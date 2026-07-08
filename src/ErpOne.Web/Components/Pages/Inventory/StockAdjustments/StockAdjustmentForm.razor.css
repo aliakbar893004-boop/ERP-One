@@ -1,0 +1,56 @@
+/* ── Header ──────────────────────────────────────────────── */
+.uf-header { margin-bottom: 0; }
+
+.back-link {
+    display: inline-block;
+    color: #64748b;
+    text-decoration: none;
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+    transition: color 0.15s;
+}
+.back-link:hover { color: #0f172a; }
+
+.uf-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+
+/* ── Form section cards ──────────────────────────────────── */
+.fs-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+}
+
+.fs-card-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    padding-bottom: 0.85rem;
+    margin-bottom: 1.1rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* ── Form labels ─────────────────────────────────────────── */
+.lbl-required::after {
+    content: " *";
+    color: #ef4444;
+}
+
+/* ── Lines table head ────────────────────────────────────── */
+.table-head th {
+    background: #f8fafc;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    border-bottom: 1px solid #e2e8f0;
+}

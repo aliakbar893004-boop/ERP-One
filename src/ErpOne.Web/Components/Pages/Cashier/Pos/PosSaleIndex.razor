@@ -1,0 +1,108 @@
+@page "/cashier/sales"
+@attribute [Authorize(Policy = "cashier.pos.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Common
+@using ErpOne.Application.PosSales
+@inject IPosSaleService Pos
+@inject NavigationManager Nav
+
+<PageTitle>Riwayat Penjualan</PageTitle>
+
+<div class="pi">
+
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Kasir</span><span class="sep">·</span><span class="here">Riwayat Penjualan</span></nav>
+            <h1>Riwayat Penjualan</h1>
+            <p>Transaksi penjualan langsung (POS). Klik baris untuk detail &amp; cetak ulang struk.</p>
+        </div>
+        <div class="pi-actions">
+            <AuthorizeView Policy="cashier.pos.create">
+                <Authorized>
+                    <a class="btn btn-primary" href="/cashier/pos"><i class="bi bi-bag-check-fill"></i> Buka Kasir</a>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <div class="search">
+            <i class="bi bi-search"></i>
+            <input placeholder="Cari nomor struk…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty">
+            <div class="empty-ic"><i class="bi bi-receipt"></i></div>
+            <p>Belum ada penjualan yang cocok.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-top">
+                <span class="n">Menampilkan <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> dari <b>@_page.Total.ToString("N0")</b></span>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No. Struk</th>
+                            <th>Tanggal</th>
+                            <th>Kasir</th>
+                            <th>Metode</th>
+                            <th class="c">Total</th>
+                            <th style="width:60px"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in _page.Items)
+                        {
+                            <tr @onclick="() => Open(item.Id)">
+                                <td class="code mono">@item.SaleNumber</td>
+                                <td class="code">@item.SaleDate.ToString("dd MMM yyyy HH:mm")</td>
+                                <td class="nm">@item.CashierName</td>
+                                <td class="nm">@item.PaymentMethodName</td>
+                                <td class="c mono">@item.GrandTotal.ToString("N2")</td>
+                                <td>
+                                    <div class="rowact">
+                                        <a class="ia" href="@($"/cashier/sales/{item.Id}")" title="Lihat" @onclick:stopPropagation="true"><i class="bi bi-eye"></i></a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (_page.TotalPages > 1)
+            {
+                <div class="card-foot">
+                    <Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+
+    private PagedResult<PosSaleListItemDto>? _page;
+    private int _currentPage = 1;
+    private string? _search;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() => _page = await Pos.GetPagedAsync(_currentPage, PageSize, _search, null);
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e) { _currentPage = 1; await LoadAsync(); }
+    private async Task GoToPageAsync(int page) { _currentPage = page; await LoadAsync(); }
+    private void Open(int id) => Nav.NavigateTo($"/cashier/sales/{id}");
+}

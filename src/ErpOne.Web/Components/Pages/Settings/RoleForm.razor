@@ -1,0 +1,292 @@
+@page "/settings/roles/new"
+@page "/settings/roles/{Id}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Identity
+@inject RoleManager<ApplicationRole> RoleManager
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+
+<PageTitle>@_title</PageTitle>
+
+<div class="rf-header mb-4">
+    <a class="back-link" href="/settings/roles"><i class="bi bi-arrow-left me-1"></i>Back</a>
+    <h4 class="rf-title">@_title</h4>
+</div>
+
+@if (_loading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+    </div>
+}
+else if (_notFound)
+{
+    <div class="alert alert-warning">Role not found.</div>
+}
+else
+{
+    <div class="row g-4">
+
+        <!-- Left: Role info -->
+        <div class="col-12 col-lg-4">
+            <div class="fs-card sticky-top" style="top:1rem">
+                <div class="fs-card-title">Role Information</div>
+
+                @if (_error is not null)
+                {
+                    <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-3">
+                        <span>&#9888;</span> @_error
+                    </div>
+                }
+
+                <div class="mb-3">
+                    <label class="form-label lbl-required">Role Name</label>
+                    <input class="form-control" @bind="_name" @bind:event="oninput"
+                           placeholder="e.g. Administrators" />
+                </div>
+                <div class="mb-4">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" rows="3" @bind="_description"
+                              placeholder="Describe what this role does..."></textarea>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_name))
+                {
+                    <div class="role-preview mb-4">
+                        <span class="text-muted small me-2">Preview:</span>
+                        <span class="role-chip">@_name</span>
+                    </div>
+                }
+
+                <div class="perm-summary mb-4">
+                    <i class="bi bi-shield-check text-primary me-1"></i>
+                    <span class="text-muted small">
+                        @_selectedPerms.Count of @AppMenus.AllPermissions.Count permissions selected
+                    </span>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Right: Permission matrix -->
+        <div class="col-12 col-lg-8">
+            <div class="fs-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="fs-card-title mb-0">Access Permissions per Feature</div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                @onclick="SelectAll">
+                            <i class="bi bi-check-all me-1"></i>All
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                @onclick="ClearAll">
+                            <i class="bi bi-x-square me-1"></i>Clear
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0 perm-table">
+                        <thead>
+                            <tr>
+                                <th class="res-col">Menu / Feature</th>
+                                @foreach (var act in AppMenus.AllActions)
+                                {
+                                    <th class="act-col text-center">
+                                        <i class="bi @act.Icon d-block mb-1 fs-6"></i>
+                                        <span class="small">@act.Label</span>
+                                    </th>
+                                }
+                                <th class="all-col text-center small text-muted">Row</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var group in AppMenus.Groups)
+                            {
+                                @if (group.GroupLabel is not null)
+                                {
+                                    <tr class="perm-group-row">
+                                        <td colspan="@(AppMenus.AllActions.Count + 2)">
+                                            <i class="bi bi-folder-fill me-2 text-warning"></i>
+                                            <span class="fw-semibold">@group.GroupLabel</span>
+                                        </td>
+                                    </tr>
+                                }
+                                @foreach (var res in group.Resources)
+                                {
+                                    var allOn = res.Actions.All(a =>
+                                        _selectedPerms.Contains(AppMenus.Perm(res.Key, a.Key)));
+
+                                    <tr>
+                                        <td class="res-label">
+                                            <i class="bi @res.Icon me-2 text-muted"></i>
+                                            @res.Label
+                                        </td>
+                                        @foreach (var act in AppMenus.AllActions)
+                                        {
+                                            var key       = AppMenus.Perm(res.Key, act.Key);
+                                            var supported = res.Actions.Any(a => a.Key == act.Key);
+                                            <td class="text-center">
+                                                @if (supported)
+                                                {
+                                                    <input class="form-check-input perm-check"
+                                                           type="checkbox"
+                                                           checked="@_selectedPerms.Contains(key)"
+                                                           @onchange="e => TogglePerm(key, (bool)e.Value!)" />
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">–</span>
+                                                }
+                                            </td>
+                                        }
+                                        <td class="text-center">
+                                            <button type="button"
+                                                    class="btn btn-xs @(allOn ? "btn-outline-danger" : "btn-outline-success")"
+                                                    @onclick="() => ToggleResource(res, !allOn)">
+                                                @(allOn ? "Clear" : "Select")
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Actions -->
+    <div class="d-flex gap-2 justify-content-end mt-4">
+        <button class="btn btn-primary btn-sm px-3" @onclick="SaveAsync" disabled="@_saving">
+            @if (_saving)
+            {
+                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+            }
+            else
+            {
+                <i class="bi bi-floppy2-fill me-1"></i>
+            }
+            Save
+        </button>
+        <a class="btn btn-outline-secondary btn-sm" href="/settings/roles">
+            <i class="bi bi-x-lg me-1"></i>Cancel
+        </a>
+    </div>
+}
+
+@code {
+    [Parameter] public string? Id { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private string _name = string.Empty;
+    private string? _description;
+    private readonly HashSet<string> _selectedPerms = [];
+    private bool _loading = true, _saving, _notFound;
+    private string? _error;
+    private ApplicationRole? _role;
+
+    private string _title => Id is null ? "Add Role" : "Edit Role";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check access to this form
+        var state = await AuthStateTask;
+        var requiredPerm = Id is null
+            ? AppMenus.Perm("settings.roles", "create")
+            : AppMenus.Perm("settings.roles", "edit");
+
+        if (!(await Auth.AuthorizeAsync(state.User, requiredPerm)).Succeeded)
+        {
+            Nav.NavigateTo("/settings/roles");
+            return;
+        }
+
+        if (Id is not null)
+        {
+            _role = await RoleManager.FindByIdAsync(Id);
+            if (_role is null)
+            {
+                _notFound = true;
+            }
+            else
+            {
+                _name        = _role.Name ?? "";
+                _description = _role.Description;
+
+                var claims = await RoleManager.GetClaimsAsync(_role);
+                foreach (var c in claims.Where(c => c.Type == AppMenus.ClaimType))
+                    _selectedPerms.Add(c.Value);
+            }
+        }
+        _loading = false;
+    }
+
+    private void TogglePerm(string key, bool selected)
+    {
+        if (selected) _selectedPerms.Add(key);
+        else _selectedPerms.Remove(key);
+    }
+
+    private void ToggleResource(AppResource res, bool selected)
+    {
+        foreach (var act in res.Actions)
+            TogglePerm(AppMenus.Perm(res.Key, act.Key), selected);
+    }
+
+    private void SelectAll()
+    {
+        foreach (var p in AppMenus.AllPermissions) _selectedPerms.Add(p);
+    }
+
+    private void ClearAll() => _selectedPerms.Clear();
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_name)) { _error = "Role name is required."; return; }
+
+        _saving = true;
+        try
+        {
+            IdentityResult result;
+            if (_role is null)
+            {
+                _role  = new ApplicationRole(_name.Trim()) { Description = _description?.Trim() };
+                result = await RoleManager.CreateAsync(_role);
+            }
+            else
+            {
+                _role.Name        = _name.Trim();
+                _role.Description = _description?.Trim();
+                result            = await RoleManager.UpdateAsync(_role);
+            }
+
+            if (!result.Succeeded) { _error = Errors(result); return; }
+
+            await SyncPermClaimsAsync();
+            Nav.NavigateTo("/settings/roles");
+        }
+        finally { _saving = false; }
+    }
+
+    private async Task SyncPermClaimsAsync()
+    {
+        var existing = (await RoleManager.GetClaimsAsync(_role!))
+            .Where(c => c.Type == AppMenus.ClaimType)
+            .ToList();
+        var existingVals = existing.Select(c => c.Value).ToHashSet();
+
+        foreach (var p in _selectedPerms.Except(existingVals))
+            await RoleManager.AddClaimAsync(_role!, new Claim(AppMenus.ClaimType, p));
+
+        foreach (var c in existing.Where(c => !_selectedPerms.Contains(c.Value)))
+            await RoleManager.RemoveClaimAsync(_role!, c);
+    }
+
+    private static string Errors(IdentityResult r) =>
+        string.Join(" ", r.Errors.Select(e => e.Description));
+}

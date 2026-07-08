@@ -1,0 +1,22 @@
+@if (TotalPages > 1)
+{
+    <nav aria-label="Paging">
+        <ul class="pagination">
+            <li class="page-item @(Page <= 1 ? "disabled" : "")">
+                <button class="page-link" @onclick="() => Go(Page - 1)" disabled="@(Page <= 1)">Sebelumnya</button>
+            </li>
+            <li class="page-item disabled"><span class="page-link">Hal @Page / @TotalPages</span></li>
+            <li class="page-item @(Page >= TotalPages ? "disabled" : "")">
+                <button class="page-link" @onclick="() => Go(Page + 1)" disabled="@(Page >= TotalPages)">Berikutnya</button>
+            </li>
+        </ul>
+    </nav>
+}
+
+@code {
+    [Parameter] public int Page { get; set; }
+    [Parameter] public int TotalPages { get; set; }
+    [Parameter] public EventCallback<int> OnPageChanged { get; set; }
+
+    private Task Go(int page) => OnPageChanged.InvokeAsync(page);
+}

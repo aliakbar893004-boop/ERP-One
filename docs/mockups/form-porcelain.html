@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en" data-theme="porcelain">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Porcelain — Product form mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#F3F6F5; --panel:#FFFFFF; --ink:#122320; --muted:#5E706C; --faint:#93A29E;
+    --line:#E1E8E6; --accent:#0E6B5E; --accent-deep:#0A5147; --accent-soft:#E2F1ED;
+    --disp:'Fraunces',Georgia,serif; --body:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--body);font-size:14.5px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:760px;margin:0 auto;padding:64px 28px 120px;}
+
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:52px;}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--disp);font-weight:600;font-size:17px;letter-spacing:-.01em;}
+  .brand .mk{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:15px;}
+  .step{color:var(--faint);font-size:12.5px;font-weight:500;letter-spacing:.02em;}
+
+  .hero{margin-bottom:48px;}
+  .kicker{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:12px;}
+  .hero h1{font-family:var(--disp);font-weight:500;font-size:44px;line-height:1.05;letter-spacing:-.02em;margin:0 0 12px;}
+  .hero p{color:var(--muted);font-size:15.5px;max-width:52ch;margin:0;}
+
+  section{margin-bottom:44px;}
+  .sh{display:flex;align-items:baseline;gap:14px;margin-bottom:22px;padding-bottom:14px;border-bottom:1px solid var(--line);}
+  .sh .idx{font-family:var(--disp);font-weight:500;font-size:15px;color:var(--faint);font-variant-numeric:oldstyle-nums;}
+  .sh h2{font-family:var(--disp);font-weight:600;font-size:22px;letter-spacing:-.01em;margin:0;}
+  .sh .note{margin-left:auto;color:var(--faint);font-size:12.5px;}
+
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:26px 28px;}
+  .fld{position:relative;grid-column:span 1;} .fld.wide{grid-column:1 / -1;}
+  .fld input,.fld select,.fld textarea{
+    width:100%;border:0;border-bottom:1.5px solid var(--line);background:transparent;padding:22px 0 9px;
+    font:inherit;font-size:15.5px;color:var(--ink);outline:none;transition:border-color .2s;
+  }
+  .fld textarea{resize:vertical;min-height:56px;line-height:1.55;}
+  .fld label{position:absolute;left:0;top:20px;color:var(--faint);font-size:15px;pointer-events:none;transition:.2s ease;}
+  .fld input:focus,.fld select:focus,.fld textarea:focus{border-bottom-color:var(--accent);}
+  .fld input:focus + label,.fld textarea:focus + label,
+  .fld input:not(:placeholder-shown) + label,.fld textarea:not(:placeholder-shown) + label,
+  .fld.filled label,.fld select:focus + label{top:0;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);}
+  .fld .cur{position:absolute;left:0;top:22px;color:var(--faint);font-size:15px;} .fld.money input{padding-left:26px;}
+  .fld select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%230E6B5E' stroke-width='1.5'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 2px center;}
+  .req{color:var(--accent);}
+
+  .foot{display:flex;align-items:center;gap:16px;margin-top:56px;padding-top:26px;border-top:1px solid var(--line);}
+  .foot .aside{color:var(--muted);font-size:13px;} .foot .aside b{color:var(--ink);font-family:var(--disp);font-weight:600;}
+  .acts{margin-left:auto;display:flex;gap:12px;}
+  .btn{border:0;border-radius:999px;padding:13px 26px;font:inherit;font-weight:600;font-size:14px;cursor:pointer;transition:.18s;}
+  .btn-text{background:transparent;color:var(--muted);padding:13px 10px;} .btn-text:hover{color:var(--ink);}
+  .btn-fill{background:var(--accent);color:#fff;box-shadow:0 10px 22px -12px var(--accent-deep);} .btn-fill:hover{background:var(--accent-deep);}
+
+  @media (max-width:620px){.row{grid-template-columns:1fr;} .hero h1{font-size:34px;} .wrap{padding:40px 20px 110px;} .foot{flex-wrap:wrap;} }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+  input:focus-visible,select:focus-visible,textarea:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand"><span class="mk">a</span> Acetris</div>
+    <div class="step">Catalog / New item</div>
+  </div>
+
+  <header class="hero">
+    <div class="kicker">Product</div>
+    <h1>Add a new item<br>to your catalog</h1>
+    <p>A few essentials get you to a saved draft. You can refine variants and imagery afterward.</p>
+  </header>
+
+  <section>
+    <div class="sh"><span class="idx">01</span><h2>Basics</h2><span class="note">Required</span></div>
+    <div class="row">
+      <div class="fld wide filled">
+        <input placeholder=" " value="Arabica Coffee Beans 250g" id="pn"><label for="pn">Product name <span class="req">•</span></label>
+      </div>
+      <div class="fld filled"><select id="cat"><option>Beverages</option><option>Food</option></select><label for="cat">Category •</label></div>
+      <div class="fld filled"><select id="br"><option>Acetris House</option><option>Unbranded</option></select><label for="br">Brand</label></div>
+      <div class="fld filled"><select id="un"><option>Pack</option><option>Piece</option></select><label for="un">Base unit •</label></div>
+      <div class="fld filled"><select id="tx"><option>PPN 11%</option><option>No tax</option></select><label for="tx">Tax</label></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sh"><span class="idx">02</span><h2>Pricing</h2><span class="note">Discount % fills the price</span></div>
+    <div class="row">
+      <div class="fld money filled"><span class="cur">Rp</span><input placeholder=" " value="62.000" id="sp"><label for="sp">Selling price <span class="req">•</span></label></div>
+      <div class="fld filled"><input placeholder=" " value="10" id="dp"><label for="dp">Discount %</label></div>
+      <div class="fld money filled"><span class="cur">Rp</span><input placeholder=" " value="55.800" id="dpr"><label for="dpr">Discount price</label></div>
+      <div class="fld money filled"><span class="cur">Rp</span><input placeholder=" " value="40.000" id="cp"><label for="cp">Cost price (HPP)</label></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sh"><span class="idx">03</span><h2>Inventory</h2><span class="note">Opening balance</span></div>
+    <div class="row">
+      <div class="fld filled"><select id="wh"><option>Central — Jakarta</option><option>Outlet — Bandung</option></select><label for="wh">Warehouse •</label></div>
+      <div class="fld filled"><input placeholder=" " value="120" id="os"><label for="os">Opening stock</label></div>
+    </div>
+  </section>
+
+  <div class="foot">
+    <div class="aside">Sells at <b>Rp 55.800</b> · margin <b>28.3%</b></div>
+    <div class="acts">
+      <button class="btn btn-text">Cancel</button>
+      <button class="btn btn-fill">Save product</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

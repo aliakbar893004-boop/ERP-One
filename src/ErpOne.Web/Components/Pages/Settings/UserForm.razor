@@ -1,0 +1,321 @@
+@page "/settings/users/new"
+@page "/settings/users/{Id}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<ApplicationRole> RoleManager
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+
+<PageTitle>@_title</PageTitle>
+
+<div class="uf-header mb-4">
+    <a class="back-link" href="/settings/users"><i class="bi bi-arrow-left me-1"></i>Back</a>
+    <h4 class="uf-title">@_title</h4>
+</div>
+
+@if (_loading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+    </div>
+}
+else if (_notFound)
+{
+    <div class="alert alert-warning">User not found.</div>
+}
+else
+{
+    <div class="row g-4">
+
+        <!-- Avatar preview card (sticky sidebar) -->
+        <div class="col-12 col-lg-3">
+            <div class="preview-card sticky-top" style="top: 1rem;">
+                <div class="big-avatar @AvatarClass(_displayName) mx-auto">
+                    @Initials(_displayName)
+                </div>
+                <p class="preview-name">@(string.IsNullOrWhiteSpace(_displayName) ? "Display Name" : _displayName)</p>
+                <p class="preview-username">@("@" + (string.IsNullOrWhiteSpace(_userName) ? "username" : _userName))</p>
+                <span class="status-pill @(_isActive ? "pill-active" : "pill-inactive")">
+                    @(_isActive ? "Active" : "Inactive")
+                </span>
+                @if (_selectedRoles.Count > 0)
+                {
+                    <div class="mt-3 d-flex flex-wrap gap-1 justify-content-center">
+                        @foreach (var r in _selectedRoles)
+                        {
+                            <span class="role-tag">@r</span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Form -->
+        <div class="col-12 col-lg-9">
+
+            @if (_error is not null)
+            {
+                <div class="alert alert-danger d-flex align-items-center gap-2 mb-3 py-2">
+                    <span>&#9888;</span> @_error
+                </div>
+            }
+
+            <!-- Basic Information -->
+            <div class="fs-card mb-4">
+                <div class="fs-card-title">Basic Information</div>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label lbl-required">Display Name</label>
+                        <input class="form-control" @bind="_displayName" @bind:event="oninput"
+                               placeholder="Full name" />
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label @(IsNew ? "lbl-required" : "")">Username</label>
+                        <div class="input-group">
+                            <span class="input-group-text text-muted small">&#64;</span>
+                            <input class="form-control" @bind="_userName" @bind:event="oninput"
+                                   placeholder="username" disabled="@(!IsNew)" />
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label">Email</label>
+                        <input class="form-control" type="email" @bind="_email"
+                               placeholder="email@domain.com" />
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label">Phone Number</label>
+                        <input class="form-control" type="tel" @bind="_phone"
+                               placeholder="+62 8xx-xxxx-xxxx" />
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch mt-1">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                   id="chkActive" @bind="_isActive" />
+                            <label class="form-check-label" for="chkActive">
+                                @if (_isActive)
+                                {
+                                    <span class="text-success fw-semibold">Account Active</span>
+                                    <span class="text-muted small ms-1">– user can sign in</span>
+                                }
+                                else
+                                {
+                                    <span class="text-danger fw-semibold">Account Inactive</span>
+                                    <span class="text-muted small ms-1">– user cannot sign in</span>
+                                }
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security -->
+            <div class="fs-card mb-4">
+                <div class="fs-card-title">Security</div>
+                <div class="row">
+                    <div class="col-sm-8 col-md-6">
+                        <label class="form-label @(IsNew ? "lbl-required" : "")">
+                            @(IsNew ? "Password" : "New Password")
+                            @if (!IsNew)
+                            {
+                                <span class="text-muted small fw-normal"> — leave blank to keep unchanged</span>
+                            }
+                        </label>
+                        <div class="input-group">
+                            <input class="form-control" type="@(_showPwd ? "text" : "password")"
+                                   @bind="_password"
+                                   placeholder="@(IsNew ? "At least 6 characters" : "Fill to change")" />
+                            <button class="btn btn-outline-secondary px-3" type="button"
+                                    @onclick="() => _showPwd = !_showPwd"
+                                    title="@(_showPwd ? "Hide password" : "Show password")">
+                                <i class="bi @(_showPwd ? "bi-eye-slash-fill" : "bi-eye-fill")"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Access Rights / Roles -->
+            @if (_allRoles.Count > 0)
+            {
+                <div class="fs-card mb-4">
+                    <div class="fs-card-title">Access Rights (Roles)</div>
+                    <p class="text-muted small mb-3">Select one or more roles for this user.</p>
+                    <div class="role-pills">
+                        @foreach (var r in _allRoles)
+                        {
+                            var on = _selectedRoles.Contains(r);
+                            <button type="button" class="role-pill @(on ? "rp-on" : "")"
+                                    @onclick="() => ToggleRole(r, !on)">
+                                @if (on) { <span class="rp-check">&#10003;</span> }
+                                @r
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Actions -->
+            <div class="d-flex gap-2 justify-content-end pt-1">
+                <button class="btn btn-primary btn-sm px-3" @onclick="SaveAsync" disabled="@_saving">
+                    @if (_saving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-floppy2-fill me-1"></i>
+                    }
+                    Save
+                </button>
+                <a class="btn btn-outline-secondary btn-sm" href="/settings/users">
+                    <i class="bi bi-x-lg me-1"></i>Cancel
+                </a>
+            </div>
+
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    private string _userName    = string.Empty;
+    private string _displayName = string.Empty;
+    private string? _email;
+    private string? _phone;
+    private string? _password;
+    private bool _isActive = true;
+    private bool _showPwd;
+    private List<string> _allRoles = [];
+    private readonly HashSet<string> _selectedRoles = [];
+
+    private bool _loading = true, _saving, _notFound;
+    private string? _error;
+    private ApplicationUser? _user;
+
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private bool IsNew => Id is null;
+    private string _title => IsNew ? "Add User" : "Edit User";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateTask;
+        var perm  = IsNew ? AppMenus.Perm("settings.users", "create")
+                          : AppMenus.Perm("settings.users", "edit");
+        if (!(await Auth.AuthorizeAsync(state.User, perm)).Succeeded)
+        {
+            Nav.NavigateTo("/settings/users");
+            return;
+        }
+
+        _allRoles = await RoleManager.Roles.OrderBy(r => r.Name).Select(r => r.Name!).ToListAsync();
+
+        if (Id is not null)
+        {
+            _user = await UserManager.FindByIdAsync(Id);
+            if (_user is null)
+            {
+                _notFound = true;
+            }
+            else
+            {
+                _userName    = _user.UserName ?? "";
+                _displayName = _user.DisplayName;
+                _email       = _user.Email;
+                _phone       = _user.PhoneNumber;
+                _isActive    = _user.IsActive;
+                foreach (var r in await UserManager.GetRolesAsync(_user))
+                    _selectedRoles.Add(r);
+            }
+        }
+        _loading = false;
+    }
+
+    private void ToggleRole(string role, bool selected)
+    {
+        if (selected) _selectedRoles.Add(role);
+        else _selectedRoles.Remove(role);
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_displayName)) { _error = "Display name is required."; return; }
+        if (IsNew && string.IsNullOrWhiteSpace(_userName))   { _error = "Username is required."; return; }
+        if (IsNew && string.IsNullOrWhiteSpace(_password))   { _error = "Password is required for new users."; return; }
+
+        _saving = true;
+        try
+        {
+            if (IsNew)
+            {
+                var user = new ApplicationUser
+                {
+                    UserName      = _userName.Trim(),
+                    Email         = Nullify(_email),
+                    EmailConfirmed = true,
+                    PhoneNumber   = Nullify(_phone),
+                    DisplayName   = _displayName.Trim(),
+                    IsActive      = _isActive
+                };
+                var created = await UserManager.CreateAsync(user, _password!);
+                if (!created.Succeeded) { _error = Errors(created); return; }
+                if (_selectedRoles.Count > 0)
+                    await UserManager.AddToRolesAsync(user, _selectedRoles);
+            }
+            else
+            {
+                _user!.DisplayName  = _displayName.Trim();
+                _user.Email         = Nullify(_email);
+                _user.PhoneNumber   = Nullify(_phone);
+                _user.IsActive      = _isActive;
+                var updated = await UserManager.UpdateAsync(_user);
+                if (!updated.Succeeded) { _error = Errors(updated); return; }
+
+                var current  = await UserManager.GetRolesAsync(_user);
+                var toRemove = current.Except(_selectedRoles).ToList();
+                var toAdd    = _selectedRoles.Except(current).ToList();
+                if (toRemove.Count > 0) await UserManager.RemoveFromRolesAsync(_user, toRemove);
+                if (toAdd.Count > 0)    await UserManager.AddToRolesAsync(_user, toAdd);
+
+                if (!string.IsNullOrWhiteSpace(_password))
+                {
+                    var token = await UserManager.GeneratePasswordResetTokenAsync(_user);
+                    var reset = await UserManager.ResetPasswordAsync(_user, token, _password);
+                    if (!reset.Succeeded) { _error = Errors(reset); return; }
+                }
+            }
+
+            Nav.NavigateTo("/settings/users");
+        }
+        finally { _saving = false; }
+    }
+
+    private static string? Nullify(string? v) =>
+        string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+
+    private static string Errors(IdentityResult r) =>
+        string.Join(" ", r.Errors.Select(e => e.Description));
+
+    private static string Initials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var p = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return p.Length >= 2
+            ? $"{char.ToUpper(p[0][0])}{char.ToUpper(p[^1][0])}"
+            : char.ToUpper(name[0]).ToString();
+    }
+
+    private static string AvatarClass(string name)
+    {
+        var cs = new[] { "av-blue", "av-green", "av-purple", "av-orange", "av-teal" };
+        if (string.IsNullOrEmpty(name)) return cs[0];
+        var h = 0;
+        foreach (var c in name) h += c;
+        return cs[Math.Abs(h) % cs.Length];
+    }
+}

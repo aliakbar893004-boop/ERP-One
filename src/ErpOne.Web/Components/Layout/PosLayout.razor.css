@@ -1,0 +1,5 @@
+/* Full-screen POS shell — no icon rail, no app chrome. */
+.pos-shell {
+    min-height: 100vh;
+    background: #F3F5F8;
+}

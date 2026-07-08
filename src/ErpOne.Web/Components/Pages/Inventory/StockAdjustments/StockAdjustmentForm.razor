@@ -1,0 +1,165 @@
+@page "/inventory/adjustments/new"
+@attribute [Authorize(Policy = "inventory.adjustments.create")]
+@rendermode InteractiveServer
+@using FluentValidation
+@using ErpOne.Application.Stock
+@using ErpOne.Application.Warehouses
+@using ErpOne.Application.Products
+@inject IStockService StockService
+@inject IWarehouseService WarehouseService
+@inject IProductService ProductService
+@inject NavigationManager Nav
+@inject SwalService Swal
+
+<PageTitle>New Stock Adjustment</PageTitle>
+
+<div class="uf-header mb-4">
+    <a class="back-link" href="/inventory/stock-levels"><i class="bi bi-arrow-left me-1"></i>Back</a>
+    <h4 class="uf-title">Stock Adjustment (Opname)</h4>
+</div>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger py-2">@_error</div>
+}
+
+<div class="fs-card mb-4">
+    <div class="row g-3">
+        <div class="col-12 col-md-4">
+            <label class="form-label lbl-required">Warehouse</label>
+            <select class="form-select" @bind="_warehouseId">
+                <option value="0">— select —</option>
+                @foreach (var w in _warehouses)
+                {
+                    <option value="@w.Id">@w.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-12 col-md-4">
+            <label class="form-label lbl-required">Date</label>
+            <input type="date" class="form-control" @bind="_date" />
+        </div>
+        <div class="col-12">
+            <label class="form-label">Note</label>
+            <input class="form-control" maxlength="200" @bind="_note" placeholder="Optional" />
+        </div>
+    </div>
+</div>
+
+<div class="fs-card mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="fs-card-title mb-0">Lines</div>
+        <button class="btn btn-sm btn-outline-primary" @onclick="AddLine"><i class="bi bi-plus-lg me-1"></i>Add line</button>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="table-head">
+                <tr>
+                    <th>Variant</th>
+                    <th style="width:130px" class="text-end">Delta Qty</th>
+                    <th style="width:150px" class="text-end">Unit Cost</th>
+                    <th>Reason</th>
+                    <th style="width:48px"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var line in _lines)
+                {
+                    <tr>
+                        <td>
+                            <select class="form-select form-select-sm" @bind="line.VariantId">
+                                <option value="0">— select —</option>
+                                @foreach (var v in _variants)
+                                {
+                                    <option value="@v.Id">@v.Sku — @v.Name</option>
+                                }
+                            </select>
+                        </td>
+                        <td><input type="number" class="form-control form-control-sm text-end" @bind="line.DeltaQuantity" /></td>
+                        <td><input type="number" step="0.01" class="form-control form-control-sm text-end" @bind="line.UnitCost" /></td>
+                        <td><input class="form-control form-control-sm" maxlength="200" @bind="line.Reason" /></td>
+                        <td><button class="btn btn-sm btn-outline-danger" @onclick="() => _lines.Remove(line)"><i class="bi bi-trash3"></i></button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="form-text mt-2">Positive delta adds stock (uses Unit Cost for Moving Average); negative delta removes stock.</div>
+</div>
+
+<div class="d-flex gap-2 justify-content-end">
+    <button class="btn btn-primary btn-sm px-3" @onclick="SaveAsync" disabled="@_saving">
+        @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> } else { <i class="bi bi-floppy2-fill me-1"></i> }
+        Save
+    </button>
+    <a class="btn btn-outline-secondary btn-sm" href="/inventory/stock-levels"><i class="bi bi-x-lg me-1"></i>Cancel</a>
+</div>
+
+@code {
+    private sealed class LineModel
+    {
+        public int VariantId { get; set; }
+        public int DeltaQuantity { get; set; }
+        public decimal UnitCost { get; set; }
+        public string? Reason { get; set; }
+    }
+
+    private IReadOnlyList<WarehouseDto> _warehouses = [];
+    private List<VariantRow> _variants = [];
+    private readonly List<LineModel> _lines = [new()];
+    private int _warehouseId;
+    private DateTime _date = DateTime.Today;
+    private string? _note;
+    private bool _saving;
+    private string? _error;
+
+    private sealed record VariantRow(int Id, string Sku, string Name);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _warehouses = await WarehouseService.GetAllAsync();
+        var products = await ProductService.GetAllAsync();
+        _variants = products
+            .SelectMany(p => p.Variants.Select(v => new VariantRow(v.Id, v.Sku, p.Name)))
+            .OrderBy(v => v.Name).ThenBy(v => v.Sku).ToList();
+        var def = _warehouses.FirstOrDefault(w => w.IsDefault);
+        if (def is not null) _warehouseId = def.Id;
+    }
+
+    private void AddLine() => _lines.Add(new());
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        _saving = true;
+        try
+        {
+            if (_warehouseId <= 0)
+            {
+                _error = "Please select a warehouse.";
+                return;
+            }
+
+            var lines = _lines
+                .Where(l => l.VariantId > 0 && l.DeltaQuantity != 0)
+                .Select(l => new StockAdjustmentLine(l.VariantId, l.DeltaQuantity, l.UnitCost, l.Reason))
+                .ToList();
+            var request = new StockAdjustmentRequest(_warehouseId, _date.ToUniversalTime(), _note, lines);
+            await StockService.RecordAdjustmentAsync(request);
+            await Swal.ToastAsync("success", "Stock adjusted");
+            Nav.NavigateTo("/inventory/stock-levels");
+        }
+        catch (ValidationException ex)
+        {
+            _error = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message; // e.g. "Stock cannot go negative."
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

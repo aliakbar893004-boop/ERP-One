@@ -1,0 +1,200 @@
+@page "/master/warehouses/new"
+@page "/master/warehouses/{Id:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using FluentValidation
+@inject IWarehouseService WarehouseService
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+
+<PageTitle>@Title</PageTitle>
+
+<div class="cf">
+
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/master/warehouses">Master</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/master/warehouses">Warehouses</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+        <h1>@Title</h1>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+    }
+    else if (_notFound)
+    {
+        <div class="cf-alert warn"><i class="bi bi-exclamation-triangle"></i> Warehouse not found.</div>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+        }
+
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-buildings"></i></span>
+                    <div class="hd-tx">
+                        <h2>Warehouse information</h2>
+                        <p>A storage location where stock is tracked.</p>
+                    </div>
+                </div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c4">
+                            <label class="fl">Code <span class="req">*</span></label>
+                            <input class="ctl mono up @(_codeError is not null ? "bad" : "")"
+                                   placeholder="e.g. WH-MAIN" maxlength="20"
+                                   @bind="_code" @bind:event="oninput" />
+                            @if (_codeError is not null)
+                            {
+                                <div class="err-txt">@_codeError</div>
+                            }
+                        </div>
+                        <div class="f c8">
+                            <label class="fl">Name <span class="req">*</span></label>
+                            <input class="ctl @(_nameError is not null ? "bad" : "")"
+                                   placeholder="e.g. Main Warehouse" maxlength="100"
+                                   @bind="_name" @bind:event="oninput" />
+                            @if (_nameError is not null)
+                            {
+                                <div class="err-txt">@_nameError</div>
+                            }
+                        </div>
+                        <div class="f c12">
+                            <label class="fl">Address</label>
+                            <textarea class="ctl @(_addressError is not null ? "bad" : "")"
+                                      rows="3" maxlength="300" placeholder="Optional"
+                                      @bind="_address" @bind:event="oninput"></textarea>
+                            <div class="cnt">@(_address?.Length ?? 0)/300</div>
+                            @if (_addressError is not null)
+                            {
+                                <div class="err-txt">@_addressError</div>
+                            }
+                        </div>
+                        <div class="f c6">
+                            <label class="tgl">
+                                <input type="checkbox" @bind="_isActive" />
+                                <span class="sw"></span>
+                                <span class="tx">Active<small>Selectable in transactions</small></span>
+                            </label>
+                        </div>
+                        <div class="f c6">
+                            <label class="tgl">
+                                <input type="checkbox" @bind="_isDefault" />
+                                <span class="sw"></span>
+                                <span class="tx">Default warehouse<small>Pre-selected on new transactions</small></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="pf-footer">
+                <div class="in">
+                    <span class="note"><span class="req">*</span> required fields</span>
+                    <a class="btn btn-ghost" href="/master/warehouses"><i class="bi bi-x-lg"></i> Cancel</a>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check2"></i>
+                        }
+                        Save warehouse
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private string _code = string.Empty;
+    private string _name = string.Empty;
+    private string? _address;
+    private bool _isActive = true;
+    private bool _isDefault;
+    private bool _loading = true, _saving, _notFound;
+    private string? _error, _codeError, _nameError, _addressError;
+
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private string Title => Id is null ? "Add Warehouse" : "Edit Warehouse";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateTask;
+        var perm = Id is null
+            ? AppMenus.Perm("master.warehouses", "create")
+            : AppMenus.Perm("master.warehouses", "edit");
+
+        if (!(await Auth.AuthorizeAsync(state.User, perm)).Succeeded)
+        {
+            Nav.NavigateTo("/master/warehouses");
+            return;
+        }
+
+        if (Id is int id)
+        {
+            var warehouse = await WarehouseService.GetByIdAsync(id);
+            if (warehouse is null)
+                _notFound = true;
+            else
+            {
+                _code = warehouse.Code;
+                _name = warehouse.Name;
+                _address = warehouse.Address;
+                _isActive = warehouse.IsActive;
+                _isDefault = warehouse.IsDefault;
+            }
+        }
+
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = _codeError = _nameError = _addressError = null;
+        _saving = true;
+
+        try
+        {
+            if (Id is int id)
+                await WarehouseService.UpdateAsync(id, new UpdateWarehouseRequest(_code, _name, _address, _isActive, _isDefault));
+            else
+                await WarehouseService.CreateAsync(new CreateWarehouseRequest(_code, _name, _address, _isActive, _isDefault));
+
+            Nav.NavigateTo("/master/warehouses");
+        }
+        catch (ValidationException ex)
+        {
+            foreach (var e in ex.Errors)
+            {
+                if (e.PropertyName == nameof(CreateWarehouseRequest.Code))
+                    _codeError = e.ErrorMessage;
+                else if (e.PropertyName == nameof(CreateWarehouseRequest.Name))
+                    _nameError = e.ErrorMessage;
+                else if (e.PropertyName == nameof(CreateWarehouseRequest.Address))
+                    _addressError = e.ErrorMessage;
+                else
+                    _error = e.ErrorMessage;
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

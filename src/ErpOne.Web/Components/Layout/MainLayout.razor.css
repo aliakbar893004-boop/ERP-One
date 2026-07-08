@@ -1,0 +1,485 @@
+.page {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: #F4F6F8;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Icon rail container. The nav chrome (brand/links/hint) is rendered by
+   <NavMenu/> directly inside this element, so it lays out as a flex column. */
+.sidebar {
+    background: #fff;
+    border-right: 1px solid #E9EDF2;
+    display: flex;
+    flex-direction: column;
+    transition: width 0.18s ease, box-shadow 0.18s ease;
+}
+
+.top-row {
+    background-color: #fff;
+    border-bottom: 1px solid #E9EDF2;
+    justify-content: flex-end;
+    height: 3.5rem;
+    display: flex;
+    align-items: center;
+}
+
+    .top-row ::deep a, .top-row ::deep .btn-link {
+        white-space: nowrap;
+        margin-left: 1.5rem;
+        text-decoration: none;
+    }
+
+    .top-row ::deep a:hover, .top-row ::deep .btn-link:hover {
+        text-decoration: underline;
+    }
+
+    .top-row ::deep a:first-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+@media (max-width: 640.98px) {
+    .top-row {
+        justify-content: space-between;
+    }
+
+    .top-row ::deep a, .top-row ::deep .btn-link {
+        margin-left: 0;
+    }
+}
+
+@media (min-width: 641px) {
+    .page {
+        flex-direction: row;
+    }
+
+    /* Icon rail: 74px collapsed, expands to 248px on hover. */
+    .sidebar {
+        width: 74px;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+        overflow: hidden;
+        z-index: 20;
+    }
+
+    .sidebar:hover {
+        width: 248px;
+        box-shadow: 14px 0 40px -20px rgba(15, 27, 45, 0.25);
+    }
+
+    /* Reveal labels / section headers / brand name while the rail is expanded.
+       ::deep crosses into <NavMenu/>'s scope; these win over the base opacity:0
+       set in NavMenu.razor.css. */
+    .sidebar:hover ::deep .brand-name,
+    .sidebar:hover ::deep .nav-label,
+    .sidebar:hover ::deep .nav-section-label {
+        opacity: 1;
+    }
+
+    .sidebar:hover ::deep .nav-section {
+        height: auto;
+    }
+
+    .top-row {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+    }
+
+    .top-row.auth ::deep a:first-child {
+        flex: 1;
+        text-align: right;
+        width: 0;
+    }
+
+    .top-row, article {
+        padding-left: 2rem !important;
+        padding-right: 1.5rem !important;
+    }
+}
+
+#blazor-error-ui {
+    color-scheme: light only;
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }
+
+/* ── User dropdown (top-row context) ── */
+
+.u-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.6rem;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: #374151;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    text-align: left;
+    text-decoration: none !important;
+}
+
+.u-trigger:hover, .u-trigger:focus {
+    background: rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 0, 0, 0.08);
+    outline: none;
+}
+
+.u-trigger.dropdown-toggle::after {
+    display: none !important;
+}
+
+.u-avatar {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+}
+
+.u-avatar-lg {
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+}
+
+.av-blue   { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+.av-green  { background: linear-gradient(135deg, #22c55e, #15803d); }
+.av-purple { background: linear-gradient(135deg, #a855f7, #7e22ce); }
+.av-orange { background: linear-gradient(135deg, #f97316, #c2410c); }
+.av-teal   { background: linear-gradient(135deg, #14b8a6, #0f766e); }
+
+.u-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.u-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #1f2937;
+    line-height: 1.3;
+    text-decoration: none !important;
+}
+
+.u-sub {
+    font-size: 0.68rem;
+    color: #9ca3af;
+    line-height: 1.3;
+}
+
+.u-chevron {
+    font-size: 0.68rem;
+    color: #9ca3af;
+    flex-shrink: 0;
+}
+
+/* Dropdown panel */
+.u-dropdown {
+    min-width: 215px !important;
+    padding: 0.4rem 0 !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.35) !important;
+    background-color: #1e293b !important;
+}
+
+.u-dropdown-header {
+    display: flex;
+    align-items: center;
+    padding: 0.7rem 1rem;
+}
+
+.u-dname {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.u-dsub {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.42);
+}
+
+.u-ditem {
+    padding: 0.55rem 1rem !important;
+    font-size: 0.85rem !important;
+    display: flex !important;
+    align-items: center !important;
+    color: #cbd5e1 !important;
+    border: none;
+    background: none;
+    width: 100%;
+}
+
+.u-ditem:hover, .u-ditem:focus {
+    background: rgba(255,255,255,0.07) !important;
+    color: white !important;
+}
+
+.u-logout {
+    color: #f87171 !important;
+}
+
+.u-logout:hover {
+    color: #fca5a5 !important;
+}
+
+/* ── Theme toggle button (top bar) ── */
+.theme-toggle {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid #E9EDF2;
+    background: #fff;
+    color: #64748B;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    font-size: 1rem;
+    margin-left: 1.5rem;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.theme-toggle:hover {
+    background: #F5F7F9;
+    color: #0F1B2D;
+}
+
+/* Light mode shows the moon (click → dark); sun is hidden. */
+.theme-icon-to-light {
+    display: none;
+}
+
+/* ── Dark mode chrome overrides ───────────────────────────────
+   Bootstrap 5.3 themes its own components off [data-bs-theme=dark]; these
+   rules flip our custom chrome to match, reusing Bootstrap's dark CSS vars
+   so the palette stays cohesive. Light mode is untouched. */
+[data-bs-theme="dark"] .page {
+    background: var(--bs-body-bg);
+}
+
+[data-bs-theme="dark"] .sidebar {
+    background: var(--bs-body-tertiary);
+    border-right-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .top-row {
+    background: var(--bs-body-tertiary);
+    border-bottom-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .theme-toggle {
+    background: transparent;
+    border-color: var(--bs-border-color);
+    color: var(--bs-secondary-color);
+}
+
+[data-bs-theme="dark"] .theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .theme-icon-to-dark {
+    display: none;
+}
+
+[data-bs-theme="dark"] .theme-icon-to-light {
+    display: grid;
+}
+
+/* User dropdown trigger sits in the (now dark) top bar — lighten its text. The
+   dropdown panel itself is already dark-styled in both modes. */
+[data-bs-theme="dark"] .u-trigger {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .u-name {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .u-trigger:hover, [data-bs-theme="dark"] .u-trigger:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Appearance popover (font size / font family / accent) ── */
+.appearance-toggle {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid #E9EDF2;
+    background: #fff;
+    color: #64748B;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    font-size: 1.05rem;
+    margin-left: 0.6rem;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.appearance-toggle:hover, .appearance-toggle[aria-expanded="true"] {
+    background: #F5F7F9;
+    color: #0F1B2D;
+}
+
+[data-bs-theme="dark"] .appearance-toggle {
+    background: transparent;
+    border-color: var(--bs-border-color);
+    color: var(--bs-secondary-color);
+}
+
+[data-bs-theme="dark"] .appearance-toggle:hover,
+[data-bs-theme="dark"] .appearance-toggle[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--bs-body-color);
+}
+
+.appearance-menu {
+    min-width: 240px;
+    padding: 0.85rem;
+    border-radius: 14px;
+    border: 1px solid var(--bs-border-color, #E9EDF2);
+    box-shadow: 0 12px 36px rgba(15, 27, 45, 0.16);
+}
+
+.ap-group + .ap-group {
+    margin-top: 0.9rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--bs-border-color, #E9EDF2);
+}
+
+.ap-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94A3B8;
+    margin-bottom: 0.5rem;
+}
+
+/* Segmented control (font size) */
+.ap-seg {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.ap-seg .ap-opt {
+    padding: 7px 4px;
+    text-align: center;
+}
+
+/* Font list */
+.ap-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.ap-list .ap-opt {
+    text-align: left;
+    padding: 8px 11px;
+}
+
+/* Shared option button look */
+.ap-opt {
+    border: 1px solid var(--bs-border-color, #E9EDF2);
+    background: var(--bs-body-bg, #fff);
+    color: var(--bs-body-color, #0F1B2D);
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.13s, border-color 0.13s, color 0.13s;
+}
+
+.ap-opt:hover {
+    border-color: var(--app-accent);
+}
+
+.ap-opt.active {
+    background: var(--app-accent-soft);
+    border-color: var(--app-accent);
+    color: var(--app-accent-deep);
+    font-weight: 600;
+}
+
+[data-bs-theme="dark"] .ap-opt.active {
+    background: color-mix(in srgb, var(--app-accent) 22%, transparent);
+    color: color-mix(in srgb, var(--app-accent) 70%, white);
+}
+
+/* Accent swatches */
+.ap-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+}
+
+.ap-sw {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--sw);
+    border: 2px solid transparent;
+    box-shadow: 0 0 0 1px var(--bs-border-color, #E9EDF2);
+    cursor: pointer;
+    transition: transform 0.12s;
+}
+
+.ap-sw:hover {
+    transform: scale(1.08);
+}
+
+.ap-sw.active {
+    border-color: var(--bs-body-bg, #fff);
+    box-shadow: 0 0 0 2px var(--sw);
+}

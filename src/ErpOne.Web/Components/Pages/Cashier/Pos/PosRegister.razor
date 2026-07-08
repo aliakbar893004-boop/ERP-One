@@ -1,0 +1,478 @@
+@page "/cashier/pos"
+@attribute [Authorize(Policy = "cashier.pos.create")]
+@layout PosLayout
+@rendermode InteractiveServer
+@implements IDisposable
+@using FluentValidation
+@using ErpOne.Application.CashierShifts
+@using ErpOne.Application.PosSales
+@using ErpOne.Application.Taxes
+@using ErpOne.Application.PaymentMethods
+@inject IPosSaleService Pos
+@inject ICashierShiftService Shifts
+@inject ITaxService Taxes
+@inject IPaymentMethodService PayMethods
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject ErpOne.Web.Services.IPosSessionRegistry Sessions
+
+<PageTitle>Kasir (POS)</PageTitle>
+
+<div class="pos" tabindex="0" @onkeydown="OnKeyDown">
+
+    <header class="pos-bar">
+        <div class="pos-brand">
+            <span class="pos-logo"><i class="bi bi-bag-check-fill"></i></span>
+            <div class="pos-brandtx">
+                <b>Kasir (POS)</b>
+                @if (_shift is not null)
+                {
+                    <span>@_shift.WarehouseName · @_userName</span>
+                }
+            </div>
+        </div>
+        <div class="pos-baractions">
+            <span class="pos-clock"><i class="bi bi-clock"></i> @_clock</span>
+            <a class="btn btn-line" href="/cashier/shifts" title="Keluar dari layar kasir"><i class="bi bi-box-arrow-left"></i> Keluar</a>
+        </div>
+    </header>
+
+    @if (_blocked)
+    {
+        <div class="pos-noshift">
+            <div class="ns-card">
+                <div class="ns-ic"><i class="bi bi-shield-lock"></i></div>
+                <h2>Kasir sedang dibuka di tempat lain</h2>
+                <p>Akun Anda sudah membuka layar kasir di tab atau perangkat lain@(_blockedSince is null ? "" : $" (sejak {_blockedSince:HH:mm})"). Satu akun hanya boleh membuka satu layar kasir.</p>
+                <div style="display:flex;gap:8px;justify-content:center">
+                    <button class="btn btn-primary" @onclick="RetryLockAsync"><i class="bi bi-arrow-clockwise"></i> Coba lagi</button>
+                    <a class="btn btn-line" href="/cashier/shifts"><i class="bi bi-box-arrow-left"></i> Keluar</a>
+                </div>
+            </div>
+        </div>
+    }
+    else if (_pickOutlet)
+    {
+        <div class="pos-noshift">
+            <div class="ns-card">
+                <div class="ns-ic"><i class="bi bi-shop"></i></div>
+                <h2>Pilih outlet</h2>
+                <p>Ada beberapa shift terbuka. Pilih laci/outlet yang Anda layani.</p>
+                <div class="outlet-list">
+                    @foreach (var s in _openShifts)
+                    {
+                        <button class="btn btn-line" @onclick="() => SelectOutlet(s)">
+                            <i class="bi bi-cash-stack"></i> @s.WarehouseName — <span class="mono">@s.ShiftNumber</span> (dibuka @s.CashierName)
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+    else if (_shift is null)
+    {
+        <div class="pos-noshift">
+            <div class="ns-card">
+                <div class="ns-ic"><i class="bi bi-lock"></i></div>
+                <h2>Belum ada shift terbuka</h2>
+                <p>Buka sesi kasir dulu sebelum mulai menjual.</p>
+                <a class="btn btn-primary" href="/cashier/shifts"><i class="bi bi-unlock"></i> Buka Shift</a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="pos-grid">
+
+            <!-- ── Kiri: pencarian + keranjang ─────────────────────────── -->
+            <section class="pos-left">
+                <div class="pos-search">
+                    <i class="bi bi-upc-scan"></i>
+                    <input @ref="_searchRef" placeholder="Scan barcode / cari SKU atau nama produk… (F2)"
+                           value="@_term" @oninput="OnTermInput" @onkeyup="OnTermKey" />
+                    <button class="btn btn-primary btn-sm" @onclick="SearchAsync"><i class="bi bi-search"></i></button>
+                </div>
+
+                @if (_results.Count > 0)
+                {
+                    <div class="pos-results">
+                        @foreach (var r in _results)
+                        {
+                            <button class="res" @onclick="() => AddToCart(r)">
+                                <span class="res-nm">@r.ProductName</span>
+                                <span class="res-sku mono">@r.Sku</span>
+                                <span class="res-stk @(r.OnHand <= 0 ? "out" : "")">stok @r.OnHand</span>
+                                <span class="res-pr mono">
+                                    @if (r.UnitPrice < r.Price)
+                                    {
+                                        <span class="was mono">@r.Price.ToString("N0")</span>
+                                        @if (r.DiscountPercent is { } dp) { <span class="disc-badge">-@dp.ToString("0.##")%</span> }
+                                    }
+                                    <span>@r.UnitPrice.ToString("N0")</span>
+                                </span>
+                            </button>
+                        }
+                    </div>
+                }
+
+                <div class="pos-cart">
+                    @if (_cart.Count == 0)
+                    {
+                        <div class="cart-empty">
+                            <i class="bi bi-cart3"></i>
+                            <p>Keranjang kosong. Scan atau cari produk untuk memulai.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <table class="cart-tbl">
+                            <thead>
+                                <tr>
+                                    <th>Produk</th>
+                                    <th class="c" style="width:130px">Qty</th>
+                                    <th class="r" style="width:120px">Harga</th>
+                                    <th class="c" style="width:80px">Disk%</th>
+                                    <th class="r" style="width:130px">Total</th>
+                                    <th style="width:44px"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var l in _cart)
+                                {
+                                    <tr class="@(_selected == l ? "sel" : "")" @onclick="() => _selected = l">
+                                        <td>
+                                            <div class="ci-nm">@l.Name</div>
+                                            <div class="ci-sku mono">
+                                                @l.Sku · stok @l.OnHand
+                                                @if (l.OrigPrice > l.UnitPrice)
+                                                {
+                                                    <span class="was mono">@l.OrigPrice.ToString("N0")</span>
+                                                    @if (l.DiscPercent is { } dp) { <span class="disc-badge">-@dp.ToString("0.##")%</span> }
+                                                }
+                                            </div>
+                                        </td>
+                                        <td class="c">
+                                            <div class="qty">
+                                                <button @onclick="() => Dec(l)" @onclick:stopPropagation="true"><i class="bi bi-dash"></i></button>
+                                                <span class="mono">@l.Qty</span>
+                                                <button @onclick="() => Inc(l)" @onclick:stopPropagation="true"><i class="bi bi-plus"></i></button>
+                                            </div>
+                                        </td>
+                                        <td class="r mono">@l.UnitPrice.ToString("N0")</td>
+                                        <td class="c">
+                                            <input class="disc mono" type="number" min="0" max="100" step="1"
+                                                   @bind="l.DiscountPercent" @onclick:stopPropagation="true" />
+                                        </td>
+                                        <td class="r mono">@l.LineTotal.ToString("N0")</td>
+                                        <td class="c">
+                                            <button class="rm" @onclick="() => Remove(l)" @onclick:stopPropagation="true" title="Hapus (Del)"><i class="bi bi-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </section>
+
+            <!-- ── Kanan: ringkasan + pembayaran ───────────────────────── -->
+            <aside class="pos-right">
+                <div class="sum">
+                    <div class="sum-row"><span>Subtotal</span><b class="mono">@Subtotal.ToString("N0")</b></div>
+                    <div class="sum-row">
+                        <span>Diskon transaksi</span>
+                        <input class="fld mono" type="number" min="0" step="1" @bind="_transactionDiscount" />
+                    </div>
+                    <div class="sum-row">
+                        <span>Pajak</span>
+                        <select class="fld sel" @bind="_taxId">
+                            <option value="">Tanpa Pajak</option>
+                            @foreach (var t in _taxes)
+                            {
+                                <option value="@t.Id">@t.Name (@t.Rate.ToString("0.##")%)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="sum-row"><span>PPN</span><b class="mono">@TaxTotal.ToString("N0")</b></div>
+                    <div class="sum-grand"><span>Total</span><b class="mono">@GrandTotal.ToString("N0")</b></div>
+                </div>
+
+                <div class="pay">
+                    <label class="pay-lbl">Metode Pembayaran</label>
+                    <select class="fld sel" @bind="_paymentMethodId">
+                        @foreach (var m in _methods)
+                        {
+                            <option value="@m.Id">@m.Name</option>
+                        }
+                    </select>
+
+                    @if (IsCash)
+                    {
+                        <label class="pay-lbl">Uang Diterima</label>
+                        <input class="fld mono big" type="text" inputmode="numeric"
+                               value="@(_amountTendered > 0 ? _amountTendered.ToString("N0") : "")" @oninput="OnTenderedInput" />
+                        <div class="quick">
+                            <button @onclick="() => _amountTendered = GrandTotal">Uang Pas</button>
+                            <button @onclick="() => _amountTendered += 50_000m">+50rb</button>
+                            <button @onclick="() => _amountTendered += 100_000m">+100rb</button>
+                            <button @onclick="() => _amountTendered = 0m">Reset</button>
+                        </div>
+                        <div class="sum-row change"><span>Kembalian</span><b class="mono">@Change.ToString("N0")</b></div>
+                    }
+                </div>
+
+                @if (_error is not null)
+                {
+                    <div class="pos-err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+                }
+
+                <button class="btn btn-pay" @onclick="PayAsync" disabled="@(_busy || _cart.Count == 0)">
+                    @if (_busy)
+                    {
+                        <span class="spinner-border spinner-border-sm"></span> <span>Memproses…</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-cash-coin"></i> <span>Bayar &amp; Cetak (F9)</span>
+                    }
+                </button>
+                <div class="pos-hints">
+                    <span><kbd>F2</kbd> Cari</span><span><kbd>F9</kbd> Bayar</span><span><kbd>Del</kbd> Hapus baris</span><span><kbd>Esc</kbd> Kosongkan</span>
+                </div>
+            </aside>
+        </div>
+    }
+</div>
+
+@if (_lastSale is not null)
+{
+    <div class="pos-receipt">
+        <div class="rc-title">@_lastSale.WarehouseName</div>
+        <div class="rc-sub">Struk Penjualan · @_lastSale.SaleNumber<br />@_lastSale.SaleDate.ToString("dd MMM yyyy HH:mm") · @_lastSale.CashierName</div>
+        <table>
+            @foreach (var l in _lastSale.Lines)
+            {
+                <tr>
+                    <td colspan="2">@l.ProductName</td>
+                </tr>
+                <tr>
+                    <td>@l.Quantity x @l.UnitPrice.ToString("N0")@(l.DiscountPercent > 0 ? $" (-{l.DiscountPercent:0.##}%)" : "")</td>
+                    <td class="rc-r">@l.LineTotal.ToString("N0")</td>
+                </tr>
+            }
+            <tr class="rc-rule"><td>Subtotal</td><td class="rc-r">@_lastSale.Subtotal.ToString("N0")</td></tr>
+            @if (_lastSale.TransactionDiscount > 0)
+            {
+                <tr><td>Diskon</td><td class="rc-r">-@_lastSale.TransactionDiscount.ToString("N0")</td></tr>
+            }
+            @if (_lastSale.TaxTotal > 0)
+            {
+                <tr><td>PPN (@_lastSale.TaxRateSnapshot.ToString("0.##")%)</td><td class="rc-r">@_lastSale.TaxTotal.ToString("N0")</td></tr>
+            }
+            <tr class="rc-grand rc-rule"><td>TOTAL</td><td class="rc-r">@_lastSale.GrandTotal.ToString("N0")</td></tr>
+            <tr><td>@_lastSale.PaymentMethodName</td><td class="rc-r">@_lastSale.AmountTendered.ToString("N0")</td></tr>
+            @if (_lastSale.IsCashPayment)
+            {
+                <tr><td>Kembali</td><td class="rc-r">@_lastSale.ChangeGiven.ToString("N0")</td></tr>
+            }
+        </table>
+        <div class="rc-foot">Terima kasih atas kunjungan Anda 🙏</div>
+    </div>
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private sealed class CartLine
+    {
+        public int VariantId { get; set; }
+        public string Sku { get; set; } = "";
+        public string Name { get; set; } = "";
+        public decimal UnitPrice { get; set; }
+        public int Qty { get; set; } = 1;
+        public decimal DiscountPercent { get; set; }
+        public int OnHand { get; set; }
+        public decimal OrigPrice { get; set; }
+        public decimal? DiscPercent { get; set; }
+        public decimal LineTotal => Math.Round(Qty * UnitPrice * (1 - DiscountPercent / 100m), 2, MidpointRounding.AwayFromZero);
+    }
+
+    private CashierShiftDto? _shift;
+    private IReadOnlyList<CashierShiftDto> _openShifts = [];
+    private bool _pickOutlet;
+    private bool _blocked;
+    private DateTime? _blockedSince;
+    private string _token = "";
+    private string _userId = "", _userName = "";
+    private readonly List<CartLine> _cart = new();
+    private CartLine? _selected;
+    private string? _term;
+    private IReadOnlyList<PosProductOptionDto> _results = [];
+    private IReadOnlyList<TaxDto> _taxes = [];
+    private IReadOnlyList<PaymentMethodDto> _methods = [];
+    private int _paymentMethodId;
+    private int? _taxId;
+    private decimal _transactionDiscount;
+    private decimal _amountTendered;
+    private bool _busy;
+    private string? _error;
+    private PosSaleDto? _lastSale;
+    private string _clock = "";
+    private ElementReference _searchRef;
+    private System.Threading.Timer? _clockTimer;
+    private CancellationTokenSource? _searchCts;
+
+    private decimal Subtotal => Math.Round(_cart.Sum(l => l.LineTotal), 2, MidpointRounding.AwayFromZero);
+    private decimal TaxRate => _taxId is { } id ? (_taxes.FirstOrDefault(t => t.Id == id)?.Rate ?? 0m) : 0m;
+    private decimal TaxBase => Math.Max(0m, Subtotal - _transactionDiscount);
+    private decimal TaxTotal => Math.Round(TaxBase * TaxRate / 100m, 2, MidpointRounding.AwayFromZero);
+    private decimal GrandTotal => TaxBase + TaxTotal;
+    private bool IsCash => _methods.FirstOrDefault(m => m.Id == _paymentMethodId)?.Type == ErpOne.Domain.Entities.PaymentType.Tunai;
+    private decimal Change => IsCash ? Math.Max(0m, _amountTendered - GrandTotal) : 0m;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await AuthStateTask).User;
+        _userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+        _userName = user.Identity?.Name ?? "";
+
+        _token = Guid.NewGuid().ToString("N");
+        if (!Sessions.TryAcquire(_userId, _token))
+        {
+            _blocked = true;
+            _blockedSince = Sessions.ActiveSince(_userId);
+        }
+        else
+        {
+            await LoadSessionAsync();
+        }
+
+        UpdateClock();
+        _clockTimer = new System.Threading.Timer(_ => InvokeAsync(() => { UpdateClock(); StateHasChanged(); }),
+            null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    private async Task LoadSessionAsync()
+    {
+        _openShifts = await Shifts.GetOpenShiftsAsync();
+        if (_openShifts.Count == 1) _shift = _openShifts[0];
+        else if (_openShifts.Count > 1) _pickOutlet = true;
+        _taxes = await Taxes.GetAllAsync();
+        _methods = (await PayMethods.GetAllAsync()).Where(m => m.IsActive).ToList();
+        _paymentMethodId = _methods.FirstOrDefault(m => m.Type == ErpOne.Domain.Entities.PaymentType.Tunai)?.Id ?? _methods.FirstOrDefault()?.Id ?? 0;
+        _taxId = _taxes.FirstOrDefault()?.Id;
+    }
+
+    private async Task RetryLockAsync()
+    {
+        if (Sessions.TryAcquire(_userId, _token))
+        {
+            _blocked = false;
+            _blockedSince = null;
+            await LoadSessionAsync();
+        }
+        else
+        {
+            _blockedSince = Sessions.ActiveSince(_userId);
+        }
+    }
+
+    private void SelectOutlet(CashierShiftDto s) { _shift = s; _pickOutlet = false; }
+
+    private void UpdateClock() => _clock = DateTime.Now.ToString("HH:mm:ss");
+
+    private const int MinSearchChars = 2;
+
+    // Live search saat mengetik (debounce): tampil produk yang cocok tanpa auto-add.
+    private async Task OnTermInput(ChangeEventArgs e)
+    {
+        _term = e.Value?.ToString();
+        _searchCts?.Cancel();
+
+        var term = _term?.Trim() ?? "";
+        if (_shift is null || term.Length < MinSearchChars) { _results = []; return; }
+
+        _searchCts = new CancellationTokenSource();
+        var token = _searchCts.Token;
+        try
+        {
+            await Task.Delay(250, token); // debounce ketukan
+            var found = await Pos.SearchProductsAsync(_shift.WarehouseId, term, token);
+            if (!token.IsCancellationRequested) { _results = found; StateHasChanged(); }
+        }
+        catch (OperationCanceledException) { /* ketukan berikutnya membatalkan yang ini */ }
+    }
+
+    // Enter / tombol cari: cari langsung + auto-add bila barcode cocok persis.
+    private async Task SearchAsync()
+    {
+        _searchCts?.Cancel();
+        if (_shift is null || string.IsNullOrWhiteSpace(_term)) { _results = []; return; }
+        _results = await Pos.SearchProductsAsync(_shift.WarehouseId, _term);
+        // barcode exact → auto-add
+        var exact = _results.FirstOrDefault(r => string.Equals(r.Barcode, _term, StringComparison.OrdinalIgnoreCase));
+        if (exact is not null) { AddToCart(exact); _term = ""; _results = []; }
+    }
+
+    private async Task OnTermKey(KeyboardEventArgs e) { if (e.Key == "Enter") await SearchAsync(); }
+
+    private void AddToCart(PosProductOptionDto p)
+    {
+        var existing = _cart.FirstOrDefault(c => c.VariantId == p.VariantId);
+        if (existing is not null) existing.Qty++;
+        else _cart.Add(new CartLine { VariantId = p.VariantId, Sku = p.Sku, Name = p.ProductName, UnitPrice = p.UnitPrice, OnHand = p.OnHand, OrigPrice = p.Price, DiscPercent = p.DiscountPercent });
+        _term = ""; _results = [];
+    }
+
+    // Uang diterima: tampil berformat ribuan (mis. 500.000) seperti Total; ambil digitnya saja.
+    private void OnTenderedInput(ChangeEventArgs e)
+    {
+        var digits = new string((e.Value?.ToString() ?? "").Where(char.IsDigit).ToArray());
+        _amountTendered = decimal.TryParse(digits, out var v) ? v : 0m;
+    }
+
+    private void Inc(CartLine l) => l.Qty++;
+    private void Dec(CartLine l) { if (l.Qty > 1) l.Qty--; }
+    private void Remove(CartLine l) { _cart.Remove(l); if (_selected == l) _selected = null; }
+    private void ClearCart() { _cart.Clear(); _selected = null; _transactionDiscount = 0m; _amountTendered = 0m; }
+
+    private async Task PayAsync()
+    {
+        _error = null;
+        if (_shift is null) { _error = "Tidak ada shift terbuka."; return; }
+        if (_cart.Count == 0) { _error = "Keranjang kosong."; return; }
+        if (IsCash && _amountTendered < GrandTotal) { _error = "Uang bayar kurang dari total."; return; }
+        _busy = true;
+        try
+        {
+            var req = new CreatePosSaleRequest(_paymentMethodId, _taxId, _transactionDiscount,
+                IsCash ? _amountTendered : GrandTotal,
+                _cart.Select(c => new PosSaleLineRequest(c.VariantId, c.Qty, c.UnitPrice, c.DiscountPercent)).ToList());
+            _lastSale = await Pos.CreateSaleAsync(_userId, _userName, _shift.Id, req);
+            ClearCart();
+            _shift = await Shifts.GetOpenShiftByWarehouseAsync(_shift.WarehouseId);
+            await JS.InvokeVoidAsync("appPrint");
+        }
+        catch (ValidationException ex) { _error = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage)); }
+        finally { _busy = false; }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "F2": await _searchRef.FocusAsync(); break;
+            case "F9": await PayAsync(); break;
+            case "Delete": if (_selected is not null) Remove(_selected); break;
+            case "Escape": ClearCart(); break;
+        }
+    }
+
+    public void Dispose()
+    {
+        Sessions.Release(_userId, _token);
+        _clockTimer?.Dispose();
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+    }
+}

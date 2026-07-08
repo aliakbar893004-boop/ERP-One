@@ -1,0 +1,97 @@
+@page "/settings/approval-chains/{DocType}"
+@attribute [Authorize(Policy = "settings.approval-chains.edit")]
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Identity
+@using ErpOne.Application.Approvals
+@using ErpOne.Domain.Entities
+@using ErpOne.Infrastructure.Identity
+@inject IApprovalChainService ChainService
+@inject RoleManager<ApplicationRole> RoleManager
+@inject NavigationManager Nav
+
+<PageTitle>Approval Chain — @DocType</PageTitle>
+
+<div class="uf-header mb-4">
+    <a class="back-link" href="/settings/approval-chains"><i class="bi bi-arrow-left me-1"></i>Approval Chains</a>
+    <h4 class="uf-title">Rantai Approval — @DocType</h4>
+</div>
+
+@if (!_valid)
+{
+    <div class="alert alert-warning">Tipe dokumen tidak dikenal.</div>
+}
+else
+{
+    @if (_saved) { <div class="alert alert-success py-2">Tersimpan.</div> }
+
+    <div class="fs-card mb-4" style="max-width:640px">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="fs-card-title mb-0">Langkah (urut dari atas)</div>
+            <button class="btn btn-sm btn-outline-primary" @onclick="AddStep"><i class="bi bi-plus-lg me-1"></i>Tambah</button>
+        </div>
+        @if (_steps.Count == 0)
+        {
+            <p class="text-muted small">Tidak ada langkah — dokumen akan langsung disetujui saat submit.</p>
+        }
+        else
+        {
+            @for (var i = 0; i < _steps.Count; i++)
+            {
+                var idx = i;
+                <div class="d-flex gap-2 align-items-center mb-2">
+                    <span class="badge bg-secondary">@(idx + 1)</span>
+                    <select class="form-select form-select-sm" @bind="_steps[idx]">
+                        <option value="">— pilih role —</option>
+                        @foreach (var r in _roles)
+                        {
+                            <option value="@r">@r</option>
+                        }
+                    </select>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => MoveUp(idx)" disabled="@(idx == 0)"><i class="bi bi-arrow-up"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="() => _steps.RemoveAt(idx)"><i class="bi bi-x-lg"></i></button>
+                </div>
+            }
+        }
+        <div class="d-flex gap-2 justify-content-end pt-2">
+            <button class="btn btn-primary btn-sm px-3" @onclick="SaveAsync" disabled="@_saving">
+                @if (_saving) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> }
+                Simpan
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string DocType { get; set; } = "";
+
+    private ApprovalDocumentType _dt;
+    private bool _valid, _saving, _saved;
+    private List<string> _roles = [];
+    private readonly List<string> _steps = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _valid = Enum.TryParse(DocType, out _dt);
+        if (!_valid) return;
+
+        _roles = RoleManager.Roles.Select(r => r.Name!).OrderBy(n => n).ToList();
+        var chain = await ChainService.GetByDocumentTypeAsync(_dt);
+        foreach (var c in chain) _steps.Add(c.RoleName);
+    }
+
+    private void AddStep() => _steps.Add("");
+    private void MoveUp(int idx)
+    {
+        if (idx <= 0) return;
+        (_steps[idx - 1], _steps[idx]) = (_steps[idx], _steps[idx - 1]);
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true; _saved = false;
+        var inputs = _steps.Where(s => !string.IsNullOrWhiteSpace(s))
+            .Select((role, i) => new ApprovalChainStepInput(i + 1, role)).ToList();
+        await ChainService.ReplaceChainAsync(_dt, inputs);
+        _saved = true; _saving = false;
+    }
+}

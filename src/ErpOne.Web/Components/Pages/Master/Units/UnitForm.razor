@@ -1,0 +1,182 @@
+@page "/master/units/new"
+@page "/master/units/{Id:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using FluentValidation
+@inject IUnitService UnitService
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+
+<PageTitle>@Title</PageTitle>
+
+<div class="cf">
+
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/master/units">Master</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/master/units">Units</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+        <h1>@Title</h1>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+    }
+    else if (_notFound)
+    {
+        <div class="cf-alert warn"><i class="bi bi-exclamation-triangle"></i> Unit not found.</div>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+        }
+
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-rulers"></i></span>
+                    <div class="hd-tx">
+                        <h2>Unit information</h2>
+                        <p>A unit of measure used across products (e.g. pieces, box, kg).</p>
+                    </div>
+                </div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c4">
+                            <label class="fl">Code <span class="req">*</span></label>
+                            <input class="ctl mono up @(_codeError is not null ? "bad" : "")"
+                                   placeholder="e.g. PCS" maxlength="20"
+                                   @bind="_code" @bind:event="oninput" />
+                            @if (_codeError is not null)
+                            {
+                                <div class="err-txt">@_codeError</div>
+                            }
+                        </div>
+                        <div class="f c8">
+                            <label class="fl">Name <span class="req">*</span></label>
+                            <input class="ctl @(_nameError is not null ? "bad" : "")"
+                                   placeholder="e.g. Pieces" maxlength="100"
+                                   @bind="_name" @bind:event="oninput" />
+                            @if (_nameError is not null)
+                            {
+                                <div class="err-txt">@_nameError</div>
+                            }
+                        </div>
+                        <div class="f c12">
+                            <label class="fl">Description</label>
+                            <textarea class="ctl @(_descError is not null ? "bad" : "")"
+                                      rows="3" maxlength="300" placeholder="Optional"
+                                      @bind="_description" @bind:event="oninput"></textarea>
+                            <div class="cnt">@(_description?.Length ?? 0)/300</div>
+                            @if (_descError is not null)
+                            {
+                                <div class="err-txt">@_descError</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="pf-footer">
+                <div class="in">
+                    <span class="note"><span class="req">*</span> required fields</span>
+                    <a class="btn btn-ghost" href="/master/units"><i class="bi bi-x-lg"></i> Cancel</a>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check2"></i>
+                        }
+                        Save unit
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private string _code = string.Empty;
+    private string _name = string.Empty;
+    private string? _description;
+    private bool _loading = true, _saving, _notFound;
+    private string? _error, _codeError, _nameError, _descError;
+
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private string Title => Id is null ? "Add Unit" : "Edit Unit";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateTask;
+        var perm = Id is null
+            ? AppMenus.Perm("master.units", "create")
+            : AppMenus.Perm("master.units", "edit");
+
+        if (!(await Auth.AuthorizeAsync(state.User, perm)).Succeeded)
+        {
+            Nav.NavigateTo("/master/units");
+            return;
+        }
+
+        if (Id is int id)
+        {
+            var unit = await UnitService.GetByIdAsync(id);
+            if (unit is null)
+                _notFound = true;
+            else
+            {
+                _code = unit.Code;
+                _name = unit.Name;
+                _description = unit.Description;
+            }
+        }
+
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = _codeError = _nameError = _descError = null;
+        _saving = true;
+
+        try
+        {
+            if (Id is int id)
+                await UnitService.UpdateAsync(id, new UpdateUnitRequest(_code, _name, _description));
+            else
+                await UnitService.CreateAsync(new CreateUnitRequest(_code, _name, _description));
+
+            Nav.NavigateTo("/master/units");
+        }
+        catch (ValidationException ex)
+        {
+            foreach (var e in ex.Errors)
+            {
+                if (e.PropertyName == nameof(CreateUnitRequest.Code))
+                    _codeError = e.ErrorMessage;
+                else if (e.PropertyName == nameof(CreateUnitRequest.Name))
+                    _nameError = e.ErrorMessage;
+                else if (e.PropertyName == nameof(CreateUnitRequest.Description))
+                    _descError = e.ErrorMessage;
+                else
+                    _error = e.ErrorMessage;
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

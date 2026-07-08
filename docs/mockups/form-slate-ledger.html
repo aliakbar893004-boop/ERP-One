@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en" data-theme="slate-ledger">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Slate Ledger — Product form mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#F7F8FA; --panel:#FFFFFF; --ink:#101828; --muted:#667085; --faint:#98A2B3;
+    --line:#E4E7EC; --line-2:#EEF1F4; --field:#FCFCFD;
+    --accent:#3538CD; --accent-deep:#282AA8; --accent-soft:#EEF0FF; --ok:#12805C; --ok-soft:#E7F6EF;
+    --disp:'Space Grotesk',system-ui,sans-serif; --body:'Inter',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --r:14px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .shell{display:grid;grid-template-columns:288px 1fr;min-height:100vh;}
+
+  /* ── Left rail ─────────────────────────────────────── */
+  .rail{border-right:1px solid var(--line);background:var(--panel);padding:26px 22px;display:flex;flex-direction:column;gap:26px;position:sticky;top:0;height:100vh;}
+  .brand{display:flex;align-items:center;gap:11px;}
+  .brand .mk{width:34px;height:34px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:#fff;font-family:var(--disp);font-weight:700;font-size:16px;}
+  .brand b{font-family:var(--disp);font-weight:700;letter-spacing:-.02em;font-size:15px;}
+  .brand span{display:block;color:var(--faint);font-size:11.5px;font-weight:500;}
+  .rail h1{font-family:var(--disp);font-weight:600;font-size:19px;letter-spacing:-.02em;margin:0 0 3px;}
+  .rail .sub{color:var(--muted);font-size:12.5px;margin:0;}
+
+  .nav{display:flex;flex-direction:column;gap:2px;}
+  .nav a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-weight:500;font-size:13.5px;transition:.15s;}
+  .nav a:hover{background:var(--line-2);color:var(--ink);}
+  .nav a.on{background:var(--accent-soft);color:var(--accent-deep);font-weight:600;}
+  .nav .dot{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-family:var(--mono);font-size:11px;color:var(--faint);flex:none;background:var(--panel);}
+  .nav a.on .dot{border-color:var(--accent);color:var(--accent-deep);}
+  .nav a.done .dot{background:var(--ok-soft);border-color:var(--ok);color:var(--ok);}
+  .tip{margin-top:auto;background:var(--field);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:12.5px;color:var(--muted);}
+  .tip b{color:var(--ink);font-weight:600;display:block;margin-bottom:4px;font-family:var(--disp);}
+
+  /* ── Canvas ────────────────────────────────────────── */
+  .canvas{padding:30px 40px 120px;max-width:960px;}
+  .crumbs{display:flex;gap:8px;align-items:center;color:var(--faint);font-size:12px;font-weight:500;margin-bottom:14px;}
+  .crumbs a{color:var(--muted);text-decoration:none;} .crumbs a:hover{color:var(--ink);}
+  .head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:26px;}
+  .head h2{font-family:var(--disp);font-weight:700;font-size:26px;letter-spacing:-.025em;margin:0 0 4px;}
+  .head p{color:var(--muted);margin:0;font-size:13.5px;}
+  .pill{font-size:12px;font-weight:600;padding:5px 12px;border-radius:99px;background:var(--ok-soft);color:var(--ok);white-space:nowrap;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:22px 24px 24px;margin-bottom:18px;box-shadow:0 1px 2px rgba(16,24,40,.04);}
+  .eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+  .eyebrow .n{font-family:var(--mono);font-size:12px;color:var(--accent-deep);background:var(--accent-soft);border-radius:6px;padding:2px 8px;font-weight:600;}
+  .eyebrow h3{font-family:var(--disp);font-weight:600;font-size:16px;letter-spacing:-.01em;margin:0;}
+  .eyebrow .hint{margin-left:auto;color:var(--faint);font-size:12px;}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px;}
+  .f{display:flex;flex-direction:column;gap:7px;} .f.wide{grid-column:1 / -1;}
+  label{font-size:12.5px;font-weight:600;color:#344054;}
+  label .req{color:var(--accent);}
+  .ctl{border:1.5px solid var(--line);background:var(--field);border-radius:10px;padding:11px 13px;font:inherit;font-size:14px;color:var(--ink);outline:none;transition:.15s;width:100%;}
+  .ctl::placeholder{color:var(--faint);}
+  .ctl:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 4px var(--accent-soft);}
+  select.ctl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23667085' stroke-width='2'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;}
+  .money{position:relative;} .money .pre{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--faint);font-family:var(--mono);font-size:13px;} .money .ctl{padding-left:34px;font-family:var(--mono);}
+  .help{font-size:11.5px;color:var(--faint);}
+  textarea.ctl{resize:vertical;min-height:88px;line-height:1.55;}
+
+  /* ── Sticky action bar ─────────────────────────────── */
+  .bar{position:fixed;left:288px;right:0;bottom:0;background:rgba(255,255,255,.86);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:14px 40px;display:flex;align-items:center;gap:18px;}
+  .metric{display:flex;flex-direction:column;line-height:1.2;}
+  .metric .k{font-size:11px;color:var(--faint);font-weight:500;}
+  .metric .v{font-family:var(--mono);font-weight:600;font-size:16px;letter-spacing:-.01em;}
+  .metric .v.good{color:var(--ok);}
+  .sep{width:1px;height:30px;background:var(--line);}
+  .actions{margin-left:auto;display:flex;gap:10px;}
+  .btn{border:0;border-radius:10px;padding:11px 18px;font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;transition:.15s;display:inline-flex;gap:8px;align-items:center;}
+  .btn-ghost{background:transparent;color:var(--muted);} .btn-ghost:hover{color:var(--ink);}
+  .btn-line{background:#fff;border:1.5px solid var(--line);color:#344054;} .btn-line:hover{border-color:#cbd5e1;}
+  .btn-primary{background:var(--accent);color:#fff;box-shadow:0 8px 18px -9px var(--accent);} .btn-primary:hover{background:var(--accent-deep);}
+
+  @media (max-width:880px){
+    .shell{grid-template-columns:1fr;} .rail{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);}
+    .tip{display:none;} .canvas{padding:24px 18px 130px;} .bar{left:0;padding:12px 18px;} .grid{grid-template-columns:1fr;}
+    .head{flex-direction:column;}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+  a:focus-visible,.ctl:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="rail">
+    <div class="brand">
+      <div class="mk">A</div>
+      <div><b>Acetris</b><span>Inventory suite</span></div>
+    </div>
+    <div>
+      <h1>New product</h1>
+      <p class="sub">Create an item and its default variant.</p>
+    </div>
+    <nav class="nav" aria-label="Form sections">
+      <a href="#basics" class="on"><span class="dot">1</span> Basics</a>
+      <a href="#desc" class=""><span class="dot">2</span> Description</a>
+      <a href="#pricing" class="done"><span class="dot">✓</span> Pricing</a>
+      <a href="#inventory"><span class="dot">4</span> Inventory</a>
+    </nav>
+    <div class="tip">
+      <b>SKU is generated</b>
+      Codes are assigned on save from the category prefix — you don't type them.
+    </div>
+  </aside>
+
+  <main class="canvas">
+    <div class="crumbs"><a href="#">Products</a> · <a href="#">Catalog</a> · <span>New</span></div>
+    <div class="head">
+      <div>
+        <h2>Add product</h2>
+        <p>Fields marked with a dot are required before this item can go active.</p>
+      </div>
+      <span class="pill">Draft</span>
+    </div>
+
+    <section class="card" id="basics">
+      <div class="eyebrow"><span class="n">01</span><h3>Basics</h3><span class="hint">Identifies the item across the catalog</span></div>
+      <div class="grid">
+        <div class="f wide"><label>Product name <span class="req">•</span></label><input class="ctl" placeholder="e.g. Arabica Coffee Beans 250g" value="Arabica Coffee Beans 250g" /></div>
+        <div class="f"><label>Category <span class="req">•</span></label>
+          <select class="ctl"><option>Beverages</option><option>Food</option><option>Packaging</option></select></div>
+        <div class="f"><label>Brand</label>
+          <select class="ctl"><option>Acetris House</option><option>Unbranded</option></select></div>
+        <div class="f"><label>Base unit <span class="req">•</span></label>
+          <select class="ctl"><option>Pack</option><option>Piece</option><option>Box</option></select></div>
+        <div class="f"><label>Tax</label>
+          <select class="ctl"><option>PPN 11%</option><option>No tax</option></select></div>
+      </div>
+    </section>
+
+    <section class="card" id="desc">
+      <div class="eyebrow"><span class="n">02</span><h3>Description</h3><span class="hint">Optional</span></div>
+      <div class="grid"><div class="f wide"><label>Details</label><textarea class="ctl" placeholder="Notes shown on the product detail page…">Single-origin, medium roast. Resealable pouch.</textarea></div></div>
+    </section>
+
+    <section class="card" id="pricing">
+      <div class="eyebrow"><span class="n">03</span><h3>Pricing</h3><span class="hint">Enter a discount % or a discount price</span></div>
+      <div class="grid">
+        <div class="f"><label>Selling price <span class="req">•</span></label><div class="money"><span class="pre">Rp</span><input class="ctl" value="62.000" /></div></div>
+        <div class="f"><label>Discount %</label><div class="money"><span class="pre">%</span><input class="ctl" value="10" /></div><span class="help">Fills discount price automatically.</span></div>
+        <div class="f"><label>Discount price</label><div class="money"><span class="pre">Rp</span><input class="ctl" value="55.800" /></div></div>
+        <div class="f"><label>Cost price (HPP)</label><div class="money"><span class="pre">Rp</span><input class="ctl" value="40.000" /></div></div>
+      </div>
+    </section>
+
+    <section class="card" id="inventory">
+      <div class="eyebrow"><span class="n">04</span><h3>Inventory</h3><span class="hint">Opening balance</span></div>
+      <div class="grid">
+        <div class="f"><label>Warehouse <span class="req">•</span></label><select class="ctl"><option>Central — Jakarta</option><option>Outlet — Bandung</option></select></div>
+        <div class="f"><label>Opening stock</label><input class="ctl" style="font-family:var(--mono)" value="120" /></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="bar">
+  <div class="metric"><span class="k">Sells at</span><span class="v">Rp 55.800</span></div>
+  <div class="sep"></div>
+  <div class="metric"><span class="k">Margin</span><span class="v good">28.3%</span></div>
+  <div class="actions">
+    <button class="btn btn-ghost">Cancel</button>
+    <button class="btn btn-line">Save draft</button>
+    <button class="btn btn-primary">Save product</button>
+  </div>
+</div>
+</body>
+</html>

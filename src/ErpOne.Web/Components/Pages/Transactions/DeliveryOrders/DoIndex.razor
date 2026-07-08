@@ -1,0 +1,206 @@
+@page "/transactions/delivery-orders"
+@attribute [Authorize(Policy = "transactions.delivery-orders.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Common
+@using ErpOne.Application.DeliveryOrders
+@using ErpOne.Domain.Entities
+@inject IDeliveryOrderService Do
+@inject NavigationManager Nav
+@inject SwalService Swal
+
+<PageTitle>Delivery Order</PageTitle>
+
+<div class="pi">
+
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Transactions</span><span class="sep">·</span><span class="here">Delivery Order</span></nav>
+            <h1>Delivery Order</h1>
+            <p>Pengiriman barang atas Sales Order.</p>
+        </div>
+        <AuthorizeView Policy="transactions.delivery-orders.create">
+            <Authorized>
+                <div class="pi-actions">
+                    <a class="btn btn-primary" href="/transactions/delivery-orders/new"><i class="bi bi-plus-lg"></i> Pengiriman Baru</a>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <!-- ── KPI cards ───────────────────────────────────────────── -->
+    @if (_dash is not null)
+    {
+        <div class="kpis">
+            <div class="kpi">
+                <div class="ic ic-blu"><i class="bi bi-truck"></i></div>
+                <div class="kpi-tx">
+                    <div class="v">@_dash.TotalCount.ToString("N0")</div>
+                    <div class="l">Total DO</div>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-amb"><i class="bi bi-pencil-square"></i></div>
+                <div class="kpi-tx">
+                    <div class="v">@_dash.DraftCount.ToString("N0")</div>
+                    <div class="l">Draft</div>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-grn"><i class="bi bi-check-circle"></i></div>
+                <div class="kpi-tx">
+                    <div class="v">@_dash.PostedCount.ToString("N0")</div>
+                    <div class="l">Posted</div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- ── Toolbar: search + status chips ──────────────────────── -->
+    <div class="toolbar">
+        <div class="search">
+            <i class="bi bi-search"></i>
+            <input placeholder="Cari nomor DO atau SO…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+        </div>
+        <div class="chips">
+            <button class="chip @(_statusFilter is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">Semua</button>
+            @foreach (var s in Enum.GetValues<DeliveryOrderStatus>())
+            {
+                <button class="chip @(_statusFilter == s ? "on" : "")" @onclick="() => SetStatusAsync(s)">@s</button>
+            }
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty">
+            <div class="empty-ic"><i class="bi bi-truck"></i></div>
+            <p>
+                @if (string.IsNullOrEmpty(_search) && _statusFilter is null)
+                {
+                    <span>Belum ada Delivery Order. <a href="/transactions/delivery-orders/new">Buat yang pertama.</a></span>
+                }
+                else
+                {
+                    <span>Tidak ada DO yang cocok dengan filter.</span>
+                }
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-top">
+                <span class="n">Menampilkan <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> dari <b>@_page.Total.ToString("N0")</b></span>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No. DO</th>
+                            <th>Sales Order</th>
+                            <th>Customer</th>
+                            <th>Tanggal</th>
+                            <th class="c">Qty</th>
+                            <th class="c">Status</th>
+                            <th style="width:96px"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in _page.Items)
+                        {
+                            <tr @onclick="() => Open(item.Id)">
+                                <td class="code mono">@item.DoNumber</td>
+                                <td class="code mono">@item.SoNumber</td>
+                                <td class="nm">@item.CustomerName</td>
+                                <td class="code">@item.DeliveryDate.ToString("dd MMM yyyy")</td>
+                                <td class="c mono">@item.TotalQuantity.ToString("N0")</td>
+                                <td class="c"><span class="badge @PillClass(item.Status)">@item.Status</span></td>
+                                <td>
+                                    <div class="rowact">
+                                        <a class="ia" href="@($"/transactions/delivery-orders/{item.Id}")" title="Lihat" @onclick:stopPropagation="true"><i class="bi bi-eye"></i></a>
+                                        @if (item.Status == "Draft")
+                                        {
+                                            <AuthorizeView Policy="transactions.delivery-orders.delete">
+                                                <Authorized>
+                                                    <button class="ia del" @onclick="() => DeleteAsync(item.Id, item.DoNumber)" @onclick:stopPropagation="true" title="Hapus"><i class="bi bi-trash3"></i></button>
+                                                </Authorized>
+                                            </AuthorizeView>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (_page.TotalPages > 1)
+            {
+                <div class="card-foot">
+                    <Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<DeliveryOrderListItemDto>? _page;
+    private DeliveryOrderDashboardDto? _dash;
+    private int _currentPage = 1;
+    private string? _search;
+    private DeliveryOrderStatus? _statusFilter;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _dash = await Do.GetDashboardAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync() =>
+        _page = await Do.GetPagedAsync(_currentPage, PageSize, _search, _statusFilter);
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        _currentPage = 1;
+        await LoadAsync();
+    }
+
+    private async Task SetStatusAsync(DeliveryOrderStatus? status)
+    {
+        _statusFilter = status;
+        _currentPage = 1;
+        await LoadAsync();
+    }
+
+    private async Task GoToPageAsync(int page)
+    {
+        _currentPage = page;
+        await LoadAsync();
+    }
+
+    private void Open(int id) => Nav.NavigateTo($"/transactions/delivery-orders/{id}");
+
+    private async Task DeleteAsync(int id, string doNumber)
+    {
+        if (!await Swal.ConfirmAsync("Hapus DO?", $"\"{doNumber}\" akan dihapus permanen."))
+            return;
+
+        await Do.DeleteDraftAsync(id);
+        _dash = await Do.GetDashboardAsync();
+        await LoadAsync();
+        await Swal.ToastAsync("success", "Delivery order dihapus");
+    }
+
+    private static string PillClass(string status) => status switch
+    {
+        "Posted" => "b-ok",
+        "Draft" => "b-off",
+        _ => "b-dark"
+    };
+}

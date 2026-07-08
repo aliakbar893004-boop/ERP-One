@@ -1,0 +1,261 @@
+@page "/transactions/delivery-orders/new"
+@page "/transactions/delivery-orders/{Id:int}/edit"
+@attribute [Authorize(Policy = "transactions.delivery-orders.create")]
+@rendermode InteractiveServer
+@using FluentValidation
+@using ErpOne.Application.DeliveryOrders
+@inject IDeliveryOrderService Do
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>@Title</PageTitle>
+
+<div class="pf">
+
+    <div class="pf-top">
+        <div class="crumbs">
+            <a href="/transactions/delivery-orders">Transactions</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/transactions/delivery-orders">Delivery Orders</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="pf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+    }
+
+    <div class="pf-layout">
+
+        <!-- ── LEFT: section navigator ─────────────────────────── -->
+        <aside class="pf-nav">
+            <div class="prog">
+                <div class="lbl"><span>Required</span><span>@ReqFilled / @ReqTotal</span></div>
+                <div class="track"><div class="fill" style="width:@(ReqFilled * 100 / ReqTotal)%"></div></div>
+            </div>
+            <button type="button" class="nlink @(_activeSection == "sec-info" ? "on" : "")"
+                    @onclick='() => ScrollTo("sec-info")'>
+                <span class="ic"><i class="bi bi-receipt"></i></span> Information
+                @if (_selectedSoId > 0)
+                {
+                    <i class="bi bi-check-circle-fill ck"></i>
+                }
+            </button>
+            <button type="button" class="nlink @(_activeSection == "sec-items" ? "on" : "")"
+                    @onclick='() => ScrollTo("sec-items")'>
+                <span class="ic"><i class="bi bi-box-seam"></i></span> Delivered Items
+                <span class="badge-n">@DeliveredLineCount</span>
+            </button>
+        </aside>
+
+        <!-- ── RIGHT: form panels ──────────────────────────────── -->
+        <main class="pf-main">
+
+            <section id="sec-info" class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-receipt"></i></span>
+                    <div class="hd-tx">
+                        <h2>Delivery information</h2>
+                        <p>The sales order delivered and the delivery date.</p>
+                    </div>
+                </div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="c6">
+                            <label class="fl">Sales Order <span class="req">*</span></label>
+                            @if (Id is not null)
+                            {
+                                <input class="ctl" readonly value="@_soNumber" />
+                            }
+                            else
+                            {
+                                <select class="ctl sel" value="@_selectedSoId" @onchange="OnSoChanged">
+                                    <option value="0">— select SO —</option>
+                                    @foreach (var so in _sos)
+                                    {
+                                        <option value="@so.Id">@so.SoNumber — @so.CustomerName</option>
+                                    }
+                                </select>
+                            }
+                        </div>
+                        <div class="c2">
+                            <label class="fl">Delivery Date <span class="req">*</span></label>
+                            <input type="date" class="ctl" @bind="_deliveryDate" />
+                        </div>
+                        <div class="c12">
+                            <label class="fl">Notes</label>
+                            <textarea class="ctl" rows="2" maxlength="500" placeholder="Optional…" @bind="_notes"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="sec-items" class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-box-seam"></i></span>
+                    <div class="hd-tx">
+                        <h2>Delivered Items</h2>
+                        <p>Enter the delivered quantity per line. Cost of goods is captured automatically on posting.</p>
+                    </div>
+                </div>
+                <div class="card-b">
+                    @if (_rows.Count > 0)
+                    {
+                        <div class="table-responsive">
+                            <table class="items">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width:200px">Product</th>
+                                        <th style="width:100px">SKU</th>
+                                        <th class="r" style="width:90px">Ordered</th>
+                                        <th class="r" style="width:130px">Already Delivered</th>
+                                        <th style="width:130px">Qty Delivered</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var row in _rows)
+                                    {
+                                        <tr>
+                                            <td class="pn">@row.ProductName</td>
+                                            <td class="sku">@row.Sku</td>
+                                            <td class="r mono">@row.Ordered</td>
+                                            <td class="r mono">@row.AlreadyDelivered</td>
+                                            <td><input type="number" min="0" class="ctl ctl-sm mono text-end" @bind="row.Qty" /></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="hint"><i class="bi bi-info-circle me-1"></i>Select a sales order to load deliverable items.</div>
+                    }
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <div class="pf-footer">
+        <div class="in">
+            <span class="note"><span class="req">*</span> required fields</span>
+            <span class="gt">Total Qty: <b>@_rows.Where(r => r.Qty > 0).Sum(r => r.Qty)</b></span>
+            <a class="btn btn-ghost" href="/transactions/delivery-orders"><i class="bi bi-x-lg"></i> Cancel</a>
+            <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                @if (_saving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                }
+                else
+                {
+                    <i class="bi bi-check2"></i>
+                }
+                Save Draft
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    [SupplyParameterFromQuery] public int? SoId { get; set; }
+
+    private List<DeliverableSoDto> _sos = new();
+    private int _selectedSoId;
+    private string _soNumber = "";
+    private DateTime _deliveryDate = DateTime.Today;
+    private string? _notes;
+    private List<Row> _rows = new();
+    private bool _saving;
+    private string? _error;
+
+    private sealed class Row
+    {
+        public int SalesOrderLineId { get; set; }
+        public string ProductName { get; set; } = "";
+        public string Sku { get; set; } = "";
+        public int Ordered { get; set; }
+        public int AlreadyDelivered { get; set; }
+        public int Qty { get; set; }
+    }
+
+    private string Title => Id is null ? "Add Delivery Order" : "Edit Delivery Order";
+
+    // Atlas nav: required-field progress (SO selected + ≥1 delivered line)
+    private const int ReqTotal = 2;
+    private int ReqFilled => (_selectedSoId > 0 ? 1 : 0) + (DeliveredLineCount > 0 ? 1 : 0);
+    private int DeliveredLineCount => _rows.Count(r => r.Qty > 0);
+
+    // Atlas nav: active section highlight + smooth scroll
+    private string _activeSection = "sec-info";
+
+    private async Task ScrollTo(string id)
+    {
+        _activeSection = id;
+        await JS.InvokeVoidAsync("pfScrollTo", id);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id is int did) { await LoadForEditAsync(did); return; }
+        _sos = (await Do.GetDeliverableSosAsync()).ToList();
+        if (SoId is int s) { _selectedSoId = s; await LoadSoLinesAsync(s); }
+    }
+
+    private async Task LoadSoLinesAsync(int soId)
+    {
+        var so = await Do.GetSoForDeliveryAsync(soId);
+        _rows = so is null ? new() : so.Lines.Select(l => new Row {
+            SalesOrderLineId = l.SalesOrderLineId, ProductName = l.ProductName, Sku = l.VariantSku,
+            Ordered = l.OrderedQuantity, AlreadyDelivered = l.AlreadyDeliveredQuantity,
+            Qty = l.RemainingQuantity
+        }).ToList();
+    }
+
+    private async Task LoadForEditAsync(int did)
+    {
+        var g = await Do.GetByIdAsync(did);
+        if (g is null || g.Status != "Draft") { Nav.NavigateTo($"/transactions/delivery-orders/{did}"); return; }
+        _selectedSoId = g.SalesOrderId; _soNumber = g.SoNumber; _deliveryDate = g.DeliveryDate; _notes = g.Notes;
+        _rows = g.Lines.Select(l => new Row {
+            SalesOrderLineId = l.SalesOrderLineId, ProductName = l.ProductName, Sku = l.VariantSku,
+            Ordered = l.OrderedQuantity, AlreadyDelivered = 0, Qty = l.QuantityDelivered
+        }).ToList();
+    }
+
+    private async Task OnSoChanged(ChangeEventArgs e)
+    {
+        _selectedSoId = int.TryParse(e.Value?.ToString(), out var v) ? v : 0;
+        if (_selectedSoId > 0) await LoadSoLinesAsync(_selectedSoId); else _rows = new();
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null; _saving = true;
+        try
+        {
+            var lines = _rows.Where(r => r.Qty > 0)
+                .Select(r => new DeliveryOrderLineRequest(r.SalesOrderLineId, r.Qty)).ToList();
+            if (Id is int did)
+            {
+                await Do.UpdateDraftAsync(did, new UpdateDeliveryOrderRequest(_deliveryDate, _notes, lines));
+                Nav.NavigateTo($"/transactions/delivery-orders/{did}");
+            }
+            else
+            {
+                if (_selectedSoId <= 0) { _error = "Select a sales order first."; return; }
+                if (lines.Count == 0) { _error = "Enter a delivered quantity on at least one line."; return; }
+                var created = await Do.CreateDraftAsync(new CreateDeliveryOrderRequest(_selectedSoId, _deliveryDate, _notes, lines));
+                Nav.NavigateTo($"/transactions/delivery-orders/{created.Id}");
+            }
+        }
+        catch (ValidationException ex)
+        {
+            _error = string.Join("; ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        finally { _saving = false; }
+    }
+}

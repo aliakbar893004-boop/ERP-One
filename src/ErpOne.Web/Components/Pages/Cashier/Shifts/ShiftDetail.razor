@@ -1,0 +1,221 @@
+@page "/cashier/shifts/{Id:int}"
+@attribute [Authorize(Policy = "cashier.shifts.index")]
+@rendermode InteractiveServer
+@using FluentValidation
+@using ErpOne.Application.CashierShifts
+@inject ICashierShiftService Shifts
+@inject NavigationManager Nav
+@inject SwalService Swal
+
+<PageTitle>@(_shift?.ShiftNumber ?? "Sesi Kasir")</PageTitle>
+
+<div class="pf">
+
+    <div class="pf-top">
+        <div class="crumbs">
+            <a href="/cashier/shifts">Kasir</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/cashier/shifts">Sesi Kasir</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">@(_shift?.ShiftNumber ?? "Detail")</span>
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+    }
+    else if (_shift is null)
+    {
+        <div class="pf-alert warn"><i class="bi bi-exclamation-triangle"></i> Sesi kasir tidak ditemukan.</div>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <div class="pf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+        }
+
+        <div class="pd-head">
+            <h1>@_shift.ShiftNumber</h1>
+            <span class="badge @StatusClass(_shift.Status)">@_shift.Status</span>
+            <div class="actions">
+                @if (_shift.Status == "Open")
+                {
+                    <a class="btn btn-line" href="/cashier/pos"><i class="bi bi-bag-check"></i> Masuk Kasir</a>
+                }
+                @if (CanClose)
+                {
+                    <AuthorizeView Policy="cashier.shifts.close">
+                        <Authorized>
+                            <button class="btn btn-primary" @onclick="() => _showClose = !_showClose" disabled="@_busy"><i class="bi bi-lock"></i> Tutup Shift</button>
+                        </Authorized>
+                    </AuthorizeView>
+                }
+            </div>
+        </div>
+
+        @if (_showClose && CanClose)
+        {
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-lock-fill"></i></span>
+                    <h2>Tutup Shift</h2>
+                </div>
+                <div class="card-b">
+                    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+                        <div>
+                            <label class="fl">Kas Fisik Terhitung (Rp)</label>
+                            <input class="ctl mono" type="number" min="0" step="1" @bind="_countedCash" />
+                        </div>
+                        <div style="flex:1;min-width:220px">
+                            <label class="fl">Catatan (opsional)</label>
+                            <input class="ctl" maxlength="500" @bind="_closingNote" placeholder="mis. selisih karena…" />
+                        </div>
+                        <div style="display:flex;gap:8px">
+                            <button class="btn btn-primary" @onclick="CloseShiftAsync" disabled="@_busy"><i class="bi bi-check-lg"></i> Konfirmasi Tutup</button>
+                            <button class="btn btn-line" @onclick="() => { _showClose = false; _error = null; }">Batal</button>
+                        </div>
+                    </div>
+                    <p class="mt-2" style="color:var(--muted);font-size:13px">Expected kas saat ini: <b class="mono">@_shift.ExpectedCash.ToString("N2")</b> (saldo awal @_shift.OpeningFloat.ToString("N2") + penjualan tunai @_shift.CashSalesTotal.ToString("N2")).</p>
+                </div>
+            </section>
+        }
+
+        <section class="card">
+            <div class="card-h">
+                <span class="hd-ic"><i class="bi bi-receipt"></i></span>
+                <h2>Informasi</h2>
+            </div>
+            <div class="card-b">
+                <dl class="dl">
+                    <dt>No. Shift</dt><dd><span class="grn-no">@_shift.ShiftNumber</span></dd>
+                    <dt>Gudang</dt><dd>@_shift.WarehouseName</dd>
+                    <dt>Kasir</dt><dd>@_shift.CashierName</dd>
+                    <dt>Dibuka</dt><dd>@_shift.OpenedAt.ToString("dd MMM yyyy HH:mm")</dd>
+                    <dt>Saldo Awal</dt><dd class="mono">@_shift.OpeningFloat.ToString("N2")</dd>
+                    @if (_shift.Status == "Closed")
+                    {
+                        <dt>Ditutup</dt><dd>@(_shift.ClosedAt?.ToString("dd MMM yyyy HH:mm") ?? "—")</dd>
+                        <dt>Catatan</dt><dd>@(_shift.ClosingNote ?? "—")</dd>
+                    }
+                </dl>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-h">
+                <span class="hd-ic"><i class="bi bi-cash-coin"></i></span>
+                <h2>Rekonsiliasi Kas</h2>
+            </div>
+            <div class="card-b">
+                <dl class="dl">
+                    <dt>Saldo Awal</dt><dd class="mono">@_shift.OpeningFloat.ToString("N2")</dd>
+                    <dt>Penjualan Tunai</dt><dd class="mono">@_shift.CashSalesTotal.ToString("N2")</dd>
+                    <dt>Expected Cash</dt><dd class="mono"><b>@_shift.ExpectedCash.ToString("N2")</b></dd>
+                    @if (_shift.Status == "Closed")
+                    {
+                        <dt>Kas Terhitung</dt><dd class="mono">@(_shift.CountedCash?.ToString("N2") ?? "—")</dd>
+                        <dt>Selisih</dt>
+                        <dd class="mono" style="@(_shift.CashVariance < 0 ? "color:#C04A4A;font-weight:600" : (_shift.CashVariance > 0 ? "color:#0E9F6E;font-weight:600" : ""))">
+                            @(_shift.CashVariance?.ToString("N2") ?? "—")
+                        </dd>
+                    }
+                </dl>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-h">
+                <span class="hd-ic"><i class="bi bi-list-columns"></i></span>
+                <h2>Total per Metode</h2>
+            </div>
+            <div class="card-b">
+                @if (_shift.MethodTotals.Count == 0)
+                {
+                    <p style="color:var(--muted)">Belum ada penjualan pada shift ini.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="items">
+                            <thead>
+                                <tr>
+                                    <th>Metode</th>
+                                    <th class="r">Transaksi</th>
+                                    <th class="r">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var m in _shift.MethodTotals)
+                                {
+                                    <tr>
+                                        <td class="pn">@m.MethodName</td>
+                                        <td class="r mono">@m.TransactionCount</td>
+                                        <td class="r mono">@m.TotalAmount.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td class="r"><b>Grand Total</b></td>
+                                    <td class="r mono">@_shift.TransactionCount</td>
+                                    <td class="r mono"><b>@_shift.TotalSalesAmount.ToString("N2")</b></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private CashierShiftDto? _shift;
+    private bool _loading = true, _busy, _showClose;
+    private decimal _countedCash;
+    private string? _closingNote;
+    private string _userId = "";
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _userId = (await AuthStateTask).User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _shift = await Shifts.GetByIdAsync(Id);
+        _loading = false;
+    }
+
+    private bool CanClose => _shift is { Status: "Open" } && _shift.CashierUserId == _userId;
+
+    private async Task CloseShiftAsync()
+    {
+        _error = null; _busy = true;
+        try
+        {
+            if (!await Swal.ConfirmAsync("Tutup shift ini?", "Setelah ditutup tidak bisa diubah.", "Ya, Tutup")) { _busy = false; return; }
+            await Shifts.CloseAsync(Id, _userId, new CloseShiftRequest(_countedCash, _closingNote));
+            _showClose = false;
+            await LoadAsync();
+            await Swal.ToastAsync("success", "Shift ditutup");
+        }
+        catch (ValidationException ex) { _error = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage)); }
+        finally { _busy = false; }
+    }
+
+    private static string StatusClass(string status) => status switch
+    {
+        "Open" => "b-ok",
+        "Closed" => "b-done",
+        _ => "b-dark"
+    };
+}

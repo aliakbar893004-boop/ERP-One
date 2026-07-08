@@ -1,0 +1,364 @@
+@page "/transactions/sales-orders/new"
+@page "/transactions/sales-orders/{Id:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using FluentValidation
+@using ErpOne.Application.SalesOrders
+@using ErpOne.Application.Customers
+@using ErpOne.Application.Warehouses
+@using ErpOne.Application.Taxes
+@using ErpOne.Web.Authorization
+@inject ISalesOrderService SoService
+@inject ICustomerService CustomerService
+@inject IWarehouseService WarehouseService
+@inject ITaxService TaxService
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>@Title</PageTitle>
+
+<div class="pf">
+
+    <div class="pf-top">
+        <div class="crumbs">
+            <a href="/transactions/sales-orders">Transactions</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/transactions/sales-orders">Sales Orders</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+    }
+    else if (_notFound)
+    {
+        <div class="pf-alert err"><i class="bi bi-exclamation-octagon"></i> Sales order not found or not a draft.</div>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <div class="pf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+        }
+
+        <div class="pf-layout">
+
+            <!-- ── LEFT: section navigator ─────────────────────────── -->
+            <aside class="pf-nav">
+                <div class="prog">
+                    <div class="lbl"><span>Required</span><span>@ReqFilled / @ReqTotal</span></div>
+                    <div class="track"><div class="fill" style="width:@(ReqFilled * 100 / ReqTotal)%"></div></div>
+                </div>
+                <button type="button" class="nlink @(_activeSection == "sec-info" ? "on" : "")"
+                        @onclick='() => ScrollTo("sec-info")'>
+                    <span class="ic"><i class="bi bi-receipt"></i></span> Information
+                    @if (InfoComplete)
+                    {
+                        <i class="bi bi-check-circle-fill ck"></i>
+                    }
+                </button>
+                <button type="button" class="nlink @(_activeSection == "sec-items" ? "on" : "")"
+                        @onclick='() => ScrollTo("sec-items")'>
+                    <span class="ic"><i class="bi bi-box-seam"></i></span> Items
+                    <span class="badge-n">@ValidLineCount</span>
+                </button>
+            </aside>
+
+            <!-- ── RIGHT: form panels ──────────────────────────────── -->
+            <main class="pf-main">
+
+                <!-- SO information -->
+                <section id="sec-info" class="card">
+                    <div class="card-h">
+                        <span class="hd-ic"><i class="bi bi-receipt"></i></span>
+                        <div class="hd-tx">
+                            <h2>Sales order information</h2>
+                            <p>Customer, source warehouse, and date.</p>
+                        </div>
+                    </div>
+                    <div class="card-b">
+                        <div class="grid">
+                            <div class="c4">
+                                <label class="fl">Customer <span class="req">*</span></label>
+                                <select class="ctl sel" value="@_customerId" @onchange="OnCustomerChanged">
+                                    <option value="0">— select customer —</option>
+                                    @foreach (var c in _customers)
+                                    {
+                                        <option value="@c.Id">@c.Code — @c.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="c4">
+                                <label class="fl">Source Warehouse <span class="req">*</span></label>
+                                <select class="ctl sel" @bind="_warehouseId">
+                                    <option value="0">— select warehouse —</option>
+                                    @foreach (var w in _warehouses)
+                                    {
+                                        <option value="@w.Id">@w.Code — @w.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="c2">
+                                <label class="fl">Date <span class="req">*</span></label>
+                                <input type="date" class="ctl" @bind="_orderDate" />
+                            </div>
+                            <div class="c2">
+                                <label class="fl">Expected Date</label>
+                                <input type="date" class="ctl" @bind="_expectedDate" />
+                            </div>
+                            <div class="c12">
+                                <label class="fl">Notes</label>
+                                <textarea class="ctl" rows="2" maxlength="500" placeholder="Optional…" @bind="_notes"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Line items -->
+                <section id="sec-items" class="card">
+                    <div class="card-h">
+                        <span class="hd-ic"><i class="bi bi-box-seam"></i></span>
+                        <div class="hd-tx">
+                            <h2>Items</h2>
+                            <p>Products sold, price, discount, and tax per line.</p>
+                        </div>
+                        <div class="hd-act">
+                            <button type="button" class="btn btn-soft" @onclick="AddRow"><i class="bi bi-plus-lg"></i> Add Row</button>
+                        </div>
+                    </div>
+                    <div class="card-b">
+                        <div class="table-responsive">
+                            <table class="items">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width:220px">Product (Variant)</th>
+                                        <th style="width:90px">Qty</th>
+                                        <th style="width:130px">Price</th>
+                                        <th style="width:90px">Disc %</th>
+                                        <th style="width:150px">Tax</th>
+                                        <th class="text-end" style="width:130px">Subtotal</th>
+                                        <th style="width:40px"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var row in _rows)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <select class="ctl sel ctl-sm" value="@row.VariantId"
+                                                        @onchange="e => OnVariantChanged(row, e.Value?.ToString())">
+                                                    <option value="0">— select —</option>
+                                                    @foreach (var v in _variants)
+                                                    {
+                                                        <option value="@v.VariantId">@v.Sku — @v.ProductName</option>
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td><input type="number" min="1" class="ctl ctl-sm mono text-end" @bind="row.Quantity" @bind:after="RefreshCreditAsync" /></td>
+                                            <td><input type="number" min="0" step="0.01" class="ctl ctl-sm mono text-end" @bind="row.UnitPrice" @bind:after="RefreshCreditAsync" /></td>
+                                            <td><input type="number" min="0" max="100" step="0.01" class="ctl ctl-sm mono text-end" @bind="row.DiscountPercent" @bind:after="RefreshCreditAsync" /></td>
+                                            <td>
+                                                <select class="ctl sel ctl-sm" @bind="row.TaxId" @bind:after="RefreshCreditAsync">
+                                                    <option value="">no tax</option>
+                                                    @foreach (var t in _taxes)
+                                                    {
+                                                        <option value="@t.Id">@t.Name (@t.Rate%)</option>
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td class="text-end sub">@LineTotal(row).ToString("N2")</td>
+                                            <td><button type="button" class="vr-del" title="Remove" @onclick="() => RemoveRow(row)"><i class="bi bi-trash3"></i></button></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (_rows.Count == 0)
+                        {
+                            <div class="hint"><i class="bi bi-info-circle me-1"></i>No rows yet. Click “Add Row” to add an item.</div>
+                        }
+                    </div>
+                </section>
+
+            </main>
+        </div>
+
+        @if (_credit is { ExceedsLimit: true })
+        {
+            <div class="pf-alert" style="background:#FEF3C7;border:1px solid #F59E0B;color:#92400E">
+                <i class="bi bi-exclamation-triangle"></i>
+                Peringatan kredit: perkiraan outstanding @_credit.EstimatedOutstanding.ToString("N2")
+                + order ini @_credit.ThisOrderTotal.ToString("N2")
+                melebihi limit @_credit.CreditLimit.ToString("N2"). SO tetap dapat disimpan.
+            </div>
+        }
+
+        <div class="pf-footer">
+            <div class="in">
+                <span class="note"><span class="req">*</span> required fields</span>
+                <span class="gt">Grand Total: <b>@GrandTotal().ToString("N2")</b></span>
+                <a class="btn btn-ghost" href="/transactions/sales-orders"><i class="bi bi-x-lg"></i> Cancel</a>
+                <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                    @if (_saving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-check2"></i>
+                    }
+                    Save Draft
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private sealed class Row
+    {
+        public int VariantId { get; set; }
+        public int Quantity { get; set; } = 1;
+        public decimal UnitPrice { get; set; }
+        public decimal DiscountPercent { get; set; }
+        public int? TaxId { get; set; }
+    }
+
+    private IReadOnlyList<CustomerDto> _customers = [];
+    private IReadOnlyList<WarehouseDto> _warehouses = [];
+    private IReadOnlyList<TaxDto> _taxes = [];
+    private IReadOnlyList<SalesOrderVariantOptionDto> _variants = [];
+    private readonly List<Row> _rows = [];
+
+    private int _customerId, _warehouseId;
+    private DateTime _orderDate = DateTime.Today;
+    private DateTime? _expectedDate;
+    private string? _notes;
+    private bool _loading = true, _saving, _notFound;
+    private string? _error;
+    private SalesOrderCreditInfoDto? _credit;
+
+    private string Title => Id is null ? "Add Sales Order" : "Edit Sales Order";
+
+    // Atlas nav: required-field progress (Customer + Gudang + ≥1 item line)
+    private const int ReqTotal = 3;
+    private int ReqFilled => (_customerId > 0 ? 1 : 0) + (_warehouseId > 0 ? 1 : 0) + (ValidLineCount > 0 ? 1 : 0);
+    private bool InfoComplete => _customerId > 0 && _warehouseId > 0;
+    private int ValidLineCount => _rows.Count(r => r.VariantId > 0);
+
+    // Atlas nav: active section highlight + smooth scroll
+    private string _activeSection = "sec-info";
+
+    private async Task ScrollTo(string id)
+    {
+        _activeSection = id;
+        await JS.InvokeVoidAsync("pfScrollTo", id);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateTask;
+        var perm = Id is null ? AppMenus.Perm("transactions.sales-orders", "create")
+                              : AppMenus.Perm("transactions.sales-orders", "edit");
+        if (!(await Auth.AuthorizeAsync(state.User, perm)).Succeeded)
+        {
+            Nav.NavigateTo("/transactions/sales-orders");
+            return;
+        }
+
+        _customers = await CustomerService.GetAllAsync();
+        _warehouses = await WarehouseService.GetAllAsync();
+        _taxes = await TaxService.GetAllAsync();
+        _variants = await SoService.SearchVariantsAsync(null);
+
+        if (Id is int id)
+        {
+            var so = await SoService.GetByIdAsync(id);
+            if (so is null || so.Status != "Draft") { _notFound = true; }
+            else
+            {
+                _customerId = so.CustomerId; _warehouseId = so.WarehouseId;
+                _orderDate = so.OrderDate; _expectedDate = so.ExpectedDate; _notes = so.Notes;
+                foreach (var l in so.Lines)
+                    _rows.Add(new Row { VariantId = l.ProductVariantId, Quantity = l.Quantity, UnitPrice = l.UnitPrice, DiscountPercent = l.DiscountPercent, TaxId = l.TaxId });
+            }
+        }
+        else
+        {
+            AddRow();
+        }
+        await RefreshCreditAsync();
+        _loading = false;
+    }
+
+    private void AddRow() => _rows.Add(new Row());
+
+    private async Task RemoveRow(Row row)
+    {
+        _rows.Remove(row);
+        await RefreshCreditAsync();
+    }
+
+    private async Task OnCustomerChanged(ChangeEventArgs e)
+    {
+        _customerId = int.TryParse(e.Value?.ToString(), out var v) ? v : 0;
+        await RefreshCreditAsync();
+    }
+
+    private async Task OnVariantChanged(Row row, string? value)
+    {
+        row.VariantId = int.TryParse(value, out var id) ? id : 0;
+        var v = _variants.FirstOrDefault(x => x.VariantId == row.VariantId);
+        if (v is not null && row.UnitPrice == 0) row.UnitPrice = v.DiscountPrice ?? v.Price; // saran harga jual
+        await RefreshCreditAsync();
+    }
+
+    private async Task RefreshCreditAsync()
+    {
+        if (_customerId <= 0) { _credit = null; return; }
+        _credit = await SoService.GetCreditInfoAsync(_customerId, GrandTotal(), Id, default);
+    }
+
+    private decimal LineTotal(Row r)
+    {
+        var sub = Math.Round(r.Quantity * r.UnitPrice, 2, MidpointRounding.AwayFromZero);
+        var disc = Math.Round(sub * r.DiscountPercent / 100m, 2, MidpointRounding.AwayFromZero);
+        var rate = r.TaxId is { } tid ? _taxes.FirstOrDefault(t => t.Id == tid)?.Rate ?? 0m : 0m;
+        var tax = Math.Round((sub - disc) * rate / 100m, 2, MidpointRounding.AwayFromZero);
+        return sub - disc + tax;
+    }
+
+    private decimal GrandTotal() => _rows.Sum(LineTotal);
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        var lines = _rows.Where(r => r.VariantId > 0)
+            .Select(r => new SalesOrderLineRequest(r.VariantId, r.Quantity, r.UnitPrice, r.DiscountPercent, r.TaxId))
+            .ToList();
+        if (_customerId <= 0) { _error = "Select a customer first."; return; }
+        if (lines.Count == 0) { _error = "Select at least one line item with a product."; return; }
+
+        _saving = true;
+        try
+        {
+            if (Id is int id)
+                await SoService.UpdateAsync(id, new UpdateSalesOrderRequest(_warehouseId, _orderDate, _expectedDate, _notes, lines));
+            else
+                await SoService.CreateAsync(new CreateSalesOrderRequest(_customerId, _warehouseId, _orderDate, _expectedDate, _notes, lines));
+            Nav.NavigateTo("/transactions/sales-orders");
+        }
+        catch (ValidationException ex)
+        {
+            _error = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        finally { _saving = false; }
+    }
+}

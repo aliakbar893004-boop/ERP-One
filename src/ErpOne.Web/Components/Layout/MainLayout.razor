@@ -1,0 +1,129 @@
+@inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <button type="button" id="theme-toggle" class="theme-toggle"
+                    title="Toggle dark / light mode" aria-label="Toggle dark / light mode">
+                <i class="bi bi-moon-stars theme-icon-to-dark" aria-hidden="true"></i>
+                <i class="bi bi-sun-fill theme-icon-to-light" aria-hidden="true"></i>
+            </button>
+
+            <div class="dropdown">
+                <button type="button" class="appearance-toggle" data-bs-toggle="dropdown"
+                        data-bs-auto-close="outside" aria-expanded="false"
+                        title="Tampilan" aria-label="Pengaturan tampilan">
+                    <i class="bi bi-fonts" aria-hidden="true"></i>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end appearance-menu">
+                    <div class="ap-group">
+                        <div class="ap-label">Ukuran huruf</div>
+                        <div class="ap-seg">
+                            <button type="button" class="ap-opt" data-set="font-size" data-val="sm">Kecil</button>
+                            <button type="button" class="ap-opt" data-set="font-size" data-val="md">Normal</button>
+                            <button type="button" class="ap-opt" data-set="font-size" data-val="lg">Besar</button>
+                        </div>
+                    </div>
+                    <div class="ap-group">
+                        <div class="ap-label">Jenis huruf</div>
+                        <div class="ap-list">
+                            <button type="button" class="ap-opt ap-font" data-set="font" data-val="plex" style="font-family:'IBM Plex Sans',sans-serif">IBM Plex Sans</button>
+                            <button type="button" class="ap-opt ap-font" data-set="font" data-val="inter" style="font-family:'Inter',sans-serif">Inter</button>
+                            <button type="button" class="ap-opt ap-font" data-set="font" data-val="lexend" style="font-family:'Lexend',sans-serif">Lexend</button>
+                            <button type="button" class="ap-opt ap-font" data-set="font" data-val="figtree" style="font-family:'Figtree',sans-serif">Figtree</button>
+                            <button type="button" class="ap-opt ap-font" data-set="font" data-val="system" style="font-family:system-ui,sans-serif">System default</button>
+                        </div>
+                    </div>
+                    <div class="ap-group">
+                        <div class="ap-label">Warna aksen</div>
+                        <div class="ap-swatches">
+                            <button type="button" class="ap-sw" data-set="accent" data-val="emerald" style="--sw:#0E9F6E" title="Emerald" aria-label="Emerald"></button>
+                            <button type="button" class="ap-sw" data-set="accent" data-val="teal" style="--sw:#0D9488" title="Teal" aria-label="Teal"></button>
+                            <button type="button" class="ap-sw" data-set="accent" data-val="cyan" style="--sw:#0891B2" title="Cyan" aria-label="Cyan"></button>
+                            <button type="button" class="ap-sw" data-set="accent" data-val="blue" style="--sw:#2563EB" title="Blue" aria-label="Blue"></button>
+                            <button type="button" class="ap-sw" data-set="accent" data-val="indigo" style="--sw:#4F46E5" title="Indigo" aria-label="Indigo"></button>
+                            <button type="button" class="ap-sw" data-set="accent" data-val="purple" style="--sw:#7C3AED" title="Purple" aria-label="Purple"></button>
+                            <button type="button" class="ap-sw" data-set="accent" data-val="pink" style="--sw:#DB2777" title="Pink" aria-label="Pink"></button>
+                            <button type="button" class="ap-sw" data-set="accent" data-val="rose" style="--sw:#E11D48" title="Rose" aria-label="Rose"></button>
+                            <button type="button" class="ap-sw" data-set="accent" data-val="orange" style="--sw:#EA580C" title="Orange" aria-label="Orange"></button>
+                            <button type="button" class="ap-sw" data-set="accent" data-val="amber" style="--sw:#D97706" title="Amber" aria-label="Amber"></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <AuthorizeView>
+                <Authorized>
+                    <div class="dropdown ms-2">
+                        <button class="u-trigger dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown" data-bs-offset="0,6" aria-expanded="false">
+                            <div class="u-avatar @AvatarClass(context.User.Identity?.Name)">
+                                @Initials(context.User.Identity?.Name)
+                            </div>
+                            <div class="u-info">
+                                <span class="u-name">@context.User.Identity?.Name</span>
+                                <span class="u-sub">My Account</span>
+                            </div>
+                            <i class="bi bi-chevron-down u-chevron"></i>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end u-dropdown">
+                            <div class="u-dropdown-header">
+                                <div class="u-avatar-lg @AvatarClass(context.User.Identity?.Name)">
+                                    @Initials(context.User.Identity?.Name)
+                                </div>
+                                <div class="ms-2 overflow-hidden">
+                                    <div class="u-dname">@context.User.Identity?.Name</div>
+                                    <div class="u-dsub">Active user</div>
+                                </div>
+                            </div>
+                            <hr class="dropdown-divider my-1" />
+                            <a class="dropdown-item u-ditem" href="/account/change-password">
+                                <i class="bi bi-key-fill me-2 text-warning"></i>Change Password
+                            </a>
+                            <hr class="dropdown-divider my-1" />
+                            <form method="post" action="/Account/Logout">
+                                <button type="submit" class="dropdown-item u-ditem u-logout">
+                                    <i class="bi bi-box-arrow-right me-2"></i>Logout
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    private static string Initials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var p = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return p.Length >= 2
+            ? $"{char.ToUpper(p[0][0])}{char.ToUpper(p[^1][0])}"
+            : char.ToUpper(name[0]).ToString();
+    }
+
+    private static string AvatarClass(string? name)
+    {
+        var cs = new[] { "av-blue", "av-green", "av-purple", "av-orange", "av-teal" };
+        if (string.IsNullOrEmpty(name)) return cs[0];
+        var h = 0;
+        foreach (var c in name) h += c;
+        return cs[Math.Abs(h) % cs.Length];
+    }
+}

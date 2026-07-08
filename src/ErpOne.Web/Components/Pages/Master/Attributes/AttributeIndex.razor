@@ -1,0 +1,157 @@
+@page "/master/attributes"
+@attribute [Authorize(Policy = "master.attributes.index")]
+@rendermode InteractiveServer
+@inject IAttributeService AttributeService
+@inject NavigationManager Nav
+@inject SwalService Swal
+
+<PageTitle>Attributes</PageTitle>
+
+<div class="pi">
+
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Master</span><span class="sep">·</span><span class="here">Attributes</span></nav>
+            <h1>Attributes</h1>
+            <p>Manage product attributes and their values.</p>
+        </div>
+        <AuthorizeView Policy="master.attributes.create">
+            <Authorized>
+                <div class="pi-actions">
+                    <a class="btn btn-primary" href="/master/attributes/new"><i class="bi bi-plus-lg"></i> Add attribute</a>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <div class="toolbar">
+        <div class="search">
+            <i class="bi bi-search"></i>
+            <input placeholder="Search code or name…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty">
+            <div class="empty-ic"><i class="bi bi-sliders2"></i></div>
+            <p>
+                @if (string.IsNullOrEmpty(_search))
+                {
+                    <span>No attributes yet. <a href="/master/attributes/new">Add the first one.</a></span>
+                }
+                else
+                {
+                    <span>No attributes match your search.</span>
+                }
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-top">
+                <span class="n">Showing <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> of <b>@_page.Total.ToString("N0")</b></span>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:140px">Code</th>
+                            <th>Name</th>
+                            <th>Values</th>
+                            <th style="width:170px">Created</th>
+                            <th class="text-end pe-3" style="width:120px"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in _page.Items)
+                        {
+                            <tr>
+                                <td class="code mono">@item.Code</td>
+                                <td class="nm">@item.Name</td>
+                                <td>
+                                    @if (item.Values.Count == 0)
+                                    {
+                                        <span>—</span>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var v in item.Values)
+                                        {
+                                            <span class="badge b-off me-1">@v.Value</span>
+                                        }
+                                    }
+                                </td>
+                                <td class="code">
+                                    @item.CreatedAt.ToLocalTime().ToString("d MMM yyyy")
+                                    @if (item.CreatedBy is not null)
+                                    {
+                                        <span class="opacity-75">· @item.CreatedBy</span>
+                                    }
+                                </td>
+                                <td class="text-end pe-3 text-nowrap">
+                                    <AuthorizeView Policy="master.attributes.edit">
+                                        <Authorized>
+                                            <a class="btn btn-sm btn-outline-primary me-1" href="@($"/master/attributes/{item.Id}/edit")" title="Edit"><i class="bi bi-pencil"></i></a>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                    <AuthorizeView Policy="master.attributes.delete">
+                                        <Authorized>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(item.Id, item.Name)" title="Delete"><i class="bi bi-trash3"></i></button>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (_page.TotalPages > 1)
+            {
+                <div class="card-foot">
+                    <Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<AttributeDto>? _page;
+    private int _currentPage = 1;
+    private string? _search;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() =>
+        _page = await AttributeService.GetPagedAsync(_currentPage, PageSize, _search);
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        _currentPage = 1;
+        await LoadAsync();
+    }
+
+    private async Task GoToPageAsync(int page)
+    {
+        _currentPage = page;
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(int id, string name)
+    {
+        if (!await Swal.ConfirmAsync("Delete attribute?", $"\"{name}\" will be permanently removed."))
+            return;
+
+        await AttributeService.DeleteAsync(id);
+        await LoadAsync();
+        await Swal.ToastAsync("success", "Attribute deleted");
+    }
+}

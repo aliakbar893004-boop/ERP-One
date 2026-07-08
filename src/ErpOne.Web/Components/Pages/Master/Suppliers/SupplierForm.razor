@@ -1,0 +1,235 @@
+@page "/master/suppliers/new"
+@page "/master/suppliers/{Id:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using FluentValidation
+@inject ISupplierService SupplierService
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+
+<PageTitle>@Title</PageTitle>
+
+<div class="cf">
+
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/master/suppliers">Master</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/master/suppliers">Suppliers</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+        <h1>@Title</h1>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+    }
+    else if (_notFound)
+    {
+        <div class="cf-alert warn"><i class="bi bi-exclamation-triangle"></i> Supplier not found.</div>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+        }
+
+        <div class="cf-wrap wide">
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-truck"></i></span>
+                    <div class="hd-tx">
+                        <h2>Supplier information</h2>
+                        <p>Identity and contact details.</p>
+                    </div>
+                </div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c4">
+                            <label class="fl">Code <span class="req">*</span></label>
+                            <input class="ctl mono up @(_codeError is not null ? "bad" : "")"
+                                   placeholder="e.g. SUP-001" maxlength="20"
+                                   @bind="_code" @bind:event="oninput" />
+                            @if (_codeError is not null)
+                            {
+                                <div class="err-txt">@_codeError</div>
+                            }
+                        </div>
+                        <div class="f c8">
+                            <label class="fl">Name <span class="req">*</span></label>
+                            <input class="ctl @(_nameError is not null ? "bad" : "")"
+                                   placeholder="e.g. PT Sumber Makmur" maxlength="100"
+                                   @bind="_name" @bind:event="oninput" />
+                            @if (_nameError is not null)
+                            {
+                                <div class="err-txt">@_nameError</div>
+                            }
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Contact person</label>
+                            <input class="ctl" maxlength="100" @bind="_contactPerson" />
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Phone</label>
+                            <input class="ctl" maxlength="30" @bind="_phone" />
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Email</label>
+                            <input class="ctl @(_emailError is not null ? "bad" : "")"
+                                   maxlength="100" @bind="_email" @bind:event="oninput" />
+                            @if (_emailError is not null)
+                            {
+                                <div class="err-txt">@_emailError</div>
+                            }
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Tax ID (NPWP)</label>
+                            <input class="ctl mono" maxlength="30" @bind="_taxId" />
+                        </div>
+                        <div class="f c12">
+                            <label class="fl">Address</label>
+                            <textarea class="ctl" rows="2" maxlength="300" placeholder="Optional" @bind="_address"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-bank"></i></span>
+                    <div class="hd-tx">
+                        <h2>Finance &amp; banking</h2>
+                        <p>Payment terms and bank account for payouts.</p>
+                    </div>
+                </div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c4">
+                            <label class="fl">Payment term (days)</label>
+                            <input class="ctl mono" type="number" min="0" @bind="_paymentTermDays" />
+                        </div>
+                        <div class="f c4">
+                            <label class="fl">Default currency</label>
+                            <input class="ctl mono up" maxlength="3" placeholder="IDR" @bind="_currency" />
+                        </div>
+                        <div class="f c4">
+                            <label class="fl">Bank name</label>
+                            <input class="ctl" maxlength="100" @bind="_bankName" />
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Bank account number</label>
+                            <input class="ctl mono" maxlength="50" @bind="_bankAccountNumber" />
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Bank account name</label>
+                            <input class="ctl" maxlength="100" @bind="_bankAccountName" />
+                        </div>
+                        <div class="f c12">
+                            <label class="tgl">
+                                <input type="checkbox" @bind="_isActive" />
+                                <span class="sw"></span>
+                                <span class="tx">Active<small>Selectable in transactions</small></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="pf-footer">
+                <div class="in">
+                    <span class="note"><span class="req">*</span> required fields</span>
+                    <a class="btn btn-ghost" href="/master/suppliers"><i class="bi bi-x-lg"></i> Cancel</a>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check2"></i>
+                        }
+                        Save supplier
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private string _code = string.Empty;
+    private string _name = string.Empty;
+    private string? _contactPerson, _phone, _email, _address, _taxId;
+    private int _paymentTermDays;
+    private string _currency = "IDR";
+    private string? _bankName, _bankAccountNumber, _bankAccountName;
+    private bool _isActive = true;
+    private bool _loading = true, _saving, _notFound;
+    private string? _error, _codeError, _nameError, _emailError;
+
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private string Title => Id is null ? "Add Supplier" : "Edit Supplier";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateTask;
+        var perm = Id is null
+            ? AppMenus.Perm("master.suppliers", "create")
+            : AppMenus.Perm("master.suppliers", "edit");
+
+        if (!(await Auth.AuthorizeAsync(state.User, perm)).Succeeded)
+        {
+            Nav.NavigateTo("/master/suppliers");
+            return;
+        }
+
+        if (Id is int id)
+        {
+            var s = await SupplierService.GetByIdAsync(id);
+            if (s is null) { _notFound = true; }
+            else
+            {
+                _code = s.Code; _name = s.Name; _contactPerson = s.ContactPerson; _phone = s.Phone;
+                _email = s.Email; _address = s.Address; _taxId = s.TaxId; _paymentTermDays = s.PaymentTermDays;
+                _currency = s.DefaultCurrency; _bankName = s.BankName; _bankAccountNumber = s.BankAccountNumber;
+                _bankAccountName = s.BankAccountName; _isActive = s.IsActive;
+            }
+        }
+
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = _codeError = _nameError = _emailError = null;
+        _saving = true;
+        try
+        {
+            if (Id is int id)
+                await SupplierService.UpdateAsync(id, new UpdateSupplierRequest(_code, _name, _contactPerson, _phone,
+                    _email, _address, _taxId, _paymentTermDays, _currency, _bankName, _bankAccountNumber, _bankAccountName, _isActive));
+            else
+                await SupplierService.CreateAsync(new CreateSupplierRequest(_code, _name, _contactPerson, _phone,
+                    _email, _address, _taxId, _paymentTermDays, _currency, _bankName, _bankAccountNumber, _bankAccountName, _isActive));
+
+            Nav.NavigateTo("/master/suppliers");
+        }
+        catch (ValidationException ex)
+        {
+            foreach (var e in ex.Errors)
+            {
+                if (e.PropertyName == nameof(CreateSupplierRequest.Code)) _codeError = e.ErrorMessage;
+                else if (e.PropertyName == nameof(CreateSupplierRequest.Name)) _nameError = e.ErrorMessage;
+                else if (e.PropertyName == nameof(CreateSupplierRequest.Email)) _emailError = e.ErrorMessage;
+                else _error = e.ErrorMessage;
+            }
+        }
+        finally { _saving = false; }
+    }
+}

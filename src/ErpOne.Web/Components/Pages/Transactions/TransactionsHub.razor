@@ -1,0 +1,39 @@
+@page "/transactions"
+@attribute [Authorize(Policy = "transactions.hub.index")]
+@rendermode InteractiveServer
+
+<PageTitle>Transaksi</PageTitle>
+
+<section class="txhub">
+    <p class="txhub-eyebrow">Transaksi</p>
+    <h1 class="txhub-title">Pusat <span class="accent">Transaksi</span></h1>
+    <p class="txhub-sub">Pilih jenis transaksi untuk memulai — pembelian dari supplier atau penjualan ke customer.</p>
+
+    <div class="txhub-grid">
+        <AuthorizeView Policy="transactions.purchase-orders.index">
+            <Authorized>
+                <a class="txhub-card" href="/transactions/purchase-orders" aria-label="Buka Purchase Order">
+                    <span class="txhub-icon">
+                        <i class="bi bi-cart-plus-fill"></i>
+                    </span>
+                    <h3>Purchase Order</h3>
+                    <p>Buat dan kelola pesanan pembelian ke supplier.</p>
+                    <span class="txhub-go">Buka Purchase Order <i class="bi bi-arrow-right"></i></span>
+                </a>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Policy="transactions.sales-orders.index">
+            <Authorized>
+                <a class="txhub-card" href="/transactions/sales-orders" aria-label="Buka Sales Order">
+                    <span class="txhub-icon">
+                        <i class="bi bi-bag-check-fill"></i>
+                    </span>
+                    <h3>Sales Order</h3>
+                    <p>Buat dan kelola pesanan penjualan ke customer.</p>
+                    <span class="txhub-go">Buka Sales Order <i class="bi bi-arrow-right"></i></span>
+                </a>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+</section>

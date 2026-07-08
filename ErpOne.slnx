@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ErpOne.Application/ErpOne.Application.csproj" />
+    <Project Path="src/ErpOne.Domain/ErpOne.Domain.csproj" />
+    <Project Path="src/ErpOne.Infrastructure/ErpOne.Infrastructure.csproj" />
+    <Project Path="src/ErpOne.Web/ErpOne.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ErpOne.IntegrationTests/ErpOne.IntegrationTests.csproj" />
+    <Project Path="tests/ErpOne.UnitTests/ErpOne.UnitTests.csproj" />
+  </Folder>
+</Solution>

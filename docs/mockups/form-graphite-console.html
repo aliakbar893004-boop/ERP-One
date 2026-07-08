@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en" data-theme="graphite-console">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Graphite Console — Product form mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#FBFCFD; --panel:#FFFFFF; --ink:#0B1220; --muted:#5B6673; --faint:#93A0AE;
+    --line:#E7EBF0; --line-2:#F1F4F7; --field:#FFFFFF;
+    --accent:#2563EB; --accent-deep:#1D4ED8; --accent-soft:#EAF1FE; --ok:#0E9F6E; --amber:#B45309;
+    --sans:'Inter Tight',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--sans);font-size:13.5px;line-height:1.45;-webkit-font-smoothing:antialiased;}
+
+  .bar{display:flex;align-items:center;gap:14px;padding:0 20px;height:52px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:10;}
+  .bar .mk{width:26px;height:26px;border-radius:7px;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;}
+  .bar .path{font-family:var(--mono);font-size:12px;color:var(--muted);} .bar .path b{color:var(--ink);}
+  .bar .sku{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--faint);border:1px solid var(--line);border-radius:6px;padding:3px 9px;}
+  .bar .save{background:var(--accent);color:#fff;border:0;border-radius:7px;padding:8px 15px;font:inherit;font-weight:600;font-size:12.5px;cursor:pointer;display:inline-flex;gap:7px;align-items:center;}
+  .bar .save kbd{font-family:var(--mono);font-size:10.5px;background:rgba(255,255,255,.22);border-radius:4px;padding:1px 5px;}
+  .bar .save:hover{background:var(--accent-deep);}
+
+  .tabs{display:flex;gap:2px;padding:8px 20px 0;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:52px;z-index:9;}
+  .tabs a{padding:9px 14px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;transition:.12s;}
+  .tabs a:hover{color:var(--ink);}
+  .tabs a.on{color:var(--accent-deep);border-bottom-color:var(--accent);font-weight:600;}
+
+  .layout{display:grid;grid-template-columns:1fr 340px;gap:0;align-items:start;}
+  .main{padding:22px 24px 60px;max-width:720px;}
+  .side{border-left:1px solid var(--line);background:var(--panel);padding:22px 20px;position:sticky;top:105px;height:calc(100vh - 105px);overflow:auto;}
+
+  .grp{margin-bottom:26px;}
+  .grp-h{display:flex;align-items:center;gap:9px;margin-bottom:14px;}
+  .grp-h h3{font-size:13px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--ink);margin:0;}
+  .grp-h .ln{flex:1;height:1px;background:var(--line);}
+
+  .rows{display:grid;grid-template-columns:150px 1fr;gap:4px 18px;align-items:center;}
+  .rows > label{font-size:13px;color:var(--muted);font-weight:500;padding:9px 0;}
+  .rows > label .req{color:var(--accent);}
+  .cell{padding:5px 0;} .cell.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .ctl{width:100%;border:1.5px solid var(--line);background:var(--field);border-radius:8px;padding:9px 11px;font:inherit;font-size:13.5px;color:var(--ink);outline:none;transition:.13s;}
+  .ctl.mono{font-family:var(--mono);}
+  .ctl::placeholder{color:var(--faint);}
+  .ctl:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  select.ctl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%235B6673' stroke-width='2'%3E%3Cpath d='M3 5l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px;}
+  .ig{position:relative;} .ig .pre{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--faint);font-family:var(--mono);font-size:12.5px;} .ig .ctl{padding-left:32px;}
+  .hint{font-size:11.5px;color:var(--faint);padding:3px 0 0;}
+  textarea.ctl{resize:vertical;min-height:70px;line-height:1.5;}
+
+  /* live preview */
+  .side h4{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:0 0 14px;}
+  .prev{border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--canvas);}
+  .prev .cat{font-size:11px;font-weight:600;color:var(--accent-deep);text-transform:uppercase;letter-spacing:.06em;}
+  .prev .nm{font-size:16px;font-weight:600;margin:6px 0 10px;letter-spacing:-.01em;}
+  .prev .price{display:flex;align-items:baseline;gap:9px;}
+  .prev .now{font-size:22px;font-weight:700;font-family:var(--mono);letter-spacing:-.02em;}
+  .prev .was{font-family:var(--mono);font-size:13px;color:var(--faint);text-decoration:line-through;}
+  .prev .badge{background:#FEF2E7;color:var(--amber);font-weight:700;font-size:11px;padding:2px 8px;border-radius:99px;}
+  .prev .meta{margin-top:14px;display:flex;flex-direction:column;gap:7px;font-size:12px;}
+  .prev .meta .r{display:flex;justify-content:space-between;color:var(--muted);}
+  .prev .meta .r b{color:var(--ink);font-family:var(--mono);font-weight:600;}
+  .prev .meta .r b.ok{color:var(--ok);}
+  .keys{margin-top:22px;border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:9px;}
+  .keys .r{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted);}
+  kbd{font-family:var(--mono);font-size:11px;background:var(--panel);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:2px 7px;color:#344054;}
+
+  @media (max-width:900px){.layout{grid-template-columns:1fr;} .side{position:static;height:auto;border-left:0;border-top:1px solid var(--line);} .rows{grid-template-columns:1fr;gap:4px;} .rows > label{padding-bottom:2px;}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+  .ctl:focus-visible,.save:focus-visible,.tabs a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+</style>
+</head>
+<body>
+  <div class="bar">
+    <span class="mk">A</span>
+    <span class="path">products / <b>new</b></span>
+    <span class="sku">SKU · auto-assigned</span>
+    <button class="save">Save <kbd>⌘S</kbd></button>
+  </div>
+  <nav class="tabs">
+    <a href="#basics" class="on">Basics</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#inventory">Inventory</a>
+    <a href="#more">Description</a>
+  </nav>
+
+  <div class="layout">
+    <main class="main">
+      <div class="grp" id="basics">
+        <div class="grp-h"><h3>Basics</h3><span class="ln"></span></div>
+        <div class="rows">
+          <label>Name <span class="req">*</span></label>
+          <div class="cell"><input class="ctl" value="Arabica Coffee Beans 250g" placeholder="Product name"></div>
+          <label>Category <span class="req">*</span></label>
+          <div class="cell two"><select class="ctl"><option>Beverages</option><option>Food</option></select><select class="ctl"><option>Brand: Acetris House</option><option>Unbranded</option></select></div>
+          <label>Base unit <span class="req">*</span></label>
+          <div class="cell two"><select class="ctl"><option>Pack</option><option>Piece</option></select><select class="ctl"><option>Tax: PPN 11%</option><option>No tax</option></select></div>
+        </div>
+      </div>
+
+      <div class="grp" id="pricing">
+        <div class="grp-h"><h3>Pricing</h3><span class="ln"></span></div>
+        <div class="rows">
+          <label>Selling price <span class="req">*</span></label>
+          <div class="cell"><div class="ig"><span class="pre">Rp</span><input class="ctl mono" value="62.000"></div></div>
+          <label>Discount</label>
+          <div class="cell two">
+            <div class="ig"><span class="pre">%</span><input class="ctl mono" value="10"></div>
+            <div class="ig"><span class="pre">Rp</span><input class="ctl mono" value="55.800"></div>
+          </div>
+          <label>Cost (HPP)</label>
+          <div class="cell"><div class="ig"><span class="pre">Rp</span><input class="ctl mono" value="40.000"></div><div class="hint">Enter % to compute the discount price, or type the price directly.</div></div>
+        </div>
+      </div>
+
+      <div class="grp" id="inventory">
+        <div class="grp-h"><h3>Inventory</h3><span class="ln"></span></div>
+        <div class="rows">
+          <label>Warehouse <span class="req">*</span></label>
+          <div class="cell"><select class="ctl"><option>Central — Jakarta</option><option>Outlet — Bandung</option></select></div>
+          <label>Opening stock</label>
+          <div class="cell"><input class="ctl mono" value="120"></div>
+        </div>
+      </div>
+
+      <div class="grp" id="more">
+        <div class="grp-h"><h3>Description</h3><span class="ln"></span></div>
+        <div class="rows">
+          <label>Notes</label>
+          <div class="cell"><textarea class="ctl" placeholder="Shown on the product detail page…">Single-origin, medium roast. Resealable pouch.</textarea></div>
+        </div>
+      </div>
+    </main>
+
+    <aside class="side">
+      <h4>Live preview</h4>
+      <div class="prev">
+        <div class="cat">Beverages</div>
+        <div class="nm">Arabica Coffee Beans 250g</div>
+        <div class="price">
+          <span class="now">Rp 55.800</span>
+          <span class="was">62.000</span>
+          <span class="badge">−10%</span>
+        </div>
+        <div class="meta">
+          <div class="r"><span>Cost (HPP)</span><b>Rp 40.000</b></div>
+          <div class="r"><span>Margin</span><b class="ok">28.3%</b></div>
+          <div class="r"><span>On hand</span><b>120 pack</b></div>
+        </div>
+      </div>
+      <div class="keys">
+        <div class="r"><span>Save</span><kbd>⌘ S</kbd></div>
+        <div class="r"><span>Next field</span><kbd>Tab</kbd></div>
+        <div class="r"><span>Cancel</span><kbd>Esc</kbd></div>
+      </div>
+    </aside>
+  </div>
+</body>
+</html>

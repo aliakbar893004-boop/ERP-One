@@ -1,0 +1,80 @@
+@page "/settings/error-log"
+@attribute [Authorize(Policy = "settings.errorlog.index")]
+@rendermode InteractiveServer
+@inject ILogService LogService
+
+<PageTitle>Error Log</PageTitle>
+
+<div class="sh-header mb-4">
+    <div>
+        <h4 class="sh-title">Error Log</h4>
+        <p class="sh-subtitle">Review system warnings and errors</p>
+    </div>
+</div>
+
+<div class="row mb-3 g-2 align-items-center">
+    <div class="col-auto">
+        <select class="form-select" @bind="_level" @bind:after="LoadAsync">
+            <option value="">All levels</option>
+            <option value="Warning">Warning</option>
+            <option value="Error">Error</option>
+            <option value="Fatal">Fatal</option>
+        </select>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-outline-secondary" @onclick="LoadAsync">Reload</button>
+    </div>
+</div>
+
+@if (_logs is null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (_logs.Count == 0)
+{
+    <p><em>No logs.</em></p>
+}
+else
+{
+    <table class="table table-sm table-striped align-middle">
+        <thead>
+            <tr><th>Time</th><th>Level</th><th>Message</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var log in _logs)
+            {
+                <tr class="@RowClass(log.Level)">
+                    <td class="text-nowrap">@log.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td>@log.Level</td>
+                    <td>
+                        @log.Message
+                        @if (!string.IsNullOrWhiteSpace(log.Exception))
+                        {
+                            <details class="mt-1">
+                                <summary class="text-danger">Exception</summary>
+                                <pre class="small mb-0">@log.Exception</pre>
+                            </details>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<LogEntryDto>? _logs;
+    private string _level = "";
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() =>
+        _logs = await LogService.GetRecentAsync(200, string.IsNullOrEmpty(_level) ? null : _level);
+
+    private static string RowClass(string level) => level switch
+    {
+        "Error" or "Fatal" => "table-danger",
+        "Warning" => "table-warning",
+        _ => ""
+    };
+}

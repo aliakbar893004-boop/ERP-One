@@ -1,0 +1,231 @@
+@page "/master/products"
+@attribute [Authorize(Policy = "master.products.index")]
+@rendermode InteractiveServer
+@inject IProductService ProductService
+@inject NavigationManager Nav
+@inject SwalService Swal
+
+<PageTitle>Products</PageTitle>
+
+<div class="pi">
+
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Master</span><span class="sep">·</span><span class="here">Products</span></nav>
+            <h1>Products</h1>
+            <p>Overview &amp; catalog management.</p>
+        </div>
+        <AuthorizeView Policy="master.products.create">
+            <Authorized>
+                <div class="pi-actions">
+                    <a class="btn btn-out" href="/master/products/import"><i class="bi bi-cloud-arrow-up"></i> Upload</a>
+                    <a class="btn btn-primary" href="/master/products/new"><i class="bi bi-plus-lg"></i> Add product</a>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <!-- ── KPI cards ───────────────────────────────────────────── -->
+    @if (_dash is not null)
+    {
+        <div class="kpis">
+            <div class="kpi">
+                <div class="ic ic-blu"><i class="bi bi-box-seam"></i></div>
+                <div class="kpi-tx">
+                    <div class="v">@_dash.TotalProducts.ToString("N0")</div>
+                    <div class="l">Total products</div>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-grn"><i class="bi bi-check-circle"></i></div>
+                <div class="kpi-tx">
+                    <div class="v">@_dash.ActiveCount.ToString("N0")</div>
+                    <div class="l">Active</div>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-amb"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="kpi-tx">
+                    <div class="v">@_dash.LowStockCount.ToString("N0")</div>
+                    <div class="l">Low stock</div>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-red"><i class="bi bi-x-octagon"></i></div>
+                <div class="kpi-tx">
+                    <div class="v">@_dash.OutOfStockCount.ToString("N0")</div>
+                    <div class="l">Out of stock</div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- ── Toolbar: search + status chips ──────────────────────── -->
+    <div class="toolbar">
+        <div class="search">
+            <i class="bi bi-search"></i>
+            <input placeholder="Search name or SKU…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+        </div>
+        <div class="chips">
+            <button class="chip @(_statusFilter is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">All</button>
+            @foreach (var s in Enum.GetValues<ProductStatus>())
+            {
+                <button class="chip @(_statusFilter == s ? "on" : "")" @onclick="() => SetStatusAsync(s)">@s</button>
+            }
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty">
+            <div class="empty-ic"><i class="bi bi-box-seam"></i></div>
+            <p>
+                @if (string.IsNullOrEmpty(_search) && _statusFilter is null)
+                {
+                    <span>No products yet. <a href="/master/products/new">Add the first one.</a></span>
+                }
+                else
+                {
+                    <span>No products match your filters.</span>
+                }
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-top">
+                <span class="n">Showing <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> of <b>@_page.Total.ToString("N0")</b></span>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:56px"></th>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th class="r">Price</th>
+                            <th class="c">Var.</th>
+                            <th class="r">Stock</th>
+                            <th class="c">Status</th>
+                            <th class="text-end pe-3" style="width:120px"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in _page.Items)
+                        {
+                            <tr>
+                                <td>
+                                    @if (item.PrimaryImageUrl is not null)
+                                    {
+                                        <img src="@item.PrimaryImageUrl" class="thumb" alt="@item.Name" />
+                                    }
+                                    else
+                                    {
+                                        <div class="thumb"><i class="bi bi-image"></i></div>
+                                    }
+                                </td>
+                                <td class="code mono">@item.Code</td>
+                                <td class="nm">@item.Name</td>
+                                <td class="code">@(item.CategoryName ?? "—")</td>
+                                <td class="r mono">
+                                    @if (item.MinPrice == item.MaxPrice)
+                                    {
+                                        <span>@item.MinPrice.ToString("N0")</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@item.MinPrice.ToString("N0")–@item.MaxPrice.ToString("N0")</span>
+                                    }
+                                </td>
+                                <td class="c">@item.VariantCount</td>
+                                <td class="r mono @(item.TotalStock == 0 ? "lowstock" : "")">@item.TotalStock.ToString("N0")</td>
+                                <td class="c"><span class="badge @PillClass(item.Status)">@item.Status</span></td>
+                                <td class="text-end pe-3 text-nowrap">
+                                    <AuthorizeView Policy="master.products.edit">
+                                        <Authorized>
+                                            <a class="btn btn-sm btn-outline-primary me-1" href="@($"/master/products/{item.Id}/edit")" title="Edit"><i class="bi bi-pencil"></i></a>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                    <AuthorizeView Policy="master.products.delete">
+                                        <Authorized>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(item.Id, item.Name)" title="Delete"><i class="bi bi-trash3"></i></button>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (_page.TotalPages > 1)
+            {
+                <div class="card-foot">
+                    <Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<ProductDto>? _page;
+    private ProductDashboardDto? _dash;
+    private int _currentPage = 1;
+    private string? _search;
+    private ProductStatus? _statusFilter;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _dash = await ProductService.GetDashboardAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync() =>
+        _page = await ProductService.GetPagedAsync(_currentPage, PageSize, _search, _statusFilter);
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        _currentPage = 1;
+        await LoadAsync();
+    }
+
+    private async Task SetStatusAsync(ProductStatus? status)
+    {
+        _statusFilter = status;
+        _currentPage = 1;
+        await LoadAsync();
+    }
+
+    private async Task GoToPageAsync(int page)
+    {
+        _currentPage = page;
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(int id, string name)
+    {
+        if (!await Swal.ConfirmAsync("Delete product?", $"\"{name}\" will be permanently removed."))
+            return;
+
+        await ProductService.DeleteAsync(id);
+        _dash = await ProductService.GetDashboardAsync();
+        await LoadAsync();
+        await Swal.ToastAsync("success", "Product deleted");
+    }
+
+    private static string PillClass(ProductStatus status) => status switch
+    {
+        ProductStatus.Aktif => "b-ok",
+        ProductStatus.Habis => "b-out",
+        ProductStatus.Nonaktif => "b-off",
+        _ => "b-dark"
+    };
+}

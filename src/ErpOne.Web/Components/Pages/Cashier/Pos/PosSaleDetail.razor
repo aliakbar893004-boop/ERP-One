@@ -1,0 +1,158 @@
+@page "/cashier/sales/{Id:int}"
+@attribute [Authorize(Policy = "cashier.pos.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.PosSales
+@inject IPosSaleService Pos
+@inject IJSRuntime JS
+
+<PageTitle>@(_sale?.SaleNumber ?? "Penjualan")</PageTitle>
+
+<div class="pf">
+
+    <div class="pf-top">
+        <div class="crumbs">
+            <a href="/cashier/sales">Kasir</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/cashier/sales">Riwayat Penjualan</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">@(_sale?.SaleNumber ?? "Detail")</span>
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+    }
+    else if (_sale is null)
+    {
+        <div class="pf-alert warn"><i class="bi bi-exclamation-triangle"></i> Transaksi tidak ditemukan.</div>
+    }
+    else
+    {
+        <div class="pd-head">
+            <h1>@_sale.SaleNumber</h1>
+            <span class="badge @(_sale.IsCashPayment ? "b-done" : "b-dark")">@_sale.PaymentMethodName</span>
+            <div class="actions">
+                <button class="btn btn-primary" @onclick="ReprintAsync"><i class="bi bi-printer"></i> Cetak Ulang</button>
+            </div>
+        </div>
+
+        <section class="card">
+            <div class="card-h">
+                <span class="hd-ic"><i class="bi bi-receipt"></i></span>
+                <h2>Informasi</h2>
+            </div>
+            <div class="card-b">
+                <dl class="dl">
+                    <dt>No. Struk</dt><dd><span class="grn-no">@_sale.SaleNumber</span></dd>
+                    <dt>Tanggal</dt><dd>@_sale.SaleDate.ToString("dd MMM yyyy HH:mm")</dd>
+                    <dt>Kasir</dt><dd>@_sale.CashierName</dd>
+                    <dt>Gudang</dt><dd>@_sale.WarehouseName</dd>
+                    <dt>Metode</dt><dd>@_sale.PaymentMethodName @(_sale.IsCashPayment ? "(tunai)" : "")</dd>
+                </dl>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-h">
+                <span class="hd-ic"><i class="bi bi-basket"></i></span>
+                <h2>Item</h2>
+            </div>
+            <div class="card-b">
+                <div class="table-responsive">
+                    <table class="items">
+                        <thead>
+                            <tr>
+                                <th>Produk</th>
+                                <th>SKU</th>
+                                <th class="r">Qty</th>
+                                <th class="r">Harga</th>
+                                <th class="r">Disk%</th>
+                                <th class="r">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var l in _sale.Lines)
+                            {
+                                <tr>
+                                    <td class="pn">@l.ProductName</td>
+                                    <td class="sku mono">@l.VariantSku</td>
+                                    <td class="r mono">@l.Quantity</td>
+                                    <td class="r mono">@l.UnitPrice.ToString("N2")</td>
+                                    <td class="r mono">@l.DiscountPercent.ToString("0.##")</td>
+                                    <td class="r mono">@l.LineTotal.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-h">
+                <span class="hd-ic"><i class="bi bi-cash-coin"></i></span>
+                <h2>Ringkasan</h2>
+            </div>
+            <div class="card-b">
+                <dl class="dl">
+                    <dt>Subtotal</dt><dd class="mono">@_sale.Subtotal.ToString("N2")</dd>
+                    <dt>Diskon Transaksi</dt><dd class="mono">@_sale.TransactionDiscount.ToString("N2")</dd>
+                    <dt>PPN (@_sale.TaxRateSnapshot.ToString("0.##")%)</dt><dd class="mono">@_sale.TaxTotal.ToString("N2")</dd>
+                    <dt>Grand Total</dt><dd class="mono"><b>@_sale.GrandTotal.ToString("N2")</b></dd>
+                    <dt>Bayar</dt><dd class="mono">@_sale.AmountTendered.ToString("N2")</dd>
+                    <dt>Kembalian</dt><dd class="mono">@_sale.ChangeGiven.ToString("N2")</dd>
+                </dl>
+            </div>
+        </section>
+    }
+</div>
+
+@if (_sale is not null)
+{
+    <div class="pos-receipt">
+        <div class="rc-title">@_sale.WarehouseName</div>
+        <div class="rc-sub">Struk Penjualan · @_sale.SaleNumber<br />@_sale.SaleDate.ToString("dd MMM yyyy HH:mm") · @_sale.CashierName</div>
+        <table>
+            @foreach (var l in _sale.Lines)
+            {
+                <tr><td colspan="2">@l.ProductName</td></tr>
+                <tr>
+                    <td>@l.Quantity x @l.UnitPrice.ToString("N0")@(l.DiscountPercent > 0 ? $" (-{l.DiscountPercent:0.##}%)" : "")</td>
+                    <td class="rc-r">@l.LineTotal.ToString("N0")</td>
+                </tr>
+            }
+            <tr class="rc-rule"><td>Subtotal</td><td class="rc-r">@_sale.Subtotal.ToString("N0")</td></tr>
+            @if (_sale.TransactionDiscount > 0)
+            {
+                <tr><td>Diskon</td><td class="rc-r">-@_sale.TransactionDiscount.ToString("N0")</td></tr>
+            }
+            @if (_sale.TaxTotal > 0)
+            {
+                <tr><td>PPN (@_sale.TaxRateSnapshot.ToString("0.##")%)</td><td class="rc-r">@_sale.TaxTotal.ToString("N0")</td></tr>
+            }
+            <tr class="rc-grand rc-rule"><td>TOTAL</td><td class="rc-r">@_sale.GrandTotal.ToString("N0")</td></tr>
+            <tr><td>@_sale.PaymentMethodName</td><td class="rc-r">@_sale.AmountTendered.ToString("N0")</td></tr>
+            @if (_sale.IsCashPayment)
+            {
+                <tr><td>Kembali</td><td class="rc-r">@_sale.ChangeGiven.ToString("N0")</td></tr>
+            }
+        </table>
+        <div class="rc-foot">Terima kasih atas kunjungan Anda 🙏</div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private PosSaleDto? _sale;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _sale = await Pos.GetByIdAsync(Id);
+        _loading = false;
+    }
+
+    private async Task ReprintAsync() => await JS.InvokeVoidAsync("appPrint");
+}

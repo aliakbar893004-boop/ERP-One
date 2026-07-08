@@ -1,0 +1,37 @@
+# ── .NET build output ──────────────────────────────────────────
+bin/
+obj/
+publish/
+[Rr]elease/
+[Dd]ebug/
+*.user
+*.suo
+
+# ── Visual Studio / Rider / VS Code ────────────────────────────
+.vs/
+.idea/
+*.userprefs
+
+# ── Runtime artifacts ──────────────────────────────────────────
+# Serilog file logs
+src/ErpOne.Web/logs/
+# User-uploaded product images (runtime data, not source)
+src/ErpOne.Web/wwwroot/uploads/
+
+# ── Stray build/console dumps ──────────────────────────────────
+build-output.txt
+green-output.txt
+red-output.txt
+
+# ── Local tool/editor config ───────────────────────────────────
+.claude/settings.local.json
+
+# ── OS noise ───────────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# ── Secrets (if ever added) ────────────────────────────────────
+appsettings.*.local.json
+*.pfx

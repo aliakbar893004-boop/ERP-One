@@ -1,0 +1,147 @@
+@page "/transactions/delivery-orders/{Id:int}"
+@attribute [Authorize(Policy = "transactions.delivery-orders.index")]
+@rendermode InteractiveServer
+@using FluentValidation
+@using ErpOne.Application.DeliveryOrders
+@inject IDeliveryOrderService Do
+@inject NavigationManager Nav
+@inject SwalService Swal
+
+<PageTitle>@(_do?.DoNumber ?? "Delivery Order")</PageTitle>
+
+<div class="pf">
+
+    <div class="pf-top">
+        <div class="crumbs">
+            <a href="/transactions/delivery-orders">Transactions</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/transactions/delivery-orders">Delivery Orders</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">@(_do?.DoNumber ?? "Detail")</span>
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+    }
+    else if (_do is null)
+    {
+        <div class="pf-alert warn"><i class="bi bi-exclamation-triangle"></i> Delivery order tidak ditemukan.</div>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <div class="pf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+        }
+
+        <div class="pd-head">
+            <h1>@_do.DoNumber</h1>
+            <span class="badge @StatusClass(_do.Status)">@_do.Status</span>
+            <div class="actions">
+                @if (_do.Status == "Draft")
+                {
+                    <AuthorizeView Policy="transactions.delivery-orders.edit">
+                        <Authorized>
+                            <a class="btn btn-line" href="@($"/transactions/delivery-orders/{_do.Id}/edit")"><i class="bi bi-pencil"></i> Edit</a>
+                        </Authorized>
+                    </AuthorizeView>
+                    <AuthorizeView Policy="transactions.delivery-orders.post">
+                        <Authorized>
+                            <button class="btn btn-primary" @onclick="PostAsync" disabled="@_posting"><i class="bi bi-check2-circle"></i> Post</button>
+                        </Authorized>
+                    </AuthorizeView>
+                }
+            </div>
+        </div>
+
+        <section class="card">
+            <div class="card-h">
+                <span class="hd-ic"><i class="bi bi-receipt"></i></span>
+                <h2>Informasi</h2>
+            </div>
+            <div class="card-b">
+                <dl class="dl">
+                    <dt>DO#</dt><dd><span class="grn-no">@_do.DoNumber</span></dd>
+                    <dt>SO#</dt><dd><a href="/transactions/sales-orders/@_do.SalesOrderId">@_do.SoNumber</a></dd>
+                    <dt>Customer</dt><dd>@_do.CustomerName</dd>
+                    <dt>Gudang</dt><dd>@_do.WarehouseName</dd>
+                    <dt>Tanggal Kirim</dt><dd>@_do.DeliveryDate.ToString("dd MMM yyyy")</dd>
+                    <dt>Catatan</dt><dd>@(_do.Notes ?? "—")</dd>
+                    <dt>Dibuat</dt><dd>@_do.CreatedAt.ToString("dd MMM yyyy HH:mm")</dd>
+                    <dt>Oleh</dt><dd>@(_do.CreatedBy ?? "—")</dd>
+                </dl>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-h">
+                <span class="hd-ic"><i class="bi bi-box-seam"></i></span>
+                <h2>Item</h2>
+            </div>
+            <div class="card-b">
+                <div class="table-responsive">
+                    <table class="items">
+                        <thead>
+                            <tr>
+                                <th>Produk</th>
+                                <th>SKU</th>
+                                <th class="r">Dipesan</th>
+                                <th class="r">Terkirim</th>
+                                <th class="r">HPP/unit</th>
+                                <th class="r">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var l in _do.Lines)
+                            {
+                                <tr>
+                                    <td class="pn">@l.ProductName</td>
+                                    <td class="sku">@l.VariantSku</td>
+                                    <td class="r mono">@l.OrderedQuantity</td>
+                                    <td class="r mono">@l.QuantityDelivered</td>
+                                    <td class="r mono">@l.UnitCost.ToString("N2")</td>
+                                    <td class="r mono">@l.LineCost.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private DeliveryOrderDto? _do;
+    private bool _loading = true;
+    private bool _posting;
+    private string? _error;
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _do = await Do.GetByIdAsync(Id);
+        _loading = false;
+    }
+
+    private async Task PostAsync()
+    {
+        if (!await Swal.ConfirmAsync("Post Delivery Order?", "Stok akan dikurangi dan COGS dicatat; tidak bisa dibatalkan.", "Ya, Post")) return;
+        _error = null; _posting = true;
+        try { await Do.PostAsync(Id); await LoadAsync(); }
+        catch (FluentValidation.ValidationException ex) { _error = string.Join("; ", ex.Errors.Select(e => e.ErrorMessage)); }
+        catch (InvalidOperationException ex) { _error = ex.Message; }
+        finally { _posting = false; }
+    }
+
+    private static string StatusClass(string status) => status switch
+    {
+        "Draft" => "b-draft",
+        "Posted" => "b-done",
+        _ => "b-dark"
+    };
+}

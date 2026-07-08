@@ -1,0 +1,152 @@
+@page "/inventory/stock-levels"
+@attribute [Authorize(Policy = "inventory.stock-levels.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Stock
+@using ErpOne.Application.Warehouses
+@inject IStockService StockService
+@inject IWarehouseService WarehouseService
+
+<PageTitle>Stock Levels</PageTitle>
+
+<div class="pi">
+
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Inventory</span><span class="sep">·</span><span class="here">Stock Levels</span></nav>
+            <h1>Stock Levels</h1>
+            <p>Monitor current stock quantities across warehouses.</p>
+        </div>
+        <AuthorizeView Policy="inventory.adjustments.create">
+            <Authorized>
+                <div class="pi-actions">
+                    <a class="btn btn-primary" href="/inventory/adjustments/new"><i class="bi bi-plus-lg"></i> New adjustment</a>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    @if (_summary is not null)
+    {
+        <div class="kpis">
+            <div class="kpi">
+                <div class="ic ic-blu"><i class="bi bi-box-seam"></i></div>
+                <div class="kpi-tx">
+                    <div class="v">@_summary.Records.ToString("N0")</div>
+                    <div class="l">Stock records</div>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-grn"><i class="bi bi-stack"></i></div>
+                <div class="kpi-tx">
+                    <div class="v">@_summary.TotalQty.ToString("N0")</div>
+                    <div class="l">Total quantity</div>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-amb"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="kpi-tx">
+                    <div class="v">@_summary.LowStock.ToString("N0")</div>
+                    <div class="l">Low stock</div>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-red"><i class="bi bi-x-octagon"></i></div>
+                <div class="kpi-tx">
+                    <div class="v">@_summary.OutOfStock.ToString("N0")</div>
+                    <div class="l">Out of stock</div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="toolbar">
+        <select @bind="_warehouseId" @bind:after="ReloadAsync">
+            <option value="0">All warehouses</option>
+            @foreach (var w in _warehouses)
+            {
+                <option value="@w.Id">@w.Name</option>
+            }
+        </select>
+        <div class="search">
+            <i class="bi bi-search"></i>
+            <input placeholder="Search SKU or product…" @bind="_search" @bind:event="oninput" @onkeyup="ReloadAsync" />
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty">
+            <div class="empty-ic"><i class="bi bi-box-seam"></i></div>
+            <p>No stock records match your filters.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-top">
+                <span class="n">Showing <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> of <b>@_page.Total.ToString("N0")</b></span>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:180px">SKU</th>
+                            <th>Product</th>
+                            <th>Warehouse</th>
+                            <th class="r" style="width:110px">Qty</th>
+                            <th class="r pe-3" style="width:150px">Cost (HPP)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var l in _page.Items)
+                        {
+                            <tr>
+                                <td class="code mono">@l.Sku</td>
+                                <td class="nm">@l.ProductName</td>
+                                <td class="code">@l.WarehouseName</td>
+                                <td class="r mono @(l.Quantity == 0 ? "lowstock" : "")">@l.Quantity.ToString("N0")</td>
+                                <td class="r mono pe-3">@l.CostPrice.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (_page.TotalPages > 1)
+            {
+                <div class="card-foot">
+                    <Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<StockLevelDto>? _page;
+    private StockLevelSummary? _summary;
+    private IReadOnlyList<WarehouseDto> _warehouses = [];
+    private int _currentPage = 1;
+    private int _warehouseId;
+    private string? _search;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _warehouses = await WarehouseService.GetAllAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        var wid = _warehouseId == 0 ? (int?)null : _warehouseId;
+        _summary = await StockService.GetLevelsSummaryAsync(wid);
+        _page = await StockService.GetLevelsPagedAsync(_currentPage, PageSize, wid, _search);
+    }
+
+    private async Task ReloadAsync() { _currentPage = 1; await LoadAsync(); }
+    private async Task GoToPageAsync(int page) { _currentPage = page; await LoadAsync(); }
+}

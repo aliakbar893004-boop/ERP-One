@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en" data-theme="dark-pro">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dark Pro — Product form mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0E1116; --surface:#151A21; --elevated:#1B212B; --line:#262D39; --line-2:#20262F;
+    --ink:#E7EBF2; --muted:#93A0B2; --faint:#6B7688;
+    --accent:#7C8CF8; --accent-deep:#6366F1; --accent-soft:#20233B; --ok:#34D399; --ok-soft:#123227;
+    --body:'Inter',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(80% 60% at 50% -10%,rgba(99,102,241,.10),transparent 60%);}
+  .wrap{max-width:760px;margin:0 auto;padding:44px 26px 110px;}
+
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:600;font-size:15px;}
+  .brand .mk{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-deep));display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px;}
+  .pill{font-family:var(--mono);font-size:11px;color:var(--accent);background:var(--accent-soft);border:1px solid var(--line);padding:4px 11px;border-radius:99px;}
+
+  .head{margin-bottom:26px;}
+  .head h1{font-size:25px;font-weight:700;letter-spacing:-.02em;margin:0 0 5px;}
+  .head p{color:var(--muted);margin:0;font-size:13.5px;}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 22px 22px;margin-bottom:16px;}
+  .ch{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+  .ch .n{font-family:var(--mono);font-size:11px;color:var(--accent);background:var(--accent-soft);border:1px solid var(--line);border-radius:6px;padding:2px 8px;}
+  .ch h3{font-size:15px;font-weight:600;letter-spacing:-.01em;margin:0;}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 18px;}
+  .f{display:flex;flex-direction:column;gap:7px;} .f.wide{grid-column:1/-1;}
+  label{font-size:12.5px;font-weight:600;color:#B4BECD;} label .req{color:var(--accent);}
+  .ctl{border:1.5px solid var(--line);background:var(--elevated);border-radius:10px;padding:11px 13px;font:inherit;font-size:14px;color:var(--ink);outline:none;transition:.15s;width:100%;}
+  .ctl::placeholder{color:var(--faint);}
+  .ctl:focus{border-color:var(--accent-deep);box-shadow:0 0 0 4px var(--accent-soft);background:#1E2530;}
+  select.ctl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2393A0B2' stroke-width='2'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;}
+  .ig{position:relative;} .ig .pre{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--faint);font-family:var(--mono);font-size:12.5px;} .ig .ctl{padding-left:34px;font-family:var(--mono);}
+  .help{font-size:11.5px;color:var(--faint);}
+  textarea.ctl{resize:vertical;min-height:80px;line-height:1.55;}
+
+  .bar{position:fixed;left:0;right:0;bottom:0;background:rgba(14,17,22,.82);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:14px 26px;}
+  .bar-in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:18px;}
+  .metric{display:flex;flex-direction:column;line-height:1.2;} .metric .k{font-size:11px;color:var(--faint);} .metric .v{font-family:var(--mono);font-weight:600;font-size:15px;} .metric .v.ok{color:var(--ok);}
+  .sep{width:1px;height:28px;background:var(--line);}
+  .acts{margin-left:auto;display:flex;gap:10px;}
+  .btn{border:0;border-radius:10px;padding:11px 18px;font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;transition:.15s;}
+  .btn-ghost{background:transparent;color:var(--muted);} .btn-ghost:hover{color:var(--ink);}
+  .btn-line{background:var(--elevated);border:1px solid var(--line);color:var(--ink);} .btn-line:hover{border-color:#374151;}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;box-shadow:0 10px 24px -12px var(--accent-deep);} .btn-primary:hover{filter:brightness(1.06);}
+
+  @media (max-width:640px){.grid{grid-template-columns:1fr;} .wrap{padding:32px 18px 120px;}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+  .ctl:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand"><span class="mk">A</span> Acetris</div>
+    <span class="pill">SKU · auto</span>
+  </div>
+  <div class="head">
+    <h1>Add product</h1>
+    <p>Create an item and its default variant.</p>
+  </div>
+
+  <section class="card">
+    <div class="ch"><span class="n">01</span><h3>Basics</h3></div>
+    <div class="grid">
+      <div class="f wide"><label>Product name <span class="req">•</span></label><input class="ctl" value="Arabica Coffee Beans 250g"></div>
+      <div class="f"><label>Category <span class="req">•</span></label><select class="ctl"><option>Beverages</option><option>Food</option></select></div>
+      <div class="f"><label>Brand</label><select class="ctl"><option>Acetris House</option><option>Unbranded</option></select></div>
+      <div class="f"><label>Base unit <span class="req">•</span></label><select class="ctl"><option>Pack</option><option>Piece</option></select></div>
+      <div class="f"><label>Tax</label><select class="ctl"><option>PPN 11%</option><option>No tax</option></select></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="ch"><span class="n">02</span><h3>Pricing</h3></div>
+    <div class="grid">
+      <div class="f"><label>Selling price <span class="req">•</span></label><div class="ig"><span class="pre">Rp</span><input class="ctl" value="62.000"></div></div>
+      <div class="f"><label>Discount %</label><div class="ig"><span class="pre">%</span><input class="ctl" value="10"></div><span class="help">Fills discount price automatically.</span></div>
+      <div class="f"><label>Discount price</label><div class="ig"><span class="pre">Rp</span><input class="ctl" value="55.800"></div></div>
+      <div class="f"><label>Cost price (HPP)</label><div class="ig"><span class="pre">Rp</span><input class="ctl" value="40.000"></div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="ch"><span class="n">03</span><h3>Inventory</h3></div>
+    <div class="grid">
+      <div class="f"><label>Warehouse <span class="req">•</span></label><select class="ctl"><option>Central — Jakarta</option><option>Outlet — Bandung</option></select></div>
+      <div class="f"><label>Opening stock</label><input class="ctl" style="font-family:var(--mono)" value="120"></div>
+    </div>
+  </section>
+</div>
+
+<div class="bar"><div class="bar-in">
+  <div class="metric"><span class="k">Sells at</span><span class="v">Rp 55.800</span></div>
+  <div class="sep"></div>
+  <div class="metric"><span class="k">Margin</span><span class="v ok">28.3%</span></div>
+  <div class="acts">
+    <button class="btn btn-ghost">Cancel</button>
+    <button class="btn btn-line">Save draft</button>
+    <button class="btn btn-primary">Save product</button>
+  </div>
+</div></div>
+</body>
+</html>

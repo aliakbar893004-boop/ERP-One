@@ -1,0 +1,194 @@
+@page "/master/product-categories/new"
+@page "/master/product-categories/{Id:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using FluentValidation
+@inject IProductCategoryService CategoryService
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+
+<PageTitle>@Title</PageTitle>
+
+<div class="cf">
+
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/master/product-categories">Master</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/master/product-categories">Product Categories</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+        <h1>@Title</h1>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+    }
+    else if (_notFound)
+    {
+        <div class="cf-alert warn"><i class="bi bi-exclamation-triangle"></i> Product category not found.</div>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+        }
+
+        <div class="cf-wrap full">
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-tag-fill"></i></span>
+                    <div class="hd-tx">
+                        <h2>Category information</h2>
+                        <p>The code becomes the SKU prefix for products in this category.</p>
+                    </div>
+                </div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c4">
+                            <label class="fl">Code <span class="req">*</span></label>
+                            <input class="ctl mono up @(_codeError is not null ? "bad" : "")"
+                                   placeholder="e.g. KAT-01" maxlength="20"
+                                   @bind="_code" @bind:event="oninput" />
+                            @if (_codeError is not null)
+                            {
+                                <div class="err-txt">@_codeError</div>
+                            }
+                        </div>
+                        <div class="f c8">
+                            <label class="fl">Name <span class="req">*</span></label>
+                            <input class="ctl @(_nameError is not null ? "bad" : "")"
+                                   placeholder="Enter category name" maxlength="200"
+                                   @bind="_name" @bind:event="oninput" />
+                            @if (_nameError is not null)
+                            {
+                                <div class="err-txt">@_nameError</div>
+                            }
+                        </div>
+                        <div class="f c12">
+                            <label class="fl">Description</label>
+                            <textarea class="ctl @(_descError is not null ? "bad" : "")"
+                                      rows="3" maxlength="500" placeholder="Optional"
+                                      @bind="_description" @bind:event="oninput"></textarea>
+                            <div class="cnt">@(_description?.Length ?? 0)/500</div>
+                            @if (_descError is not null)
+                            {
+                                <div class="err-txt">@_descError</div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="pv">
+                        <div class="pv-top"><span class="dot"></span> Live preview</div>
+                        <div class="pv-b">
+                            <div class="pv-id">
+                                <div class="cat">SKU prefix</div>
+                                <div class="nm">@(string.IsNullOrWhiteSpace(_name) ? "Category name" : _name)</div>
+                            </div>
+                            <div class="pv-code mono">@PrefixPreview</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="pf-footer">
+                <div class="in">
+                    <span class="note"><span class="req">*</span> required fields</span>
+                    <a class="btn btn-ghost" href="/master/product-categories"><i class="bi bi-x-lg"></i> Cancel</a>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check2"></i>
+                        }
+                        Save category
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private string _code = string.Empty;
+    private string _name = string.Empty;
+    private string? _description;
+    private bool _loading = true, _saving, _notFound;
+    private string? _error, _codeError, _nameError, _descError;
+
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private string Title => Id is null ? "Add Product Category" : "Edit Product Category";
+    private string PrefixPreview => (string.IsNullOrWhiteSpace(_code) ? "KAT-01" : _code.ToUpperInvariant()) + "/0001";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateTask;
+        var perm = Id is null
+            ? AppMenus.Perm("master.categories", "create")
+            : AppMenus.Perm("master.categories", "edit");
+
+        if (!(await Auth.AuthorizeAsync(state.User, perm)).Succeeded)
+        {
+            Nav.NavigateTo("/master/product-categories");
+            return;
+        }
+
+        if (Id is int id)
+        {
+            var cat = await CategoryService.GetByIdAsync(id);
+            if (cat is null)
+                _notFound = true;
+            else
+            {
+                _code = cat.Code;
+                _name = cat.Name;
+                _description = cat.Description;
+            }
+        }
+
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = _codeError = _nameError = _descError = null;
+        _saving = true;
+
+        try
+        {
+            if (Id is int id)
+                await CategoryService.UpdateAsync(id, new UpdateProductCategoryRequest(_code, _name, _description));
+            else
+                await CategoryService.CreateAsync(new CreateProductCategoryRequest(_code, _name, _description));
+
+            Nav.NavigateTo("/master/product-categories");
+        }
+        catch (ValidationException ex)
+        {
+            foreach (var e in ex.Errors)
+            {
+                if (e.PropertyName == nameof(CreateProductCategoryRequest.Code))
+                    _codeError = e.ErrorMessage;
+                else if (e.PropertyName == nameof(CreateProductCategoryRequest.Name))
+                    _nameError = e.ErrorMessage;
+                else if (e.PropertyName == nameof(CreateProductCategoryRequest.Description))
+                    _descError = e.ErrorMessage;
+                else
+                    _error = e.ErrorMessage;
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

@@ -1,0 +1,934 @@
+@page "/master/products/new"
+@page "/master/products/{Id:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using FluentValidation
+@inject IProductService ProductService
+@inject IProductCategoryService CategoryService
+@inject IBrandService BrandService
+@inject IUnitService UnitService
+@inject ITaxService TaxService
+@inject IAttributeService AttributeService
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+@inject SwalService Swal
+@inject IJSRuntime JS
+
+<PageTitle>@Title</PageTitle>
+
+<div class="pf">
+
+    <div class="pf-top">
+        <div class="crumbs">
+            <a href="/master/products">Master</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/master/products">Products</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+        @* <h1>@Title</h1> *@
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+    }
+    else if (_notFound)
+    {
+        <div class="pf-alert err"><i class="bi bi-exclamation-octagon"></i> Product not found.</div>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <div class="pf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+        }
+
+        <div class="pf-layout">
+
+            <!-- ── LEFT: section navigator ─────────────────────────── -->
+            <aside class="pf-nav">
+                <div class="prog">
+                    <div class="lbl"><span>Required</span><span>@InfoFilled / 2</span></div>
+                    <div class="track"><div class="fill" style="width:@(InfoFilled * 50)%"></div></div>
+                </div>
+                <button type="button" class="nlink @(_activeSection == "sec-info" ? "on" : "")"
+                        @onclick='() => ScrollTo("sec-info")'>
+                    <span class="ic"><i class="bi bi-box-seam"></i></span> Information
+                    @if (InfoComplete)
+                    {
+                        <i class="bi bi-check-circle-fill ck"></i>
+                    }
+                </button>
+                <button type="button" class="nlink @(_activeSection == "sec-images" ? "on" : "")"
+                        @onclick='() => ScrollTo("sec-images")'>
+                    <span class="ic"><i class="bi bi-images"></i></span> Images
+                    <span class="badge-n">@CurrentImageCount</span>
+                </button>
+                <button type="button" class="nlink @(_activeSection == "sec-variants" ? "on" : "")"
+                        @onclick='() => ScrollTo("sec-variants")'>
+                    <span class="ic"><i class="bi bi-cash-coin"></i></span> Variants &amp; Pricing
+                </button>
+            </aside>
+
+            <!-- ── RIGHT: form panels ──────────────────────────────── -->
+            <main class="pf-main">
+
+                <!-- Product information -->
+                <section id="sec-info" class="card">
+                    <div class="card-h">
+                        <span class="hd-ic"><i class="bi bi-box-seam"></i></span>
+                        <div class="hd-tx">
+                            <h2>Product information</h2>
+                            <p>Identity, classification, and description.</p>
+                        </div>
+                    </div>
+                    <div class="card-b">
+                        <div class="grid">
+                            <div class="c6">
+                                <label class="fl">Code</label>
+                                @if (Id is null)
+                                {
+                                    <input class="ctl" value="Auto-generated from category" disabled />
+                                    <div class="hint">e.g. @(_selectedCode ?? "KAT-01")/0001</div>
+                                }
+                                else
+                                {
+                                    <input class="ctl mono" value="@_code" disabled />
+                                }
+                            </div>
+                            <div class="c6">
+                                <label class="fl">Category <span class="req">*</span></label>
+                                <select class="ctl sel @(_categoryError is not null ? "is-invalid" : "")"
+                                        @bind="_categoryId" @bind:after="OnCategoryChanged">
+                                    <option value="">— Select category —</option>
+                                    @foreach (var c in _categories)
+                                    {
+                                        <option value="@c.Id">@c.Code — @c.Name</option>
+                                    }
+                                </select>
+                                @if (_categoryError is not null)
+                                {
+                                    <div class="invalid-feedback">@_categoryError</div>
+                                }
+                            </div>
+                            <div class="c12">
+                                <label class="fl">Name <span class="req">*</span></label>
+                                <input class="ctl @(_nameError is not null ? "is-invalid" : "")"
+                                       placeholder="Enter product name"
+                                       @bind="_name" @bind:event="oninput" maxlength="200" />
+                                @if (_nameError is not null)
+                                {
+                                    <div class="invalid-feedback">@_nameError</div>
+                                }
+                            </div>
+                            <div class="c4">
+                                <label class="fl">Brand</label>
+                                <select class="ctl sel" @bind="_brandId">
+                                    <option value="">— None —</option>
+                                    @foreach (var b in _brands)
+                                    {
+                                        <option value="@b.Id">@b.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="c4">
+                                <label class="fl">Base Unit</label>
+                                <select class="ctl sel" @bind="_baseUnitId">
+                                    <option value="">— None —</option>
+                                    @foreach (var u in _units)
+                                    {
+                                        <option value="@u.Id">@u.Code — @u.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="c4">
+                                <label class="fl">Tax</label>
+                                <select class="ctl sel" @bind="_taxId">
+                                    <option value="">— None —</option>
+                                    @foreach (var t in _taxes)
+                                    {
+                                        <option value="@t.Id">@t.Name (@t.Rate%)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="c4">
+                                <label class="fl">Status</label>
+                                <select class="ctl sel" @bind="_status">
+                                    @foreach (var s in Enum.GetValues<ProductStatus>())
+                                    {
+                                        <option value="@s">@s</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="c12">
+                                <label class="fl">Description</label>
+                                <textarea class="ctl"
+                                          placeholder="Specifications, benefits, details..."
+                                          rows="3"
+                                          @bind="_description" @bind:event="oninput"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Images -->
+                <section id="sec-images" class="card">
+                    <div class="card-h">
+                        <span class="hd-ic ic-img"><i class="bi bi-images"></i></span>
+                        <div class="hd-tx">
+                            <h2>Images</h2>
+                            <p>Up to @MaxImages photos. The starred one is the main image.</p>
+                        </div>
+                        <span class="count">@CurrentImageCount / @MaxImages</span>
+                    </div>
+                    <div class="card-b">
+                        @if (_imageError is not null)
+                        {
+                            <div class="pf-alert warn mb-3"><i class="bi bi-exclamation-triangle"></i> @_imageError</div>
+                        }
+
+                        <div class="img-grid mb-3">
+                            @foreach (var img in _existingImages)
+                            {
+                                <div class="img-tile @(img.IsPrimary ? "is-primary" : "")">
+                                    <img src="@img.Url" alt="@img.OriginalFileName" />
+                                    @if (img.IsPrimary)
+                                    {
+                                        <span class="img-badge primary"><i class="bi bi-star-fill me-1"></i>Main</span>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="img-star" title="Set as main image"
+                                                @onclick="() => SetPrimaryAsync(img.Id)">
+                                            <i class="bi bi-star"></i>
+                                        </button>
+                                    }
+                                    <button type="button" class="img-remove" title="Remove"
+                                            @onclick="() => RemoveExistingImageAsync(img.Id)">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            }
+                            @foreach (var pf in _newFiles)
+                            {
+                                <div class="img-tile">
+                                    <img src="@pf.DataUrl" alt="@pf.OriginalFileName" />
+                                    <span class="img-badge">new</span>
+                                    <button type="button" class="img-remove" title="Remove"
+                                            @onclick="() => RemoveNewFile(pf)">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            }
+
+                            @if (CurrentImageCount < MaxImages)
+                            {
+                                <label class="img-upload">
+                                    <InputFile OnChange="OnFilesSelectedAsync" multiple accept="image/*" />
+                                    <i class="bi bi-cloud-arrow-up"></i>
+                                    <span>Add images</span>
+                                    <small>max @(MaxFileSizeMb)MB each</small>
+                                </label>
+                            }
+                        </div>
+
+                        @if (CurrentImageCount >= MaxImages)
+                        {
+                            <div class="hint"><i class="bi bi-info-circle me-1"></i>Maximum @MaxImages images reached.</div>
+                        }
+                    </div>
+                </section>
+
+                <!-- Variants & pricing -->
+                <section id="sec-variants" class="card">
+                    <div class="card-h">
+                        <span class="hd-ic ic-var"><i class="bi bi-cash-coin"></i></span>
+                        <div class="hd-tx">
+                            <h2>Variants &amp; pricing</h2>
+                            <p>Price and stock for a single item, or generate combinations.</p>
+                        </div>
+                    </div>
+                    <div class="card-b">
+
+                        <label class="switch mb-3">
+                            <input type="checkbox" class="sw-input" @bind="_hasVariants" />
+                            <span class="sw"></span>
+                            <span class="sw-tx">
+                                <span class="tl">This product has variants</span>
+                                <span class="ts">Size, color, and other combinations</span>
+                            </span>
+                        </label>
+
+                        @if (!_hasVariants)
+                        {
+                            <!-- Simple: single default variant -->
+                            <div class="grid">
+                                <div class="c6">
+                                    <label class="fl">Selling Price <span class="req">*</span></label>
+                                    <div class="ig"><span class="pre">Rp</span>
+                                        <input class="ctl mono pad" type="text" inputmode="numeric" placeholder="0"
+                                               value="@FmtPrice(_price)" @oninput="OnPriceInput" /></div>
+                                </div>
+                                <div class="c6">
+                                    <label class="fl">Discount %</label>
+                                    <div class="ig"><span class="pre">%</span>
+                                        <input class="ctl mono pad" type="number" step="0.01" min="0" max="100" placeholder="optional"
+                                               @bind="_discountPercent" @bind:after="OnDiscPctChanged" /></div>
+                                </div>
+                                <div class="c6">
+                                    <label class="fl">Discount Price</label>
+                                    <div class="ig"><span class="pre">Rp</span>
+                                        <input class="ctl mono pad" type="text" inputmode="numeric" placeholder="optional"
+                                               value="@FmtPriceN(_discountPrice)" @oninput="OnDiscPriceInput" /></div>
+                                </div>
+                                <div class="c6">
+                                    <label class="fl">Cost Price (HPP)</label>
+                                    <div class="ig"><span class="pre">Rp</span>
+                                        <input class="ctl mono pad" type="text" inputmode="numeric" placeholder="0"
+                                               value="@FmtPrice(_cost)" @oninput="OnCostInput" /></div>
+                                </div>
+                                <div class="c6">
+                                    @if (Id is null)
+                                    {
+                                        <label class="fl">Opening Stock</label>
+                                        <input class="ctl mono" type="number" step="1" min="0" placeholder="0"
+                                               @bind="_stock" @bind:event="oninput" />
+                                    }
+                                    else
+                                    {
+                                        <label class="fl">Stock on hand</label>
+                                        <input class="ctl mono" value="@_stock.ToString("N0")" disabled />
+                                    }
+                                </div>
+                                <div class="c6">
+                                    <label class="fl">Barcode</label>
+                                    <input class="ctl mono" maxlength="50" placeholder="optional"
+                                           @bind="_barcode" @bind:event="oninput" />
+                                </div>
+                                <div class="c6">
+                                    <label class="fl">Weight (gram)</label>
+                                    <input class="ctl mono" type="number" step="0.001" min="0" placeholder="0"
+                                           @bind="_weight" @bind:event="oninput" />
+                                </div>
+                                <div class="c12">
+                                    <label class="fl">Dimensions (P x L x T)</label>
+                                    <input class="ctl" placeholder="e.g. 20 x 15 x 5 cm"
+                                           @bind="_dimensions" @bind:event="oninput" maxlength="100" />
+                                </div>
+                            </div>
+
+                            @if (_price > 0)
+                            {
+                                <div class="pv">
+                                    <div class="pv-top"><span class="dot"></span> Live preview</div>
+                                    <div class="pv-b">
+                                        <div class="pv-id">
+                                            <div class="cat">@(PreviewCategoryName ?? "Uncategorized")</div>
+                                            <div class="nm">@(string.IsNullOrWhiteSpace(_name) ? "Product name" : _name)</div>
+                                        </div>
+                                        <div class="pv-price">
+                                            <span class="now">Rp @PreviewSell.ToString("N0")</span>
+                                            @if (PreviewHasDiscount)
+                                            {
+                                                <span class="was">@_price.ToString("N0")</span>
+                                                @if (_discountPercent is { } dp)
+                                                {
+                                                    <span class="badge">-@dp.ToString("0.##")%</span>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="pv-meta">
+                                        <span class="m">Cost (HPP) <b>Rp @_cost.ToString("N0")</b></span>
+                                        <span class="m">Margin <b class="ok">@PreviewMargin.ToString("0.#")%</b></span>
+                                        @if (Id is null)
+                                        {
+                                            <span class="m">Opening <b>@_stock.ToString("N0")</b></span>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <!-- Multi-variant generator -->
+                            <p class="hint mb-3">Select attributes and values, then generate the combinations.</p>
+                            @foreach (var attr in _attributes)
+                            {
+                                var attrId = attr.Id;
+                                <div class="attr-box">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="@($"attr{attrId}")"
+                                               checked="@_selectedAttributes.Contains(attrId)"
+                                               @onchange="e => ToggleAttribute(attrId, (bool)e.Value!)" />
+                                        <label class="form-check-label fw-medium" for="@($"attr{attrId}")">@attr.Name</label>
+                                    </div>
+                                    @if (_selectedAttributes.Contains(attrId))
+                                    {
+                                        <div class="d-flex flex-wrap gap-3 mt-2 ms-3">
+                                            @foreach (var val in attr.Values)
+                                            {
+                                                var valId = val.Id;
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="@($"val{valId}")"
+                                                           checked="@_selectedValues.Contains(valId)"
+                                                           @onchange="e => ToggleValue(valId, (bool)e.Value!)" />
+                                                    <label class="form-check-label" for="@($"val{valId}")">@val.Value</label>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            @if (_attributes.Count == 0)
+                            {
+                                <div class="pf-alert warn"><i class="bi bi-exclamation-triangle"></i> No attributes defined. Create some under Master → Attribute first.</div>
+                            }
+
+                            <button type="button" class="btn btn-soft mb-3" @onclick="GenerateVariants">
+                                <i class="bi bi-grid-3x3-gap"></i> Generate variants
+                            </button>
+
+                            @if (_rows.Count > 0)
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle vr-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width:34px"></th>
+                                                <th>Combination</th>
+                                                <th style="width:130px">Price</th>
+                                                <th style="width:110px">@(Id is null ? "Opening Stock" : "On hand")</th>
+                                                <th style="width:40px"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @for (var i = 0; i < _rows.Count; i++)
+                                            {
+                                                var idx = i;
+                                                <tr>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-link p-0 vr-caret"
+                                                                title="Detail" @onclick="() => _rows[idx].Expanded = !_rows[idx].Expanded">
+                                                            <i class="bi @(_rows[idx].Expanded ? "bi-chevron-down" : "bi-chevron-right")"></i>
+                                                        </button>
+                                                    </td>
+                                                    <td class="small">@_rows[idx].Combo</td>
+                                                    <td><input class="ctl ctl-sm mono text-end" type="text" inputmode="numeric" value="@FmtPrice(_rows[idx].Price)" @oninput="e => OnRowPriceInput(_rows[idx], e)" /></td>
+                                                    <td>
+                                                        @if (Id is null)
+                                                        {
+                                                            <input class="ctl ctl-sm mono text-end" type="number" step="1" min="0" @bind="_rows[idx].Stock" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <input class="ctl ctl-sm mono text-end" value="@_rows[idx].Stock.ToString("N0")" disabled />
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        <button type="button" class="vr-del" @onclick="() => _rows.RemoveAt(idx)" title="Remove">
+                                                            <i class="bi bi-trash3"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                @if (_rows[idx].Expanded)
+                                                {
+                                                    <tr class="vr-detail">
+                                                        <td></td>
+                                                        <td colspan="4">
+                                                            <div class="vr-detail-grid">
+                                                                <div>
+                                                                    <label class="form-label-sm">Cost Price (HPP)</label>
+                                                                    <input class="ctl ctl-sm mono text-end" type="text" inputmode="numeric" value="@FmtPrice(_rows[idx].Cost)" @oninput="e => OnRowCostInput(_rows[idx], e)" />
+                                                                </div>
+                                                                <div>
+                                                                    <label class="form-label-sm">Discount %</label>
+                                                                    <input class="ctl ctl-sm mono text-end" type="number" step="0.01" min="0" max="100" placeholder="optional" @bind="_rows[idx].DiscountPercent" @bind:after="() => OnRowDiscPctChanged(_rows[idx])" />
+                                                                </div>
+                                                                <div>
+                                                                    <label class="form-label-sm">Discount Price</label>
+                                                                    <input class="ctl ctl-sm mono text-end" type="text" inputmode="numeric" placeholder="optional" value="@FmtPriceN(_rows[idx].Discount)" @oninput="e => OnRowDiscPriceInput(_rows[idx], e)" />
+                                                                </div>
+                                                                <div>
+                                                                    <label class="form-label-sm">Barcode</label>
+                                                                    <input class="ctl ctl-sm mono" maxlength="50" placeholder="optional" @bind="_rows[idx].Barcode" />
+                                                                </div>
+                                                                <div>
+                                                                    <label class="form-label-sm">Weight (gram)</label>
+                                                                    <input class="ctl ctl-sm mono text-end" type="number" step="0.001" min="0" placeholder="0" @bind="_rows[idx].Weight" />
+                                                                </div>
+                                                                <div class="vr-detail-dim">
+                                                                    <label class="form-label-sm">Dimensions (P x L x T)</label>
+                                                                    <input class="ctl ctl-sm" maxlength="100" placeholder="e.g. 20 x 15 x 5 cm" @bind="_rows[idx].Dimensions" />
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="hint"><i class="bi bi-info-circle me-1"></i>Click the arrow on a row to set its HPP, discount, barcode, weight, and dimensions.</div>
+                            }
+                        }
+                    </div>
+                </section>
+
+            </main>
+        </div>
+
+        <div class="pf-footer">
+            <div class="in">
+                @if (!_hasVariants && _price > 0)
+                {
+                    <div class="metric"><span class="k">Sells at</span><span class="v">Rp @PreviewSell.ToString("N0")</span></div>
+                    <div class="msep"></div>
+                    <div class="metric"><span class="k">Margin</span><span class="v ok">@PreviewMargin.ToString("0.#")%</span></div>
+                }
+                <span class="note"><span class="req">*</span> required fields</span>
+                <a class="btn btn-ghost" href="/master/products">
+                    <i class="bi bi-x-lg"></i> Cancel
+                </a>
+                <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                    @if (_saving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-check2"></i>
+                    }
+                    Save product
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private const int MaxImages = 5;            // selaras dengan Product.MaxImages
+    private const int MaxFileSizeMb = 5;
+    private const long MaxFileSize = MaxFileSizeMb * 1024 * 1024;
+
+    // Parent fields
+    private string _code = string.Empty;
+    private string _name = string.Empty;
+    private string? _description;
+    private int? _categoryId;
+    private int? _brandId;
+    private int? _baseUnitId;
+    private int? _taxId;
+    private ProductStatus _status = ProductStatus.Aktif;
+    private string? _selectedCode;
+
+    // Simple (single-variant) fields
+    private bool _hasVariants;
+    private string? _barcode;
+    private decimal _price;
+    private decimal? _discountPrice;
+    private decimal? _discountPercent;
+    private decimal _cost;
+    private int _stock;
+    private decimal? _weight;
+    private string? _dimensions;
+
+    // Multi-variant state
+    private readonly HashSet<int> _selectedAttributes = new();
+    private readonly HashSet<int> _selectedValues = new();
+    private readonly List<VariantRow> _rows = new();
+
+    private IReadOnlyList<ProductCategoryDto> _categories = [];
+    private IReadOnlyList<BrandDto> _brands = [];
+    private IReadOnlyList<UnitDto> _units = [];
+    private IReadOnlyList<TaxDto> _taxes = [];
+    private IReadOnlyList<AttributeDto> _attributes = [];
+    private readonly List<ProductImageDto> _existingImages = [];
+    private readonly List<PendingImage> _newFiles = [];
+
+    private bool _loading = true, _saving, _notFound;
+    private string? _error, _imageError, _nameError, _categoryError;
+
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private string Title => Id is null ? "Add Product" : "Edit Product";
+    private int CurrentImageCount => _existingImages.Count + _newFiles.Count;
+
+    // Atlas nav: completion of required fields (Name + Category)
+    private int InfoFilled => (!string.IsNullOrWhiteSpace(_name) ? 1 : 0) + (_categoryId is not null ? 1 : 0);
+    private bool InfoComplete => InfoFilled == 2;
+
+    // Live-preview (single-item pricing)
+    private string? PreviewCategoryName => _categories.FirstOrDefault(c => c.Id == _categoryId)?.Name;
+    private decimal PreviewSell => _discountPrice is > 0 ? _discountPrice.Value : _price;
+    private bool PreviewHasDiscount => _discountPrice is > 0 && _discountPrice.Value < _price;
+    private decimal PreviewMargin => PreviewSell > 0 ? Math.Round((PreviewSell - _cost) / PreviewSell * 100m, 1, MidpointRounding.AwayFromZero) : 0m;
+
+    // Atlas nav: active section highlight + smooth scroll (avoids <base href> "#id" → Home bug)
+    private string _activeSection = "sec-info";
+
+    private async Task ScrollTo(string id)
+    {
+        _activeSection = id;
+        await JS.InvokeVoidAsync("pfScrollTo", id);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateTask;
+        var perm = Id is null
+            ? AppMenus.Perm("master.products", "create")
+            : AppMenus.Perm("master.products", "edit");
+
+        if (!(await Auth.AuthorizeAsync(state.User, perm)).Succeeded)
+        {
+            Nav.NavigateTo("/master/products");
+            return;
+        }
+
+        _categories = await CategoryService.GetAllAsync();
+        _brands = await BrandService.GetAllAsync();
+        _units = await UnitService.GetAllAsync();
+        _taxes = await TaxService.GetAllAsync();
+        _attributes = await AttributeService.GetAllAsync();
+
+        if (Id is int id)
+        {
+            var p = await ProductService.GetByIdAsync(id);
+            if (p is null)
+            {
+                _notFound = true;
+            }
+            else
+            {
+                _code = p.Code;
+                _name = p.Name;
+                _description = p.Description;
+                _categoryId = p.CategoryId;
+                _brandId = p.BrandId;
+                _baseUnitId = p.BaseUnitId;
+                _taxId = p.TaxId;
+                _status = p.Status;
+                _existingImages.AddRange(p.Images);
+                OnCategoryChanged();
+                LoadVariants(p);
+            }
+        }
+
+        _loading = false;
+    }
+
+    private void LoadVariants(ProductDto p)
+    {
+        var single = p.Variants.Count == 1 && p.Variants[0].Attributes.Count == 0;
+        if (single)
+        {
+            var v = p.Variants[0];
+            _hasVariants = false;
+            _barcode = v.Barcode;
+            _price = v.Price;
+            _discountPrice = v.DiscountPrice;
+            _discountPercent = v.DiscountPercent;
+            _cost = v.CostPrice;
+            _stock = v.Stock;
+            _weight = v.Weight;
+            _dimensions = v.Dimensions;
+            return;
+        }
+
+        _hasVariants = true;
+        foreach (var v in p.Variants)
+        {
+            var ids = v.Attributes.Select(a => a.AttributeValueId).ToList();
+            foreach (var a in v.Attributes)
+            {
+                _selectedValues.Add(a.AttributeValueId);
+                var attr = _attributes.FirstOrDefault(at => at.Values.Any(val => val.Id == a.AttributeValueId));
+                if (attr is not null) _selectedAttributes.Add(attr.Id);
+            }
+            _rows.Add(new VariantRow
+            {
+                AttributeValueIds = ids,
+                Combo = ComboLabel(ids),
+                Price = v.Price,
+                Discount = v.DiscountPrice,
+                DiscountPercent = v.DiscountPercent,
+                Cost = v.CostPrice,
+                Barcode = v.Barcode,
+                Weight = v.Weight,
+                Dimensions = v.Dimensions,
+                Stock = v.Stock,
+                IsActive = v.IsActive
+            });
+        }
+    }
+
+    private void OnCategoryChanged() =>
+        _selectedCode = _categories.FirstOrDefault(c => c.Id == _categoryId)?.Code;
+
+    private void ToggleAttribute(int attributeId, bool on)
+    {
+        if (on) _selectedAttributes.Add(attributeId);
+        else
+        {
+            _selectedAttributes.Remove(attributeId);
+            // also unselect its values
+            var attr = _attributes.FirstOrDefault(a => a.Id == attributeId);
+            if (attr is not null)
+                foreach (var v in attr.Values) _selectedValues.Remove(v.Id);
+        }
+    }
+
+    private void ToggleValue(int valueId, bool on)
+    {
+        if (on) _selectedValues.Add(valueId);
+        else _selectedValues.Remove(valueId);
+    }
+
+    private void GenerateVariants()
+    {
+        var groups = _attributes
+            .Where(a => _selectedAttributes.Contains(a.Id))
+            .Select(a => a.Values.Where(v => _selectedValues.Contains(v.Id)).Select(v => v.Id).ToList())
+            .Where(g => g.Count > 0)
+            .ToList();
+
+        if (groups.Count == 0)
+        {
+            _rows.Clear();
+            return;
+        }
+
+        var combos = CartesianProduct(groups);
+        _rows.Clear();
+        foreach (var combo in combos)
+            _rows.Add(new VariantRow
+            {
+                AttributeValueIds = combo,
+                Combo = ComboLabel(combo),
+                Price = _price,
+                Cost = _cost,
+                Stock = 0,
+                IsActive = true
+            });
+    }
+
+    private string ComboLabel(IReadOnlyList<int> valueIds)
+    {
+        var labels = new List<string>();
+        foreach (var attr in _attributes)
+            foreach (var v in attr.Values)
+                if (valueIds.Contains(v.Id)) labels.Add(v.Value);
+        return string.Join(" / ", labels);
+    }
+
+    private static List<List<int>> CartesianProduct(List<List<int>> groups)
+    {
+        var result = new List<List<int>> { new() };
+        foreach (var group in groups)
+        {
+            var next = new List<List<int>>();
+            foreach (var combo in result)
+                foreach (var val in group)
+                    next.Add(new List<int>(combo) { val });
+            result = next;
+        }
+        return result;
+    }
+
+    private async Task OnFilesSelectedAsync(InputFileChangeEventArgs e)
+    {
+        _imageError = null;
+
+        foreach (var file in e.GetMultipleFiles(maximumFileCount: 100))
+        {
+            if (CurrentImageCount >= MaxImages)
+            {
+                _imageError = $"Maximum {MaxImages} images per product.";
+                break;
+            }
+            if (file.Size > MaxFileSize)
+            {
+                _imageError = $"\"{file.Name}\" exceeds {MaxFileSizeMb}MB and was skipped.";
+                continue;
+            }
+
+            using var ms = new MemoryStream();
+            await file.OpenReadStream(MaxFileSize).CopyToAsync(ms);
+            var bytes = ms.ToArray();
+
+            _newFiles.Add(new PendingImage(
+                file.Name,
+                string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType,
+                bytes,
+                $"data:{file.ContentType};base64,{Convert.ToBase64String(bytes)}"));
+        }
+    }
+
+    private void RemoveNewFile(PendingImage file)
+    {
+        _newFiles.Remove(file);
+        _imageError = null;
+    }
+
+    private async Task RemoveExistingImageAsync(int imageId)
+    {
+        if (Id is not int id) return;
+        if (!await Swal.ConfirmAsync("Remove image?", "This image will be deleted from the product.", "Yes, remove"))
+            return;
+
+        if (await ProductService.DeleteImageAsync(id, imageId))
+        {
+            await ReloadImagesAsync(id);
+            await Swal.ToastAsync("success", "Image removed");
+        }
+        _imageError = null;
+    }
+
+    private async Task SetPrimaryAsync(int imageId)
+    {
+        if (Id is int id && await ProductService.SetPrimaryImageAsync(id, imageId))
+            await ReloadImagesAsync(id);
+    }
+
+    private async Task ReloadImagesAsync(int id)
+    {
+        var p = await ProductService.GetByIdAsync(id);
+        _existingImages.Clear();
+        if (p is not null)
+            _existingImages.AddRange(p.Images);
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = _imageError = _nameError = _categoryError = null;
+        _saving = true;
+
+        try
+        {
+            var categoryId = _categoryId ?? 0;
+            var variants = BuildVariantInputs();
+            int productId;
+            IReadOnlyList<string> deactivatedSkus = [];
+
+            if (Id is int id)
+            {
+                var result = await ProductService.UpdateAsync(id, new UpdateProductRequest(
+                    _name, _description, categoryId, _brandId, _baseUnitId, _taxId, _status, variants));
+                productId = id;
+                deactivatedSkus = result.DeactivatedVariantSkus;
+            }
+            else
+            {
+                var created = await ProductService.CreateAsync(new CreateProductRequest(
+                    _name, _description, categoryId, _brandId, _baseUnitId, _taxId, _status, variants));
+                productId = created.Id;
+            }
+
+            // Notify before the image upload so the message isn't lost if upload throws.
+            if (deactivatedSkus.Count > 0)
+                await Swal.AlertAsync("Varian dinonaktifkan",
+                    $"{deactivatedSkus.Count} varian masih punya stok/riwayat, jadi dinonaktifkan (bukan dihapus): {string.Join(", ", deactivatedSkus)}");
+
+            if (_newFiles.Count > 0)
+            {
+                var uploads = _newFiles
+                    .Select(f => new ProductImageUpload(f.OriginalFileName, f.ContentType, f.Content))
+                    .ToList();
+                await ProductService.AddImagesAsync(productId, uploads);
+            }
+
+            Nav.NavigateTo("/master/products");
+        }
+        catch (ValidationException ex)
+        {
+            foreach (var e in ex.Errors)
+            {
+                if (e.PropertyName == nameof(CreateProductRequest.Name)) _nameError = e.ErrorMessage;
+                else if (e.PropertyName == nameof(CreateProductRequest.CategoryId)) _categoryError = e.ErrorMessage;
+                else _error = string.IsNullOrEmpty(_error) ? e.ErrorMessage : $"{_error} {e.ErrorMessage}";
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            _imageError = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "Failed to save. Please check the data and try again.";
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private List<VariantInput> BuildVariantInputs()
+    {
+        if (!_hasVariants)
+            return new()
+            {
+                new VariantInput(_barcode, _price, _discountPrice, _cost, _weight, _dimensions, Id is null ? _stock : 0, true, Array.Empty<int>(), _discountPercent)
+            };
+
+        return _rows
+            .Select(r => new VariantInput(r.Barcode, r.Price, r.Discount, r.Cost, r.Weight, r.Dimensions, Id is null ? r.Stock : 0, r.IsActive, r.AttributeValueIds, r.DiscountPercent))
+            .ToList();
+    }
+
+    // ── Format harga (ribuan) & kalkulasi diskon ────────────────────────────
+    private static string FmtPrice(decimal v) => v > 0 ? v.ToString("N0") : "";
+    private static string FmtPriceN(decimal? v) => v is > 0 ? v.Value.ToString("N0") : "";
+    private static decimal DigitsToDecimal(object? raw)
+        => decimal.TryParse(new string((raw?.ToString() ?? "").Where(char.IsDigit).ToArray()), out var v) ? v : 0m;
+    private static decimal? DigitsToDecimalN(object? raw)
+    {
+        var s = new string((raw?.ToString() ?? "").Where(char.IsDigit).ToArray());
+        return s.Length == 0 ? null : (decimal.TryParse(s, out var v) ? v : null);
+    }
+    private static decimal? ApplyPct(decimal price, decimal? pct)
+        => pct is { } p ? Math.Round(price * (1 - p / 100m), 2, MidpointRounding.AwayFromZero) : null;
+
+    // Single-item handlers
+    private void OnPriceInput(ChangeEventArgs e)
+    {
+        _price = DigitsToDecimal(e.Value);
+        if (_discountPercent is not null) _discountPrice = ApplyPct(_price, _discountPercent);
+    }
+    private void OnDiscPriceInput(ChangeEventArgs e) { _discountPrice = DigitsToDecimalN(e.Value); _discountPercent = null; }
+    private void OnCostInput(ChangeEventArgs e) => _cost = DigitsToDecimal(e.Value);
+    private void OnDiscPctChanged() { if (_discountPercent is { } p && (p < 0 || p > 100)) _discountPercent = Math.Clamp(p, 0, 100); _discountPrice = ApplyPct(_price, _discountPercent); }
+
+    // Row handlers
+    private void OnRowPriceInput(VariantRow r, ChangeEventArgs e)
+    {
+        r.Price = DigitsToDecimal(e.Value);
+        if (r.DiscountPercent is not null) r.Discount = ApplyPct(r.Price, r.DiscountPercent);
+    }
+    private void OnRowDiscPriceInput(VariantRow r, ChangeEventArgs e) { r.Discount = DigitsToDecimalN(e.Value); r.DiscountPercent = null; }
+    private void OnRowCostInput(VariantRow r, ChangeEventArgs e) => r.Cost = DigitsToDecimal(e.Value);
+    private void OnRowDiscPctChanged(VariantRow r) { if (r.DiscountPercent is { } p && (p < 0 || p > 100)) r.DiscountPercent = Math.Clamp(p, 0, 100); r.Discount = ApplyPct(r.Price, r.DiscountPercent); }
+
+    private sealed record PendingImage(string OriginalFileName, string ContentType, byte[] Content, string DataUrl);
+
+    private sealed class VariantRow
+    {
+        public List<int> AttributeValueIds { get; set; } = new();
+        public string Combo { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public decimal? Discount { get; set; }
+        public decimal? DiscountPercent { get; set; }
+        public decimal Cost { get; set; }
+        public string? Barcode { get; set; }
+        public decimal? Weight { get; set; }
+        public string? Dimensions { get; set; }
+        public int Stock { get; set; }
+        public bool IsActive { get; set; } = true;
+        public bool Expanded { get; set; }
+    }
+}

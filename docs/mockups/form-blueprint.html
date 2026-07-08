@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en" data-theme="blueprint">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Blueprint — Product form mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FBFCFE; --ink:#16202E; --muted:#5A6B80; --faint:#93A2B5;
+    --grid:#E5EBF3; --grid-bold:#D7E0EC; --line:#D3DCE8;
+    --accent:#1F4E9C; --accent-2:#2E6BE6; --accent-soft:#E7EEFB; --stamp:#C0433B;
+    --mono:'IBM Plex Mono',ui-monospace,monospace; --body:'Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;
+    background:var(--paper);
+    background-image:
+      linear-gradient(var(--grid) 1px,transparent 1px),
+      linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:26px 26px;}
+  .sheet{max-width:900px;margin:0 auto;padding:40px 26px 90px;}
+  .frame{background:rgba(251,252,254,.92);border:1.5px solid var(--line);border-radius:4px;box-shadow:0 1px 0 var(--grid-bold);}
+
+  .titleblock{display:flex;align-items:stretch;border-bottom:1.5px solid var(--line);}
+  .tb-main{padding:20px 24px;flex:1;}
+  .tb-main .doc{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;}
+  .tb-main h1{font-size:23px;font-weight:700;letter-spacing:-.02em;margin:6px 0 3px;}
+  .tb-main p{color:var(--muted);font-size:13px;margin:0;}
+  .tb-meta{border-left:1.5px solid var(--line);display:grid;grid-template-columns:1fr 1fr;min-width:230px;}
+  .tb-meta div{padding:10px 14px;border-bottom:1.5px solid var(--line);}
+  .tb-meta div:nth-child(odd){border-right:1.5px solid var(--line);}
+  .tb-meta div:nth-last-child(-n+2){border-bottom:0;}
+  .tb-meta .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;}
+  .tb-meta .v{font-family:var(--mono);font-size:12.5px;font-weight:600;margin-top:2px;}
+
+  .sec{padding:22px 24px;border-bottom:1.5px dashed var(--line);}
+  .sec:last-of-type{border-bottom:0;}
+  .sec-h{display:flex;align-items:center;gap:11px;margin-bottom:18px;}
+  .sec-h .sh{font-family:var(--mono);font-size:11px;color:#fff;background:var(--accent);padding:3px 9px;border-radius:3px;letter-spacing:.08em;}
+  .sec-h h2{font-size:15px;font-weight:700;letter-spacing:.01em;margin:0;}
+  .sec-h .rule{flex:1;border-top:1.5px dotted var(--grid-bold);}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 22px;}
+  .f{display:flex;flex-direction:column;gap:6px;} .f.wide{grid-column:1/-1;}
+  label{font-family:var(--mono);font-size:11px;letter-spacing:.03em;color:var(--muted);text-transform:uppercase;display:flex;justify-content:space-between;}
+  label .ref{color:var(--faint);}
+  .ctl{border:1.5px solid var(--line);background:#fff;border-radius:3px;padding:10px 12px;font:inherit;font-size:14px;color:var(--ink);outline:none;transition:.13s;width:100%;}
+  .ctl:focus{border-color:var(--accent-2);box-shadow:0 0 0 3px var(--accent-soft);}
+  .ctl.mono{font-family:var(--mono);}
+  select.ctl{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%235A6B80' stroke-width='2'%3E%3Cpath d='M3 5l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px;}
+  .ig{position:relative;} .ig .pre{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:12px;color:var(--faint);} .ig .ctl{padding-left:32px;font-family:var(--mono);}
+  textarea.ctl{resize:vertical;min-height:70px;line-height:1.5;}
+
+  .foot{display:flex;align-items:center;gap:14px;padding:16px 24px;border-top:1.5px solid var(--line);background:var(--accent-soft);}
+  .stamp{font-family:var(--mono);font-size:11px;color:var(--stamp);border:1.5px solid var(--stamp);border-radius:3px;padding:4px 9px;transform:rotate(-3deg);letter-spacing:.08em;}
+  .calc{font-family:var(--mono);font-size:12.5px;color:var(--muted);} .calc b{color:var(--ink);}
+  .acts{margin-left:auto;display:flex;gap:9px;}
+  .btn{font-family:var(--mono);border:1.5px solid var(--line);background:#fff;border-radius:3px;padding:9px 15px;font-size:12.5px;font-weight:600;cursor:pointer;transition:.13s;}
+  .btn:hover{border-color:var(--accent);}
+  .btn.pri{background:var(--accent);border-color:var(--accent);color:#fff;} .btn.pri:hover{background:var(--accent-2);border-color:var(--accent-2);}
+
+  @media (max-width:720px){.titleblock{flex-direction:column;} .tb-meta{border-left:0;border-top:1.5px solid var(--line);} .grid{grid-template-columns:1fr;} .foot{flex-wrap:wrap;}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+  .ctl:focus-visible,.btn:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px;}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="frame">
+    <div class="titleblock">
+      <div class="tb-main">
+        <div class="doc">FORM · Product master</div>
+        <h1>Add product</h1>
+        <p>Complete the sheet, then release to the catalog.</p>
+      </div>
+      <div class="tb-meta">
+        <div><div class="k">Sheet</div><div class="v">1 / 1</div></div>
+        <div><div class="k">Rev</div><div class="v">A</div></div>
+        <div><div class="k">SKU</div><div class="v">auto</div></div>
+        <div><div class="k">Status</div><div class="v" style="color:var(--accent)">DRAFT</div></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h"><span class="sh">01 BASICS</span><span class="rule"></span></div>
+      <div class="grid">
+        <div class="f wide"><label>Product name <span class="ref">req</span></label><input class="ctl" value="Arabica Coffee Beans 250g"></div>
+        <div class="f"><label>Category <span class="ref">req</span></label><select class="ctl"><option>Beverages</option><option>Food</option></select></div>
+        <div class="f"><label>Brand</label><select class="ctl"><option>Acetris House</option><option>Unbranded</option></select></div>
+        <div class="f"><label>Base unit <span class="ref">req</span></label><select class="ctl"><option>Pack</option><option>Piece</option></select></div>
+        <div class="f"><label>Tax</label><select class="ctl"><option>PPN 11%</option><option>No tax</option></select></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h"><span class="sh">02 PRICING</span><span class="rule"></span></div>
+      <div class="grid">
+        <div class="f"><label>Selling price <span class="ref">Rp</span></label><div class="ig"><span class="pre">Rp</span><input class="ctl mono" value="62.000"></div></div>
+        <div class="f"><label>Discount <span class="ref">%</span></label><div class="ig"><span class="pre">%</span><input class="ctl mono" value="10"></div></div>
+        <div class="f"><label>Discount price <span class="ref">Rp</span></label><div class="ig"><span class="pre">Rp</span><input class="ctl mono" value="55.800"></div></div>
+        <div class="f"><label>Cost / HPP <span class="ref">Rp</span></label><div class="ig"><span class="pre">Rp</span><input class="ctl mono" value="40.000"></div></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h"><span class="sh">03 INVENTORY</span><span class="rule"></span></div>
+      <div class="grid">
+        <div class="f"><label>Warehouse <span class="ref">req</span></label><select class="ctl"><option>Central — Jakarta</option><option>Outlet — Bandung</option></select></div>
+        <div class="f"><label>Opening stock <span class="ref">qty</span></label><input class="ctl mono" value="120"></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <span class="stamp">FOR RELEASE</span>
+      <span class="calc">sells <b>Rp 55.800</b> · margin <b>28.3%</b></span>
+      <div class="acts"><button class="btn">Cancel</button><button class="btn">Save draft</button><button class="btn pri">Release</button></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

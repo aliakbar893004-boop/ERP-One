@@ -1,0 +1,196 @@
+@page "/settings/users"
+@attribute [Authorize(Policy = "settings.users.index")]
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>User Management</PageTitle>
+
+<div class="sh-header mb-4">
+    <div>
+        <h4 class="sh-title">User Management</h4>
+        <p class="sh-subtitle">Manage user accounts and system access</p>
+    </div>
+    <AuthorizeView Policy="settings.users.create">
+        <Authorized>
+            <a class="btn btn-primary btn-sm" href="/settings/users/new">
+                <i class="bi bi-person-plus-fill me-1"></i> Add User
+            </a>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+<div class="search-card mb-4">
+    <input class="form-control" placeholder="Search username, name, or email..."
+           @bind="_search" @bind:event="oninput" />
+</div>
+
+@if (_rows is null)
+{
+    <div class="text-center py-5 text-muted">
+        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+        Loading data...
+    </div>
+}
+else
+{
+    var shown = Filter(_rows, _search);
+
+    if (shown.Count == 0)
+    {
+        <div class="empty-state">
+            <div class="empty-icon">&#128100;</div>
+            <p class="empty-text">@(string.IsNullOrWhiteSpace(_search) ? "No users yet." : "No matching users.")</p>
+        </div>
+    }
+    else
+    {
+        <div class="data-card">
+            <div class="data-card-header">
+                <span class="text-muted small">@shown.Count of @_rows.Count users</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-head">
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in shown)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="u-avatar @AvatarClass(row.User.DisplayName)">
+                                            @Initials(row.User.DisplayName)
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold lh-sm">@row.User.DisplayName</div>
+                                            <div class="text-muted small">@("@" + row.User.UserName)</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-muted small">@(row.User.Email ?? "–")</td>
+                                <td>
+                                    @foreach (var role in row.Roles)
+                                    {
+                                        <span class="role-badge">@role</span>
+                                    }
+                                    @if (!row.Roles.Any()) { <span class="text-muted">–</span> }
+                                </td>
+                                <td>
+                                    @if (row.User.IsActive)
+                                    {
+                                        <span class="status-badge status-active">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-badge status-inactive">Inactive</span>
+                                    }
+                                </td>
+                                <td class="small text-muted text-nowrap">
+                                    @row.User.CreatedAt.ToLocalTime().ToString("d MMM yyyy")
+                                </td>
+                                <td class="text-end text-nowrap">
+                                    @if (_confirmDeleteId == row.User.Id)
+                                    {
+                                        <span class="text-danger small fw-semibold me-2">Delete?</span>
+                                        <button class="btn btn-sm btn-danger me-1"
+                                                @onclick="() => ConfirmDeleteAsync(row.User.Id)">
+                                            <i class="bi bi-check2 me-1"></i>Yes
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary"
+                                                @onclick="CancelDelete">
+                                            <i class="bi bi-x-lg me-1"></i>Cancel
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <AuthorizeView Policy="settings.users.edit">
+                                            <Authorized>
+                                                <a class="btn btn-sm btn-outline-primary me-1"
+                                                   href="@($"/settings/users/{row.User.Id}/edit")">
+                                                    <i class="bi bi-pencil-fill me-1"></i>Edit
+                                                </a>
+                                            </Authorized>
+                                        </AuthorizeView>
+                                        <AuthorizeView Policy="settings.users.delete">
+                                            <Authorized>
+                                                <button class="btn btn-sm btn-outline-danger"
+                                                        @onclick="() => _confirmDeleteId = row.User.Id">
+                                                    <i class="bi bi-trash3-fill me-1"></i>Delete
+                                                </button>
+                                            </Authorized>
+                                        </AuthorizeView>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<Row>? _rows;
+    private string _search = string.Empty;
+    private string? _confirmDeleteId;
+
+    private sealed record Row(ApplicationUser User, IList<string> Roles);
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        var users = await UserManager.Users.OrderBy(u => u.UserName).ToListAsync();
+        var rows = new List<Row>();
+        foreach (var u in users)
+            rows.Add(new Row(u, await UserManager.GetRolesAsync(u)));
+        _rows = rows;
+    }
+
+    private void CancelDelete() => _confirmDeleteId = null;
+
+    private async Task ConfirmDeleteAsync(string id)
+    {
+        _confirmDeleteId = null;
+        var user = await UserManager.FindByIdAsync(id);
+        if (user is not null) await UserManager.DeleteAsync(user);
+        await LoadAsync();
+    }
+
+    private static List<Row> Filter(List<Row> rows, string q) =>
+        string.IsNullOrWhiteSpace(q)
+            ? rows
+            : rows.Where(r =>
+                (r.User.UserName ?? "").Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                r.User.DisplayName.Contains(q, StringComparison.OrdinalIgnoreCase) ||
+                (r.User.Email ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    private static string Initials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var p = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return p.Length >= 2
+            ? $"{char.ToUpper(p[0][0])}{char.ToUpper(p[^1][0])}"
+            : char.ToUpper(name[0]).ToString();
+    }
+
+    private static string AvatarClass(string name)
+    {
+        var cs = new[] { "av-blue", "av-green", "av-purple", "av-orange", "av-teal" };
+        if (string.IsNullOrEmpty(name)) return cs[0];
+        var h = 0;
+        foreach (var c in name) h += c;
+        return cs[Math.Abs(h) % cs.Length];
+    }
+}

@@ -1,0 +1,206 @@
+@page "/transactions/goods-receipts"
+@attribute [Authorize(Policy = "transactions.goods-receipts.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Common
+@using ErpOne.Application.GoodsReceipts
+@using ErpOne.Domain.Entities
+@inject IGoodsReceiptService Grn
+@inject NavigationManager Nav
+@inject SwalService Swal
+
+<PageTitle>Goods Receipt</PageTitle>
+
+<div class="pi">
+
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Transactions</span><span class="sep">·</span><span class="here">Goods Receipt</span></nav>
+            <h1>Goods Receipt</h1>
+            <p>Penerimaan barang atas Purchase Order.</p>
+        </div>
+        <AuthorizeView Policy="transactions.goods-receipts.create">
+            <Authorized>
+                <div class="pi-actions">
+                    <a class="btn btn-primary" href="/transactions/goods-receipts/new"><i class="bi bi-plus-lg"></i> Penerimaan Baru</a>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <!-- ── KPI cards ───────────────────────────────────────────── -->
+    @if (_dash is not null)
+    {
+        <div class="kpis">
+            <div class="kpi">
+                <div class="ic ic-blu"><i class="bi bi-box-seam"></i></div>
+                <div class="kpi-tx">
+                    <div class="v">@_dash.TotalCount.ToString("N0")</div>
+                    <div class="l">Total GRN</div>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-gry"><i class="bi bi-pencil-square"></i></div>
+                <div class="kpi-tx">
+                    <div class="v">@_dash.DraftCount.ToString("N0")</div>
+                    <div class="l">Draft</div>
+                </div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-grn"><i class="bi bi-check-circle"></i></div>
+                <div class="kpi-tx">
+                    <div class="v">@_dash.PostedCount.ToString("N0")</div>
+                    <div class="l">Posted</div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- ── Toolbar: search + status chips ──────────────────────── -->
+    <div class="toolbar">
+        <div class="search">
+            <i class="bi bi-search"></i>
+            <input placeholder="Cari nomor GRN atau PO…" @bind="_search" @bind:event="oninput" @onkeyup="ReloadAsync" />
+        </div>
+        <div class="chips">
+            <button class="chip @(_status is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">Semua</button>
+            @foreach (var s in Enum.GetValues<GoodsReceiptStatus>())
+            {
+                <button class="chip @(_status == s ? "on" : "")" @onclick="() => SetStatusAsync(s)">@s</button>
+            }
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty">
+            <div class="empty-ic"><i class="bi bi-box-seam"></i></div>
+            <p>
+                @if (string.IsNullOrEmpty(_search) && _status is null)
+                {
+                    <span>Belum ada Goods Receipt. <a href="/transactions/goods-receipts/new">Buat yang pertama.</a></span>
+                }
+                else
+                {
+                    <span>Tidak ada GRN yang cocok dengan filter.</span>
+                }
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-top">
+                <span class="n">Menampilkan <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> dari <b>@_page.Total.ToString("N0")</b></span>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>GRN#</th>
+                            <th>PO#</th>
+                            <th>Supplier</th>
+                            <th>Tanggal</th>
+                            <th class="c">Status</th>
+                            <th class="r">Qty</th>
+                            <th style="width:96px"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in _page.Items)
+                        {
+                            <tr @onclick="() => Open(item.Id)">
+                                <td><span class="po-no">@item.GrnNumber</span></td>
+                                <td><span class="po-no">@item.PoNumber</span></td>
+                                <td class="nm">@item.SupplierName</td>
+                                <td class="code">@item.ReceiptDate.ToString("dd MMM yyyy")</td>
+                                <td class="c"><span class="badge @StatusClass(item.Status)">@item.Status</span></td>
+                                <td class="r mono">@item.TotalQuantity</td>
+                                <td @onclick:stopPropagation>
+                                    <div class="rowact">
+                                        <a class="ia" href="@($"/transactions/goods-receipts/{item.Id}")" title="Lihat"><i class="bi bi-eye"></i></a>
+                                        @if (item.Status == "Draft")
+                                        {
+                                            <AuthorizeView Policy="transactions.goods-receipts.delete">
+                                                <Authorized>
+                                                    <button class="ia del" @onclick="() => DeleteAsync(item.Id, item.GrnNumber)" title="Hapus"><i class="bi bi-trash3"></i></button>
+                                                </Authorized>
+                                            </AuthorizeView>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (_page.TotalPages > 1)
+            {
+                <div class="card-foot">
+                    <Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<GoodsReceiptListItemDto>? _page;
+    private GoodsReceiptDashboardDto? _dash;
+    private int _currentPage = 1;
+    private string? _search;
+    private GoodsReceiptStatus? _status;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _dash = await Grn.GetDashboardAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync() =>
+        _page = await Grn.GetPagedAsync(_currentPage, PageSize, _search, _status);
+
+    private async Task ReloadAsync()
+    {
+        _currentPage = 1;
+        await LoadAsync();
+    }
+
+    private async Task SetStatusAsync(GoodsReceiptStatus? status)
+    {
+        _status = status;
+        _currentPage = 1;
+        await LoadAsync();
+    }
+
+    private async Task GoToPageAsync(int page)
+    {
+        _currentPage = page;
+        await LoadAsync();
+    }
+
+    private void Open(int id) => Nav.NavigateTo($"/transactions/goods-receipts/{id}");
+
+    private async Task DeleteAsync(int id, string grnNumber)
+    {
+        if (!await Swal.ConfirmAsync("Hapus penerimaan draft ini?", $"\"{grnNumber}\" akan dihapus secara permanen."))
+            return;
+
+        await Grn.DeleteDraftAsync(id);
+        _dash = await Grn.GetDashboardAsync();
+        await LoadAsync();
+        await Swal.ToastAsync("success", "Goods Receipt dihapus");
+    }
+
+    private static string StatusClass(string status) => status switch
+    {
+        "Draft" => "b-draft",
+        "Posted" => "b-done",
+        _ => "b-dark"
+    };
+}

@@ -1,0 +1,288 @@
+<div class="brand">
+    <div class="logo"><i class="bi bi-boxes"></i></div>
+    <b class="brand-name">ERP_One</b>
+    <button type="button" class="navbar-toggler-inline" aria-label="Toggle menu" title="Menu"
+            onclick="document.querySelector('.navbar-toggler').click()">
+        <i class="bi bi-list"></i>
+    </button>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="if(event.target.closest('a')) document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All" title="Home">
+                <i class="bi bi-house-door nav-icon" aria-hidden="true"></i> <span class="nav-label">Home</span>
+            </NavLink>
+        </div>
+
+        <AuthorizeView Policy="master.any" Context="masterCtx">
+            <Authorized>
+                <div class="nav-section">
+                    <span class="nav-section-label">Master</span>
+                </div>
+                <AuthorizeView Policy="master.products.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="master/products" title="Product">
+                                <i class="bi bi-box-seam nav-icon" aria-hidden="true"></i> <span class="nav-label">Product</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="master.categories.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="master/product-categories" title="Product Category">
+                                <i class="bi bi-tag nav-icon" aria-hidden="true"></i> <span class="nav-label">Product Category</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="master.units.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="master/units" title="Unit">
+                                <i class="bi bi-rulers nav-icon" aria-hidden="true"></i> <span class="nav-label">Unit</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="master.brands.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="master/brands" title="Brand">
+                                <i class="bi bi-bookmark-star nav-icon" aria-hidden="true"></i> <span class="nav-label">Brand</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="master.warehouses.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="master/warehouses" title="Warehouse">
+                                <i class="bi bi-building nav-icon" aria-hidden="true"></i> <span class="nav-label">Warehouse</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="master.taxes.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="master/taxes" title="Tax">
+                                <i class="bi bi-percent nav-icon" aria-hidden="true"></i> <span class="nav-label">Tax</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="master.payment-methods.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="master/payment-methods" title="Payment Method">
+                                <i class="bi bi-credit-card-2-front nav-icon" aria-hidden="true"></i> <span class="nav-label">Payment Method</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="master.attributes.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="master/attributes" title="Attribute">
+                                <i class="bi bi-sliders nav-icon" aria-hidden="true"></i> <span class="nav-label">Attribute</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="master.suppliers.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="master/suppliers" title="Supplier">
+                                <i class="bi bi-truck nav-icon" aria-hidden="true"></i> <span class="nav-label">Supplier</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="master.customers.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="master/customers" title="Customer">
+                                <i class="bi bi-person-vcard nav-icon" aria-hidden="true"></i> <span class="nav-label">Customer</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Policy="inventory.any" Context="inventoryCtx">
+            <Authorized>
+                <div class="nav-section">
+                    <span class="nav-section-label">Inventory</span>
+                </div>
+                <AuthorizeView Policy="inventory.stock-levels.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="inventory/stock-levels" title="Stock Levels">
+                                <i class="bi bi-boxes nav-icon" aria-hidden="true"></i> <span class="nav-label">Stock Levels</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="inventory.adjustments.create">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="inventory/adjustments/new" title="Stock Adjustment">
+                                <i class="bi bi-clipboard2-check nav-icon" aria-hidden="true"></i> <span class="nav-label">Stock Adjustment</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Policy="transactions.any" Context="txCtx">
+            <Authorized>
+                <div class="nav-section">
+                    <span class="nav-section-label">Transaksi</span>
+                </div>
+                <AuthorizeView Policy="transactions.hub.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="transactions" Match="NavLinkMatch.All" title="Transaksi">
+                                <i class="bi bi-grid-1x2 nav-icon" aria-hidden="true"></i> <span class="nav-label">Transaksi</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="transactions.purchase-orders.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="transactions/purchase-orders" title="Purchase Order">
+                                <i class="bi bi-cart-plus nav-icon" aria-hidden="true"></i> <span class="nav-label">Purchase Order</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="transactions.goods-receipts.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="transactions/goods-receipts" title="Goods Receipt">
+                                <i class="bi bi-box-seam nav-icon" aria-hidden="true"></i> <span class="nav-label">Goods Receipt</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="transactions.sales-orders.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="transactions/sales-orders" title="Sales Order">
+                                <i class="bi bi-bag-check nav-icon" aria-hidden="true"></i> <span class="nav-label">Sales Order</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="transactions.delivery-orders.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="transactions/delivery-orders" title="Delivery Order">
+                                <i class="bi bi-truck nav-icon" aria-hidden="true"></i> <span class="nav-label">Delivery Order</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Policy="cashier.any" Context="cashierCtx">
+            <Authorized>
+                <div class="nav-section">
+                    <span class="nav-section-label">Kasir</span>
+                </div>
+                <AuthorizeView Policy="cashier.shifts.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="cashier/shifts" title="Sesi Kasir">
+                                <i class="bi bi-cash-stack nav-icon" aria-hidden="true"></i> <span class="nav-label">Sesi Kasir</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="cashier.pos.create">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="cashier/pos" title="Kasir (POS)">
+                                <i class="bi bi-bag-check nav-icon" aria-hidden="true"></i> <span class="nav-label">Kasir (POS)</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="cashier.pos.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="cashier/sales" title="Riwayat Penjualan">
+                                <i class="bi bi-clock-history nav-icon" aria-hidden="true"></i> <span class="nav-label">Riwayat Penjualan</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Policy="settings.any" Context="settingsCtx">
+            <Authorized>
+                <div class="nav-section">
+                    <span class="nav-section-label">Settings</span>
+                </div>
+                <AuthorizeView Policy="settings.users.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="settings/users" title="User">
+                                <i class="bi bi-people nav-icon" aria-hidden="true"></i> <span class="nav-label">User</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="settings.roles.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="settings/roles" title="Role">
+                                <i class="bi bi-shield nav-icon" aria-hidden="true"></i> <span class="nav-label">Role</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="settings.approval-chains.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="settings/approval-chains" title="Approval Chain">
+                                <i class="bi bi-diagram-3 nav-icon" aria-hidden="true"></i> <span class="nav-label">Approval Chain</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Policy="settings.errorlog.index">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="settings/error-log" title="Error Log">
+                                <i class="bi bi-exclamation-triangle nav-icon" aria-hidden="true"></i> <span class="nav-label">Error Log</span>
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+            </Authorized>
+        </AuthorizeView>
+    </nav>
+
+    <AuthorizeView>
+        <NotAuthorized>
+            <div class="px-3 py-2">
+                <a class="btn btn-sm btn-primary w-100" href="/Account/Login">Login</a>
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+<div class="rail-hint">
+    <i class="bi bi-arrows-angle-expand"></i><span class="nav-label">Hover to expand</span>
+</div>

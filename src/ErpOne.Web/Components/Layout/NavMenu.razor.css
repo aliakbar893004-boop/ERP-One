@@ -1,0 +1,231 @@
+/* ── Icon rail nav (light theme, Atlas palette) ──────────────
+   Base styling for the nav chrome. The hover-to-expand reveal rules live in
+   MainLayout.razor.css because they hang off `.sidebar:hover`, which is rendered
+   by the parent layout (cross-scope, via ::deep). */
+
+/* Brand */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 19px;
+    border-bottom: 1px solid #E9EDF2;
+    white-space: nowrap;
+    height: 3.5rem;
+    flex: none;
+}
+
+.logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--app-accent), var(--app-accent-deep));
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: 18px;
+    flex: none;
+}
+
+.brand-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0F1B2D;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+/* Nav scroll area */
+.nav-scrollable {
+    display: none;
+    padding: 12px 13px;
+    overflow-x: hidden;
+}
+
+.nav {
+    gap: 3px;
+}
+
+/* Section labels */
+.nav-section {
+    height: 14px;
+    padding: 14px 8px 6px;
+    overflow: hidden;
+}
+
+.nav-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #94A3B8;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+/* Nav items / links */
+.nav-item {
+    padding: 0 !important;
+    margin-bottom: 3px;
+}
+
+.nav-item ::deep .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 11px 12px;
+    border-radius: 11px;
+    color: #475569;
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background 0.13s, color 0.13s;
+}
+
+.nav-item ::deep .nav-link:hover {
+    background: #F5F7F9;
+    color: #0F1B2D;
+}
+
+.nav-item ::deep a.active {
+    background: var(--app-accent-soft);
+    color: var(--app-accent-deep);
+    font-weight: 600;
+}
+
+.nav-icon {
+    font-size: 18px;
+    width: 22px;
+    text-align: center;
+    color: #94A3B8;
+    flex: none;
+}
+
+.nav-item ::deep a.active .nav-icon {
+    color: var(--app-accent-deep);
+}
+
+.nav-label {
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+/* Bottom "hover to expand" hint */
+.rail-hint {
+    margin-top: auto;
+    padding: 10px 22px;
+    border-top: 1px solid #E9EDF2;
+    font-size: 11px;
+    color: #94A3B8;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.rail-hint i {
+    font-size: 16px;
+}
+
+/* Mobile hamburger (inline in brand, desktop hidden) */
+.navbar-toggler-inline {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: #64748B;
+    font-size: 1.3rem;
+    line-height: 1;
+    padding: 0.2rem 0.4rem;
+    cursor: pointer;
+    border-radius: 8px;
+}
+
+.navbar-toggler-inline:hover {
+    background: #F5F7F9;
+    color: #0F1B2D;
+}
+
+/* The checkbox that drives the mobile drawer (hidden control) */
+.navbar-toggler {
+    display: none;
+}
+
+/* ── Desktop (≥641px): icon rail ── */
+@media (min-width: 641px) {
+    .navbar-toggler-inline {
+        display: none;
+    }
+
+    .nav-scrollable {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        height: auto;
+        overflow-y: auto;
+    }
+}
+
+/* ── Dark mode overrides ──────────────────────────────────────
+   React to [data-bs-theme=dark] on <html>; reuse Bootstrap dark vars for
+   borders so the chrome matches the themed content. Light mode untouched. */
+[data-bs-theme="dark"] .brand {
+    border-bottom-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .brand-name {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .nav-item ::deep .nav-link {
+    color: #cbd5e1;
+}
+
+[data-bs-theme="dark"] .nav-item ::deep .nav-link:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+}
+
+[data-bs-theme="dark"] .nav-item ::deep a.active {
+    background: color-mix(in srgb, var(--app-accent) 20%, transparent);
+    color: color-mix(in srgb, var(--app-accent) 70%, white);
+}
+
+[data-bs-theme="dark"] .nav-item ::deep a.active .nav-icon {
+    color: color-mix(in srgb, var(--app-accent) 70%, white);
+}
+
+[data-bs-theme="dark"] .rail-hint {
+    border-top-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .navbar-toggler-inline {
+    color: var(--bs-secondary-color);
+}
+
+[data-bs-theme="dark"] .navbar-toggler-inline:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+}
+
+/* ── Mobile (<641px): full drawer, labels always visible ── */
+@media (max-width: 640.98px) {
+    .brand-name,
+    .nav-label,
+    .nav-section-label {
+        opacity: 1;
+    }
+
+    .nav-section {
+        height: auto;
+    }
+
+    .navbar-toggler:checked ~ .nav-scrollable {
+        display: block;
+    }
+
+    .rail-hint {
+        display: none;
+    }
+}

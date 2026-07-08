@@ -1,0 +1,65 @@
+/* ── Header ──────────────────────────────────────────────── */
+.uf-header { margin-bottom: 0; }
+
+.back-link {
+    display: inline-block;
+    color: #64748b;
+    text-decoration: none;
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+    transition: color 0.15s;
+}
+.back-link:hover { color: #0f172a; }
+
+.uf-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+
+/* ── Section cards ───────────────────────────────────────── */
+.fs-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .06);
+}
+
+.fs-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.85rem 1.4rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #fff;
+}
+
+.fs-card-head i { font-size: 1rem; }
+
+.fs-card-body { padding: 1.4rem 1.5rem; }
+
+.head-price  { background: linear-gradient(135deg, #10b981, #059669); }
+.head-images { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+
+/* ── Upload control ──────────────────────────────────────── */
+.img-upload {
+    display: inline-flex;
+    align-items: center;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 0.6rem 1rem;
+    color: #475569;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+}
+.img-upload:hover { border-color: #7c3aed; color: #7c3aed; }
+
+.img-upload ::deep input[type="file"] {
+    display: none;
+}

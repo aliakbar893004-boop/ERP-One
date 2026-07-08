@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Form mockups — Acetris</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#101828;--muted:#667085;--line:#E4E7EC;--canvas:#F7F8FA;--mono:'IBM Plex Mono',monospace;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--canvas);color:var(--ink);font-family:'Inter',system-ui,sans-serif;line-height:1.55;}
+  .wrap{max-width:1080px;margin:0 auto;padding:56px 28px 80px;}
+  header h1{font-size:30px;font-weight:700;letter-spacing:-.025em;margin:0 0 8px;}
+  header p{color:var(--muted);font-size:15px;margin:0 0 40px;max-width:60ch;}
+  .rec{display:block;text-decoration:none;color:inherit;background:#fff;border:1.5px solid #0E9F6E;border-radius:18px;overflow:hidden;margin-bottom:26px;box-shadow:0 12px 30px -18px rgba(14,159,110,.5);transition:.18s;}
+  .rec:hover{transform:translateY(-2px);box-shadow:0 20px 40px -20px rgba(14,159,110,.55);}
+  .rec .in{display:grid;grid-template-columns:200px 1fr;}
+  .rec .sw{background:linear-gradient(135deg,#E7F8F1,#F5F7FA);display:flex;align-items:flex-end;gap:7px;padding:16px;}
+  .rec .sw span{width:28px;height:28px;border-radius:8px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.05);}
+  .rec .bd{padding:20px 24px;}
+  .rec .ribbon{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:600;color:#fff;background:#0E9F6E;padding:3px 10px;border-radius:99px;letter-spacing:.04em;margin-bottom:8px;}
+  .rec h2{font-size:20px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em;}
+  .rec p{color:var(--muted);font-size:13.5px;margin:0 0 10px;max-width:62ch;}
+  .rec .go{font-size:13px;font-weight:600;color:#077E57;}
+  .subhead{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 14px;}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;text-decoration:none;color:inherit;transition:.18s;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(16,24,40,.04);}
+  .card:hover{transform:translateY(-3px);box-shadow:0 18px 34px -20px rgba(16,24,40,.35);border-color:#cbd5e1;}
+  .swatch{height:112px;display:flex;align-items:flex-end;padding:14px;gap:7px;}
+  .swatch span{width:26px;height:26px;border-radius:7px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.05);}
+  .body{padding:16px 18px 20px;}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.04em;}
+  .body h2{font-size:17px;font-weight:700;margin:5px 0 6px;letter-spacing:-.01em;}
+  .body p{color:var(--muted);font-size:13px;margin:0 0 12px;}
+  .body .go{font-size:13px;font-weight:600;color:#3538CD;}
+  .a .swatch{background:linear-gradient(135deg,#EEF0FF,#F7F8FA);} .a .go{color:#3538CD;}
+  .b .swatch{background:linear-gradient(135deg,#E2F1ED,#F3F6F5);} .b .go{color:#0E6B5E;}
+  .c .swatch{background:linear-gradient(135deg,#EAF1FE,#FBFCFD);} .c .go{color:#2563EB;}
+  .d .swatch{background:linear-gradient(135deg,#E7EEFB,#FBFCFE);} .d .go{color:#1F4E9C;}
+  .e .swatch{background:linear-gradient(135deg,#312E81,#1E1B4B);} .e .go{color:#4F46E5;}
+  .f .swatch{background:linear-gradient(135deg,#1B212B,#0E1116);} .f .go{color:#7C8CF8;}
+  .g .swatch{background:linear-gradient(135deg,#E7F8F1,#F5F7FA);} .g .go{color:#0E9F6E;}
+  .note{margin-top:38px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:20px;}
+  @media (max-width:760px){.grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Enterprise form mockups</h1>
+    <p>Directions for the product/master-data form, built on the same content so you can compare aesthetics. Pick one and I'll translate it into Blazor components.</p>
+  </header>
+
+  <a class="rec" href="form-atlas-tabs.html">
+    <div class="in">
+      <div class="sw"><span style="background:#0E9F6E"></span><span style="background:#E7F8F1"></span><span style="background:#0F1B2D"></span><span style="background:#9A6B12"></span></div>
+      <div class="bd">
+        <span class="ribbon">★ Recommended</span>
+        <h2>Atlas Pro · nav layout</h2>
+        <p>Keeps the left section-navigator you already use (Information / Pricing / Inventory with the required-progress bar and ✓ checks) — no third column, nothing feels far away. The live preview stays: it's a full product card inline in the Pricing section (price, discount badge, margin, on-hand) right where you edit. A slim sticky footer keeps sells-at + margin + Save always in reach. Pure Atlas green, drops straight into the app.</p>
+        <span class="go">Open recommended mockup →</span>
+      </div>
+    </div>
+  </a>
+
+  <p class="subhead">Other explorations</p>
+  <div class="grid">
+    <a class="card a" href="form-slate-ledger.html">
+      <div class="swatch"><span style="background:#3538CD"></span><span style="background:#EEF0FF"></span><span style="background:#101828"></span><span style="background:#12805C"></span></div>
+      <div class="body"><div class="tag">A · corporate precision</div><h2>Slate Ledger</h2><p>Section-navigator rail, sectioned cards, sticky footer with live margin. Indigo · Space Grotesk.</p><span class="go">Open mockup →</span></div>
+    </a>
+    <a class="card b" href="form-porcelain.html">
+      <div class="swatch"><span style="background:#0E6B5E"></span><span style="background:#E2F1ED"></span><span style="background:#122320"></span><span style="background:#F3F6F5"></span></div>
+      <div class="body"><div class="tag">B · editorial elegance</div><h2>Porcelain</h2><p>Single focused column, serif headers, floating labels, generous air. Teal · Fraunces.</p><span class="go">Open mockup →</span></div>
+    </a>
+    <a class="card c" href="form-graphite-console.html">
+      <div class="swatch"><span style="background:#2563EB"></span><span style="background:#EAF1FE"></span><span style="background:#0B1220"></span><span style="background:#B45309"></span></div>
+      <div class="body"><div class="tag">C · power tool</div><h2>Graphite Console</h2><p>Dense rows, keyboard-first, sticky live preview with discount badge. Blue · Inter Tight + mono.</p><span class="go">Open mockup →</span></div>
+    </a>
+    <a class="card d" href="form-blueprint.html">
+      <div class="swatch"><span style="background:#1F4E9C"></span><span style="background:#E7EEFB"></span><span style="background:#16202E"></span><span style="background:#C0433B"></span></div>
+      <div class="body"><div class="tag">D · technical / drafting</div><h2>Blueprint</h2><p>Faint grid, title block, mono spec-sheet labels, "for release" stamp. Blueprint-blue · IBM Plex Mono.</p><span class="go">Open mockup →</span></div>
+    </a>
+    <a class="card e" href="form-split-brand.html">
+      <div class="swatch"><span style="background:#4F46E5"></span><span style="background:#EEEDFC"></span><span style="background:#1E1B4B"></span><span style="background:#0E9F6E"></span></div>
+      <div class="body"><div class="tag">E · guided / branded</div><h2>Split Brand</h2><p>Immersive colored context panel with a live step checklist, clean white form beside it. Indigo · Sora.</p><span class="go">Open mockup →</span></div>
+    </a>
+    <a class="card f" href="form-dark-pro.html">
+      <div class="swatch"><span style="background:#7C8CF8"></span><span style="background:#1B212B"></span><span style="background:#0E1116"></span><span style="background:#34D399"></span></div>
+      <div class="body"><div class="tag">F · dark theme</div><h2>Dark Pro</h2><p>Layered charcoal surfaces, soft periwinkle focus glow, sticky margin bar. Linear/Vercel energy.</p><span class="go">Open mockup →</span></div>
+    </a>
+    <a class="card g" href="form-atlas-pro.html">
+      <div class="swatch"><span style="background:#0E9F6E"></span><span style="background:#E7F8F1"></span><span style="background:#0F1B2D"></span><span style="background:#9A6B12"></span></div>
+      <div class="body"><div class="tag">G · two-pane variant</div><h2>Atlas Pro · preview panel</h2><p>The earlier version with the live-preview panel on the right — kept for comparison. Felt a touch far from the fields.</p><span class="go">Open mockup →</span></div>
+    </a>
+  </div>
+  <p class="note">All mockups are self-contained HTML, responsive to mobile, with visible keyboard focus and reduced-motion respected. Content mirrors the real product form (name, category, pricing with discount %, inventory).</p>
+</div>
+</body>
+</html>

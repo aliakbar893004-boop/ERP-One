@@ -1,0 +1,90 @@
+@page "/Account/Login"
+@layout AccountLayout
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using ErpOne.Infrastructure.Identity
+@attribute [AllowAnonymous]
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager Nav
+
+<PageTitle>Sign In · ERP_One</PageTitle>
+
+<div class="login-card">
+    <div class="login-brand">
+        <div class="login-logo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+        </div>
+        <h1 class="login-title">ERP_One</h1>
+        <p class="login-subtitle">Sign in to continue</p>
+    </div>
+
+    <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+        <DataAnnotationsValidator />
+
+        @if (_error is not null)
+        {
+            <div class="alert alert-danger d-flex align-items-center py-2 mb-3">
+                <span class="me-2">&#9888;</span>@_error
+            </div>
+        }
+
+        <div class="mb-3">
+            <label class="form-label small fw-semibold">Username</label>
+            <InputText class="form-control form-control-lg" @bind-Value="Input.UserName"
+                       autocomplete="username" placeholder="enter username" />
+            <ValidationMessage For="() => Input.UserName" class="text-danger small" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label small fw-semibold">Password</label>
+            <InputText type="password" class="form-control form-control-lg" @bind-Value="Input.Password"
+                       autocomplete="current-password" placeholder="enter password" />
+            <ValidationMessage For="() => Input.Password" class="text-danger small" />
+        </div>
+
+        <div class="form-check mb-4">
+            <InputCheckbox class="form-check-input" @bind-Value="Input.RememberMe" id="remember" />
+            <label class="form-check-label small" for="remember">Remember me</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-100 login-btn">Sign In</button>
+    </EditForm>
+</div>
+
+@code {
+    [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    [SupplyParameterFromForm] private InputModel Input { get; set; } = default!;
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+
+    private string? _error;
+
+    protected override void OnInitialized() => Input ??= new InputModel();
+
+    private async Task LoginUser()
+    {
+        var result = await SignInManager.PasswordSignInAsync(
+            Input.UserName, Input.Password, Input.RememberMe, lockoutOnFailure: true);
+
+        if (result.Succeeded)
+            Nav.NavigateTo(ReturnUrl ?? "/");
+        else if (result.IsLockedOut)
+            _error = "Account temporarily locked. Please try again later.";
+        else
+            _error = "Invalid username or password.";
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "Username is required.")]
+        public string UserName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Password is required.")]
+        public string Password { get; set; } = string.Empty;
+
+        public bool RememberMe { get; set; }
+    }
+}

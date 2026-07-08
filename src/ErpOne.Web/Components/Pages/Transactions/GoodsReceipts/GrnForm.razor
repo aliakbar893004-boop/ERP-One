@@ -1,0 +1,264 @@
+@page "/transactions/goods-receipts/new"
+@page "/transactions/goods-receipts/{Id:int}/edit"
+@attribute [Authorize(Policy = "transactions.goods-receipts.create")]
+@rendermode InteractiveServer
+@using FluentValidation
+@using ErpOne.Application.GoodsReceipts
+@inject IGoodsReceiptService Grn
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>@Title</PageTitle>
+
+<div class="pf">
+
+    <div class="pf-top">
+        <div class="crumbs">
+            <a href="/transactions/goods-receipts">Transactions</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/transactions/goods-receipts">Goods Receipts</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="pf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+    }
+
+    <div class="pf-layout">
+
+        <!-- ── LEFT: section navigator ─────────────────────────── -->
+        <aside class="pf-nav">
+            <div class="prog">
+                <div class="lbl"><span>Required</span><span>@ReqFilled / @ReqTotal</span></div>
+                <div class="track"><div class="fill" style="width:@(ReqFilled * 100 / ReqTotal)%"></div></div>
+            </div>
+            <button type="button" class="nlink @(_activeSection == "sec-info" ? "on" : "")"
+                    @onclick='() => ScrollTo("sec-info")'>
+                <span class="ic"><i class="bi bi-receipt"></i></span> Information
+                @if (_selectedPoId > 0)
+                {
+                    <i class="bi bi-check-circle-fill ck"></i>
+                }
+            </button>
+            <button type="button" class="nlink @(_activeSection == "sec-items" ? "on" : "")"
+                    @onclick='() => ScrollTo("sec-items")'>
+                <span class="ic"><i class="bi bi-box-seam"></i></span> Received Items
+                <span class="badge-n">@ReceivedLineCount</span>
+            </button>
+        </aside>
+
+        <!-- ── RIGHT: form panels ──────────────────────────────── -->
+        <main class="pf-main">
+
+            <section id="sec-info" class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-receipt"></i></span>
+                    <div class="hd-tx">
+                        <h2>Receipt information</h2>
+                        <p>The purchase order received and the receipt date.</p>
+                    </div>
+                </div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="c6">
+                            <label class="fl">Purchase Order <span class="req">*</span></label>
+                            @if (Id is not null)
+                            {
+                                <input class="ctl" readonly value="@_poNumber" />
+                            }
+                            else
+                            {
+                                <select class="ctl sel" value="@_selectedPoId" @onchange="OnPoChanged">
+                                    <option value="0">— select PO —</option>
+                                    @foreach (var po in _pos)
+                                    {
+                                        <option value="@po.Id">@po.PoNumber — @po.SupplierName</option>
+                                    }
+                                </select>
+                            }
+                        </div>
+                        <div class="c2">
+                            <label class="fl">Receipt Date <span class="req">*</span></label>
+                            <input type="date" class="ctl" @bind="_receiptDate" />
+                        </div>
+                        <div class="c12">
+                            <label class="fl">Notes</label>
+                            <textarea class="ctl" rows="2" maxlength="500" placeholder="Optional…" @bind="_notes"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="sec-items" class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-box-seam"></i></span>
+                    <div class="hd-tx">
+                        <h2>Received Items</h2>
+                        <p>Enter the received quantity and unit cost per line.</p>
+                    </div>
+                </div>
+                <div class="card-b">
+                    @if (_rows.Count > 0)
+                    {
+                        <div class="table-responsive">
+                            <table class="items">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width:200px">Product</th>
+                                        <th style="width:100px">SKU</th>
+                                        <th class="r" style="width:90px">Ordered</th>
+                                        <th class="r" style="width:120px">Already Received</th>
+                                        <th style="width:120px">Qty Received</th>
+                                        <th style="width:140px">Unit Cost</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var row in _rows)
+                                    {
+                                        <tr>
+                                            <td class="pn">@row.ProductName</td>
+                                            <td class="sku">@row.Sku</td>
+                                            <td class="r mono">@row.Ordered</td>
+                                            <td class="r mono">@row.AlreadyReceived</td>
+                                            <td><input type="number" min="0" class="ctl ctl-sm mono text-end" @bind="row.Qty" /></td>
+                                            <td><input type="number" min="0" step="0.01" class="ctl ctl-sm mono text-end" @bind="row.UnitCost" /></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="hint"><i class="bi bi-info-circle me-1"></i>Select a purchase order to load receivable items.</div>
+                    }
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <div class="pf-footer">
+        <div class="in">
+            <span class="note"><span class="req">*</span> required fields</span>
+            <span class="gt">Total Qty: <b>@_rows.Where(r => r.Qty > 0).Sum(r => r.Qty)</b></span>
+            <a class="btn btn-ghost" href="/transactions/goods-receipts"><i class="bi bi-x-lg"></i> Cancel</a>
+            <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                @if (_saving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                }
+                else
+                {
+                    <i class="bi bi-check2"></i>
+                }
+                Save Draft
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    [SupplyParameterFromQuery] public int? PoId { get; set; }
+
+    private List<ReceivablePoDto> _pos = new();
+    private int _selectedPoId;
+    private string _poNumber = "";
+    private DateTime _receiptDate = DateTime.Today;
+    private string? _notes;
+    private List<Row> _rows = new();
+    private bool _saving;
+    private string? _error;
+
+    private sealed class Row
+    {
+        public int PurchaseOrderLineId { get; set; }
+        public string ProductName { get; set; } = "";
+        public string Sku { get; set; } = "";
+        public int Ordered { get; set; }
+        public int AlreadyReceived { get; set; }
+        public int Qty { get; set; }
+        public decimal UnitCost { get; set; }
+    }
+
+    private string Title => Id is null ? "Add Goods Receipt" : "Edit Goods Receipt";
+
+    // Atlas nav: required-field progress (PO selected + ≥1 received line)
+    private const int ReqTotal = 2;
+    private int ReqFilled => (_selectedPoId > 0 ? 1 : 0) + (ReceivedLineCount > 0 ? 1 : 0);
+    private int ReceivedLineCount => _rows.Count(r => r.Qty > 0);
+
+    // Atlas nav: active section highlight + smooth scroll
+    private string _activeSection = "sec-info";
+
+    private async Task ScrollTo(string id)
+    {
+        _activeSection = id;
+        await JS.InvokeVoidAsync("pfScrollTo", id);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id is int gid) { await LoadForEditAsync(gid); return; }
+        _pos = (await Grn.GetReceivablePosAsync()).ToList();
+        if (PoId is int p) { _selectedPoId = p; await LoadPoLinesAsync(p); }
+    }
+
+    private async Task LoadPoLinesAsync(int poId)
+    {
+        var po = await Grn.GetPoForReceiptAsync(poId);
+        _rows = po is null ? new() : po.Lines.Select(l => new Row {
+            PurchaseOrderLineId = l.PurchaseOrderLineId, ProductName = l.ProductName, Sku = l.VariantSku,
+            Ordered = l.OrderedQuantity, AlreadyReceived = l.AlreadyReceivedQuantity,
+            Qty = l.RemainingQuantity, UnitCost = l.DefaultUnitCost
+        }).ToList();
+    }
+
+    private async Task LoadForEditAsync(int gid)
+    {
+        var g = await Grn.GetByIdAsync(gid);
+        if (g is null || g.Status != "Draft") { Nav.NavigateTo($"/transactions/goods-receipts/{gid}"); return; }
+        _selectedPoId = g.PurchaseOrderId; _poNumber = g.PoNumber; _receiptDate = g.ReceiptDate; _notes = g.Notes;
+        _rows = g.Lines.Select(l => new Row {
+            PurchaseOrderLineId = l.PurchaseOrderLineId, ProductName = l.ProductName, Sku = l.VariantSku,
+            Ordered = l.OrderedQuantity, AlreadyReceived = 0, Qty = l.QuantityReceived, UnitCost = l.UnitCost
+        }).ToList();
+    }
+
+    private async Task OnPoChanged(ChangeEventArgs e)
+    {
+        _selectedPoId = int.TryParse(e.Value?.ToString(), out var v) ? v : 0;
+        if (_selectedPoId > 0) await LoadPoLinesAsync(_selectedPoId); else _rows = new();
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null; _saving = true;
+        try
+        {
+            var lines = _rows.Where(r => r.Qty > 0)
+                .Select(r => new GoodsReceiptLineRequest(r.PurchaseOrderLineId, r.Qty, r.UnitCost)).ToList();
+            if (Id is int gid)
+            {
+                await Grn.UpdateDraftAsync(gid, new UpdateGoodsReceiptRequest(_receiptDate, _notes, lines));
+                Nav.NavigateTo($"/transactions/goods-receipts/{gid}");
+            }
+            else
+            {
+                if (_selectedPoId <= 0) { _error = "Select a purchase order first."; return; }
+                if (lines.Count == 0) { _error = "Enter a received quantity on at least one line."; return; }
+                var created = await Grn.CreateDraftAsync(new CreateGoodsReceiptRequest(_selectedPoId, _receiptDate, _notes, lines));
+                Nav.NavigateTo($"/transactions/goods-receipts/{created.Id}");
+            }
+        }
+        catch (ValidationException ex)
+        {
+            _error = string.Join("; ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        finally { _saving = false; }
+    }
+}
