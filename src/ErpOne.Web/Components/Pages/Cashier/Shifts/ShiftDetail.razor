@@ -1,21 +1,22 @@
 @page "/cashier/shifts/{Id:int}"
 @attribute [Authorize(Policy = "cashier.shifts.index")]
 @rendermode InteractiveServer
+@using System.Globalization
 @using FluentValidation
 @using ErpOne.Application.CashierShifts
 @inject ICashierShiftService Shifts
 @inject NavigationManager Nav
 @inject SwalService Swal
 
-<PageTitle>@(_shift?.ShiftNumber ?? "Sesi Kasir")</PageTitle>
+<PageTitle>@(_shift?.ShiftNumber ?? "Cashier Session")</PageTitle>
 
 <div class="pf">
 
     <div class="pf-top">
         <div class="crumbs">
-            <a href="/cashier/shifts">Kasir</a>
+            <a href="/cashier/shifts">Cashier</a>
             <i class="bi bi-chevron-right"></i>
-            <a href="/cashier/shifts">Sesi Kasir</a>
+            <a href="/cashier/shifts">Cashier Sessions</a>
             <i class="bi bi-chevron-right"></i>
             <span class="here">@(_shift?.ShiftNumber ?? "Detail")</span>
         </div>
@@ -27,7 +28,7 @@
     }
     else if (_shift is null)
     {
-        <div class="pf-alert warn"><i class="bi bi-exclamation-triangle"></i> Sesi kasir tidak ditemukan.</div>
+        <div class="pf-alert warn"><i class="bi bi-exclamation-triangle"></i> Cashier session not found.</div>
     }
     else
     {
@@ -42,13 +43,13 @@
             <div class="actions">
                 @if (_shift.Status == "Open")
                 {
-                    <a class="btn btn-line" href="/cashier/pos"><i class="bi bi-bag-check"></i> Masuk Kasir</a>
+                    <a class="btn btn-line" href="/cashier/pos"><i class="bi bi-bag-check"></i> Enter Register</a>
                 }
                 @if (CanClose)
                 {
                     <AuthorizeView Policy="cashier.shifts.close">
                         <Authorized>
-                            <button class="btn btn-primary" @onclick="() => _showClose = !_showClose" disabled="@_busy"><i class="bi bi-lock"></i> Tutup Shift</button>
+                            <button class="btn btn-primary" @onclick="() => _showClose = !_showClose" disabled="@_busy"><i class="bi bi-lock"></i> Close Shift</button>
                         </Authorized>
                     </AuthorizeView>
                 }
@@ -60,24 +61,32 @@
             <section class="card">
                 <div class="card-h">
                     <span class="hd-ic"><i class="bi bi-lock-fill"></i></span>
-                    <h2>Tutup Shift</h2>
+                    <h2>Close Shift</h2>
                 </div>
                 <div class="card-b">
-                    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
-                        <div>
-                            <label class="fl">Kas Fisik Terhitung (Rp)</label>
-                            <input class="ctl mono" type="number" min="0" step="1" @bind="_countedCash" />
+                    <div class="cs-form">
+                        <div class="f">
+                            <label class="fl">Counted Physical Cash</label>
+                            <div class="ig">
+                                <span class="ig-pre">Rp</span>
+                                <input class="ctl mono has-pre" type="number" min="0" step="1" @bind="_countedCash" placeholder="0" />
+                            </div>
                         </div>
-                        <div style="flex:1;min-width:220px">
-                            <label class="fl">Catatan (opsional)</label>
-                            <input class="ctl" maxlength="500" @bind="_closingNote" placeholder="mis. selisih karena…" />
-                        </div>
-                        <div style="display:flex;gap:8px">
-                            <button class="btn btn-primary" @onclick="CloseShiftAsync" disabled="@_busy"><i class="bi bi-check-lg"></i> Konfirmasi Tutup</button>
-                            <button class="btn btn-line" @onclick="() => { _showClose = false; _error = null; }">Batal</button>
+                        <div class="f">
+                            <label class="fl">Note <span class="opt">(optional)</span></label>
+                            <input class="ctl" maxlength="500" @bind="_closingNote" placeholder="e.g. variance due to…" />
                         </div>
                     </div>
-                    <p class="mt-2" style="color:var(--muted);font-size:13px">Expected kas saat ini: <b class="mono">@_shift.ExpectedCash.ToString("N2")</b> (saldo awal @_shift.OpeningFloat.ToString("N2") + penjualan tunai @_shift.CashSalesTotal.ToString("N2")).</p>
+
+                    <div class="cs-hint">
+                        <i class="bi bi-info-circle"></i>
+                        <span>Expected cash right now is <b class="mono">@_shift.ExpectedCash.ToString("N2")</b> — opening float <span class="mono">@_shift.OpeningFloat.ToString("N2")</span> + cash sales <span class="mono">@_shift.CashSalesTotal.ToString("N2")</span>.</span>
+                    </div>
+
+                    <div class="cs-actions">
+                        <button class="btn btn-line" @onclick="() => { _showClose = false; _error = null; }">Cancel</button>
+                        <button class="btn btn-primary" @onclick="CloseShiftAsync" disabled="@_busy"><i class="bi bi-check-lg"></i> Confirm Close</button>
+                    </div>
                 </div>
             </section>
         }
@@ -85,55 +94,117 @@
         <section class="card">
             <div class="card-h">
                 <span class="hd-ic"><i class="bi bi-receipt"></i></span>
-                <h2>Informasi</h2>
+                <h2>Information</h2>
             </div>
             <div class="card-b">
-                <dl class="dl">
-                    <dt>No. Shift</dt><dd><span class="grn-no">@_shift.ShiftNumber</span></dd>
-                    <dt>Gudang</dt><dd>@_shift.WarehouseName</dd>
-                    <dt>Kasir</dt><dd>@_shift.CashierName</dd>
-                    <dt>Dibuka</dt><dd>@_shift.OpenedAt.ToString("dd MMM yyyy HH:mm")</dd>
-                    <dt>Saldo Awal</dt><dd class="mono">@_shift.OpeningFloat.ToString("N2")</dd>
+                <div class="info-grid">
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-receipt"></i> Shift No.</span>
+                        <span class="v"><span class="grn-no">@_shift.ShiftNumber</span></span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-box-seam"></i> Warehouse</span>
+                        <span class="v">@_shift.WarehouseName</span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-person"></i> Cashier</span>
+                        <span class="v">@_shift.CashierName</span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-calendar3"></i> Opened</span>
+                        <span class="v">@_shift.OpenedAt.ToString("dd MMM yyyy HH:mm")</span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-cash"></i> Opening Float</span>
+                        <span class="v mono">@_shift.OpeningFloat.ToString("N2")</span>
+                    </div>
                     @if (_shift.Status == "Closed")
                     {
-                        <dt>Ditutup</dt><dd>@(_shift.ClosedAt?.ToString("dd MMM yyyy HH:mm") ?? "—")</dd>
-                        <dt>Catatan</dt><dd>@(_shift.ClosingNote ?? "—")</dd>
+                        <div class="info-cell">
+                            <span class="k"><i class="bi bi-calendar-check"></i> Closed</span>
+                            <span class="v">@(_shift.ClosedAt?.ToString("dd MMM yyyy HH:mm") ?? "—")</span>
+                        </div>
+                        <div class="info-cell wide">
+                            <span class="k"><i class="bi bi-sticky"></i> Note</span>
+                            <span class="v @(string.IsNullOrEmpty(_shift.ClosingNote) ? "muted-v" : "")">@(_shift.ClosingNote ?? "—")</span>
+                        </div>
                     }
-                </dl>
+                </div>
             </div>
         </section>
 
         <section class="card">
             <div class="card-h">
                 <span class="hd-ic"><i class="bi bi-cash-coin"></i></span>
-                <h2>Rekonsiliasi Kas</h2>
+                <h2>Cash Reconciliation</h2>
             </div>
             <div class="card-b">
-                <dl class="dl">
-                    <dt>Saldo Awal</dt><dd class="mono">@_shift.OpeningFloat.ToString("N2")</dd>
-                    <dt>Penjualan Tunai</dt><dd class="mono">@_shift.CashSalesTotal.ToString("N2")</dd>
-                    <dt>Expected Cash</dt><dd class="mono"><b>@_shift.ExpectedCash.ToString("N2")</b></dd>
-                    @if (_shift.Status == "Closed")
-                    {
-                        <dt>Kas Terhitung</dt><dd class="mono">@(_shift.CountedCash?.ToString("N2") ?? "—")</dd>
-                        <dt>Selisih</dt>
-                        <dd class="mono" style="@(_shift.CashVariance < 0 ? "color:#C04A4A;font-weight:600" : (_shift.CashVariance > 0 ? "color:#0E9F6E;font-weight:600" : ""))">
-                            @(_shift.CashVariance?.ToString("N2") ?? "—")
-                        </dd>
-                    }
-                </dl>
+                @{
+                    var expected = _shift.ExpectedCash;
+                    var floatPct = expected > 0 ? _shift.OpeningFloat / expected * 100m : 0m;
+                    var salesPct = expected > 0 ? _shift.CashSalesTotal / expected * 100m : 0m;
+                }
+
+                <div class="cr-kpis">
+                    <div class="cr-kpi">
+                        <span class="ic float"><i class="bi bi-wallet2"></i></span>
+                        <div class="tx"><span class="l">Opening Float</span><span class="v">@_shift.OpeningFloat.ToString("N2")</span></div>
+                    </div>
+                    <div class="cr-kpi">
+                        <span class="ic sales"><i class="bi bi-cash-stack"></i></span>
+                        <div class="tx"><span class="l">Cash Sales</span><span class="v">@_shift.CashSalesTotal.ToString("N2")</span></div>
+                    </div>
+                    <div class="cr-kpi accent">
+                        <span class="ic"><i class="bi bi-calculator"></i></span>
+                        <div class="tx"><span class="l">Expected Cash</span><span class="v">@_shift.ExpectedCash.ToString("N2")</span></div>
+                    </div>
+                </div>
+
+                <div class="cr-meter">
+                    <div class="cr-meter-head"><span>Expected cash composition</span></div>
+                    <div class="cr-bar">
+                        <div class="seg float" style="width:@(floatPct.ToString("0.##", CultureInfo.InvariantCulture))%"></div>
+                        <div class="seg sales" style="width:@(salesPct.ToString("0.##", CultureInfo.InvariantCulture))%"></div>
+                    </div>
+                    <div class="cr-legend">
+                        <span class="lg"><i class="dot float"></i> Opening Float · <b class="mono">@floatPct.ToString("0", CultureInfo.InvariantCulture)%</b></span>
+                        <span class="lg"><i class="dot sales"></i> Cash Sales · <b class="mono">@salesPct.ToString("0", CultureInfo.InvariantCulture)%</b></span>
+                    </div>
+                </div>
+
+                @if (_shift.Status == "Closed")
+                {
+                    var variance = _shift.CashVariance ?? 0m;
+                    var vClass = variance < 0 ? "short" : variance > 0 ? "over" : "ok";
+                    var vIcon = variance < 0 ? "bi-arrow-down-circle-fill" : variance > 0 ? "bi-arrow-up-circle-fill" : "bi-check-circle-fill";
+                    var vLabel = variance < 0 ? "Cash Short" : variance > 0 ? "Cash Over" : "Balanced";
+
+                    <div class="cr-hero @vClass">
+                        <div class="hero-main">
+                            <span class="hero-ic"><i class="bi @vIcon"></i></span>
+                            <div class="hero-tx">
+                                <span class="hero-l">@vLabel</span>
+                                <span class="hero-v mono">@variance.ToString("N2")</span>
+                            </div>
+                        </div>
+                        <div class="hero-cmp">
+                            <div><span class="l">Counted</span><span class="v mono">@(_shift.CountedCash?.ToString("N2") ?? "—")</span></div>
+                            <div><span class="l">Expected</span><span class="v mono">@_shift.ExpectedCash.ToString("N2")</span></div>
+                        </div>
+                    </div>
+                }
             </div>
         </section>
 
         <section class="card">
             <div class="card-h">
                 <span class="hd-ic"><i class="bi bi-list-columns"></i></span>
-                <h2>Total per Metode</h2>
+                <h2>Totals by Method</h2>
             </div>
             <div class="card-b">
                 @if (_shift.MethodTotals.Count == 0)
                 {
-                    <p style="color:var(--muted)">Belum ada penjualan pada shift ini.</p>
+                    <p style="color:var(--muted)">No sales in this shift yet.</p>
                 }
                 else
                 {
@@ -141,8 +212,8 @@
                         <table class="items">
                             <thead>
                                 <tr>
-                                    <th>Metode</th>
-                                    <th class="r">Transaksi</th>
+                                    <th>Method</th>
+                                    <th class="r">Transactions</th>
                                     <th class="r">Total</th>
                                 </tr>
                             </thead>
@@ -152,15 +223,15 @@
                                     <tr>
                                         <td class="pn">@m.MethodName</td>
                                         <td class="r mono">@m.TransactionCount</td>
-                                        <td class="r mono">@m.TotalAmount.ToString("N2")</td>
+                                        <td class="r mono total">@m.TotalAmount.ToString("N2")</td>
                                     </tr>
                                 }
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td class="r"><b>Grand Total</b></td>
+                                    <td class="gt-l">Grand Total</td>
                                     <td class="r mono">@_shift.TransactionCount</td>
-                                    <td class="r mono"><b>@_shift.TotalSalesAmount.ToString("N2")</b></td>
+                                    <td class="r grand">@_shift.TotalSalesAmount.ToString("N2")</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -202,11 +273,11 @@
         _error = null; _busy = true;
         try
         {
-            if (!await Swal.ConfirmAsync("Tutup shift ini?", "Setelah ditutup tidak bisa diubah.", "Ya, Tutup")) { _busy = false; return; }
+            if (!await Swal.ConfirmAsync("Close this shift?", "Once closed it can't be changed.", "Yes, Close")) { _busy = false; return; }
             await Shifts.CloseAsync(Id, _userId, new CloseShiftRequest(_countedCash, _closingNote));
             _showClose = false;
             await LoadAsync();
-            await Swal.ToastAsync("success", "Shift ditutup");
+            await Swal.ToastAsync("success", "Shift closed");
         }
         catch (ValidationException ex) { _error = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage)); }
         finally { _busy = false; }

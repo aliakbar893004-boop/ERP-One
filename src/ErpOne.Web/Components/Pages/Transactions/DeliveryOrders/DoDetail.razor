@@ -27,7 +27,7 @@
     }
     else if (_do is null)
     {
-        <div class="pf-alert warn"><i class="bi bi-exclamation-triangle"></i> Delivery order tidak ditemukan.</div>
+        <div class="pf-alert warn"><i class="bi bi-exclamation-triangle"></i> Delivery order not found.</div>
     }
     else
     {
@@ -59,37 +59,56 @@
         <section class="card">
             <div class="card-h">
                 <span class="hd-ic"><i class="bi bi-receipt"></i></span>
-                <h2>Informasi</h2>
+                <h2>Information</h2>
             </div>
             <div class="card-b">
-                <dl class="dl">
-                    <dt>DO#</dt><dd><span class="grn-no">@_do.DoNumber</span></dd>
-                    <dt>SO#</dt><dd><a href="/transactions/sales-orders/@_do.SalesOrderId">@_do.SoNumber</a></dd>
-                    <dt>Customer</dt><dd>@_do.CustomerName</dd>
-                    <dt>Gudang</dt><dd>@_do.WarehouseName</dd>
-                    <dt>Tanggal Kirim</dt><dd>@_do.DeliveryDate.ToString("dd MMM yyyy")</dd>
-                    <dt>Catatan</dt><dd>@(_do.Notes ?? "—")</dd>
-                    <dt>Dibuat</dt><dd>@_do.CreatedAt.ToString("dd MMM yyyy HH:mm")</dd>
-                    <dt>Oleh</dt><dd>@(_do.CreatedBy ?? "—")</dd>
-                </dl>
+                <div class="info-grid">
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-truck"></i> DO #</span>
+                        <span class="v"><span class="grn-no">@_do.DoNumber</span></span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-file-earmark-text"></i> SO #</span>
+                        <span class="v"><a href="/transactions/sales-orders/@_do.SalesOrderId">@_do.SoNumber</a></span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-person"></i> Customer</span>
+                        <span class="v">@_do.CustomerName</span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-box-seam"></i> Warehouse</span>
+                        <span class="v">@_do.WarehouseName</span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-calendar3"></i> Delivery Date</span>
+                        <span class="v">@_do.DeliveryDate.ToString("dd MMM yyyy")</span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-clock"></i> Created</span>
+                        <span class="v">@_do.CreatedAt.ToString("dd MMM yyyy HH:mm")@(string.IsNullOrEmpty(_do.CreatedBy) ? "" : " · " + _do.CreatedBy)</span>
+                    </div>
+                    <div class="info-cell wide">
+                        <span class="k"><i class="bi bi-sticky"></i> Notes</span>
+                        <span class="v @(string.IsNullOrEmpty(_do.Notes) ? "muted-v" : "")">@(_do.Notes ?? "—")</span>
+                    </div>
+                </div>
             </div>
         </section>
 
         <section class="card">
             <div class="card-h">
                 <span class="hd-ic"><i class="bi bi-box-seam"></i></span>
-                <h2>Item</h2>
+                <h2>Items</h2>
             </div>
             <div class="card-b">
                 <div class="table-responsive">
                     <table class="items">
                         <thead>
                             <tr>
-                                <th>Produk</th>
-                                <th>SKU</th>
-                                <th class="r">Dipesan</th>
-                                <th class="r">Terkirim</th>
-                                <th class="r">HPP/unit</th>
+                                <th>Product</th>
+                                <th class="r">Ordered</th>
+                                <th class="c">Delivered</th>
+                                <th class="r">Cost/unit</th>
                                 <th class="r">Subtotal</th>
                             </tr>
                         </thead>
@@ -97,15 +116,25 @@
                             @foreach (var l in _do.Lines)
                             {
                                 <tr>
-                                    <td class="pn">@l.ProductName</td>
-                                    <td class="sku">@l.VariantSku</td>
+                                    <td class="prod">
+                                        <span class="pn">@l.ProductName</span>
+                                        <span class="sku">@l.VariantSku</span>
+                                    </td>
                                     <td class="r mono">@l.OrderedQuantity</td>
-                                    <td class="r mono">@l.QuantityDelivered</td>
+                                    <td class="c">
+                                        <span class="recv @(l.QuantityDelivered == 0 ? "none" : l.QuantityDelivered >= l.OrderedQuantity ? "full" : "part")">@l.QuantityDelivered</span>
+                                    </td>
                                     <td class="r mono">@l.UnitCost.ToString("N2")</td>
-                                    <td class="r mono">@l.LineCost.ToString("N2")</td>
+                                    <td class="r mono total">@l.LineCost.ToString("N2")</td>
                                 </tr>
                             }
                         </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4" class="r gt-l">Total</td>
+                                <td class="r grand">@_do.Lines.Sum(l => l.LineCost).ToString("N2")</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -130,7 +159,7 @@
 
     private async Task PostAsync()
     {
-        if (!await Swal.ConfirmAsync("Post Delivery Order?", "Stok akan dikurangi dan COGS dicatat; tidak bisa dibatalkan.", "Ya, Post")) return;
+        if (!await Swal.ConfirmAsync("Post Delivery Order?", "Stock will be reduced and COGS recorded; this cannot be undone.", "Yes, Post")) return;
         _error = null; _posting = true;
         try { await Do.PostAsync(Id); await LoadAsync(); }
         catch (FluentValidation.ValidationException ex) { _error = string.Join("; ", ex.Errors.Select(e => e.ErrorMessage)); }

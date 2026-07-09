@@ -420,6 +420,18 @@ h1:focus {
 .cf .vempty { color:var(--muted); font-size:0.84rem; margin:0; }
 @media (max-width:640px){ .cf .vrow, .cf .vrow-head { grid-template-columns:110px 1fr 38px; } }
 
+/* Line-item table (transactional forms — adjustments, PO, sales …).
+   A real <table> because line columns have very different widths. */
+.cf .ltbl-wrap { overflow-x:auto; }
+.cf .ltbl { width:100%; border-collapse:separate; border-spacing:0; min-width:640px; }
+.cf .ltbl th { text-align:left; font-size:0.7rem; text-transform:uppercase; letter-spacing:.05em;
+        font-weight:700; color:var(--muted); padding:0 8px 7px; }
+.cf .ltbl th.num { text-align:right; }
+.cf .ltbl td { padding:0 8px 9px; vertical-align:top; }
+.cf .ltbl .ctl { padding:8px 11px; font-size:0.8125rem; border-radius:9px; }
+.cf .ltbl .ctl.num { text-align:right; }
+.cf .ltbl-note { font-size:0.78125rem; color:var(--muted); margin:8px 2px 0; }
+
 /* Toggle switch (booleans: active / default / inclusive …) */
 .cf .tgl { display:flex; align-items:center; gap:11px; cursor:pointer; user-select:none; align-self:flex-start; padding-top:2px; }
 .cf .tgl input { position:absolute; opacity:0; width:0; height:0; }
@@ -461,3 +473,104 @@ h1:focus {
 
 @media (max-width:640px){ .cf .f.c4,.cf .f.c6,.cf .f.c8 { grid-column:1 / -1; } }
 .cf .ctl:focus-visible,.cf .btn:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+/* ============================================================
+   SweetAlert2 — one general, on-brand dialog style (window.appSwal).
+   Buttons styled here (buttonsStyling:false); container forced to
+   stay centered so it never drops to the bottom of the page.
+   ============================================================ */
+.swal2-container.swal2-center { align-items:center !important; }
+.swal2-popup.app-swal {
+    width:26rem; max-width:calc(100vw - 2rem); padding:26px 26px 22px; border-radius:18px;
+    font-family:var(--app-font); box-shadow:0 24px 60px -14px rgba(15,27,45,.38);
+}
+.app-swal .app-swal-title { font-size:1.15rem; font-weight:700; color:#0F1B2D; padding:0; }
+.app-swal .app-swal-text  { font-size:0.9rem; color:#64748B; margin-top:7px; }
+.app-swal .app-swal-actions { gap:9px; margin-top:22px; }
+.app-swal-btn { border:0; border-radius:11px; padding:10px 20px; font:inherit; font-weight:700;
+    font-size:0.85rem; cursor:pointer; transition:.15s; }
+.app-swal-btn:focus { outline:2px solid var(--app-accent); outline-offset:2px; }
+.app-swal-primary { background:var(--app-accent); color:#fff; box-shadow:0 10px 22px -10px var(--app-accent); }
+.app-swal-primary:hover { background:var(--app-accent-deep); }
+.app-swal-danger  { background:#E1453B; color:#fff; box-shadow:0 10px 22px -10px rgba(225,69,59,.6); }
+.app-swal-danger:hover { background:#C43A31; }
+.app-swal-ghost   { background:#F1F4F7; color:#475569; }
+.app-swal-ghost:hover { background:#E6EAEF; color:#0F1B2D; }
+.app-toast { border-radius:13px !important; font-family:var(--app-font); }
+
+/* ============================================================
+   DARK MODE — deep navy (not black), light-grey text. Re-tints
+   Bootstrap's dark theme + our .pi/.cf/.pf design tokens.
+   Light mode is untouched (everything below is gated on
+   html[data-bs-theme="dark"]).
+   ============================================================ */
+html[data-bs-theme="dark"] {
+    --bs-body-bg:#0B1220; --bs-body-bg-rgb:11,18,32;
+    --bs-body-tertiary:#131C31; --bs-secondary-bg:#131C31; --bs-tertiary-bg:#131C31;
+    --bs-body-color:#E6EAF2; --bs-body-color-rgb:230,234,242;
+    --bs-secondary-color:rgba(230,234,242,.62); --bs-emphasis-color:#F3F6FB;
+    --bs-border-color:#29364F; --bs-border-color-translucent:rgba(255,255,255,.10);
+
+    /* shared navy design tokens */
+    --dk-panel:#16223C; --dk-field:#0F1B31; --dk-line:#2A374F;
+    --dk-ink:#E6EAF2; --dk-muted:#9AA7BD; --dk-faint:#6C7B94;
+}
+
+html[data-bs-theme="dark"] body { background:var(--bs-body-bg); color:var(--bs-body-color); }
+
+/* Custom surfaces (index .pi / form .cf / detail .pf) → navy + light ink.
+   Overriding the CSS vars recolours every child that uses them. */
+html[data-bs-theme="dark"] .pi,
+html[data-bs-theme="dark"] .cf,
+html[data-bs-theme="dark"] .pf {
+    --panel:var(--dk-panel); --field:var(--dk-field); --line:var(--dk-line);
+    --ink:var(--dk-ink); --muted:var(--dk-muted); --faint:var(--dk-faint);
+    --accent-soft:color-mix(in srgb, var(--accent) 20%, transparent);
+    --accent-deep:color-mix(in srgb, var(--accent) 62%, white);
+}
+
+/* .pi — hardcoded light spots the tokens don't cover */
+html[data-bs-theme="dark"] .pi .search input,
+html[data-bs-theme="dark"] .pi .toolbar select,
+html[data-bs-theme="dark"] .pi .chip,
+html[data-bs-theme="dark"] .pi-head .btn-out { background:var(--dk-field); color:var(--dk-ink); }
+html[data-bs-theme="dark"] .pi thead th { background:#101A2E; }
+html[data-bs-theme="dark"] .pi tbody tr:hover { background:rgba(255,255,255,.03); }
+html[data-bs-theme="dark"] .pi .chip.on { background:var(--accent-soft); color:var(--accent-deep); border-color:var(--accent); }
+html[data-bs-theme="dark"] .pi .ic-blu,  html[data-bs-theme="dark"] .pi .b-info { background:rgba(37,99,235,.18);  color:#93B4FF; }
+html[data-bs-theme="dark"] .pi .ic-amb,  html[data-bs-theme="dark"] .pi .b-out  { background:rgba(217,119,6,.18);  color:#FBBF24; }
+html[data-bs-theme="dark"] .pi .ic-red   { background:rgba(225,69,59,.18); color:#FCA5A5; }
+html[data-bs-theme="dark"] .pi .b-off, html[data-bs-theme="dark"] .pi .b-dark { background:rgba(255,255,255,.08); color:#C3CDDD; }
+
+/* .cf — inputs, focus, alerts, sticky footer, select caret */
+html[data-bs-theme="dark"] .cf .ctl { color:var(--dk-ink); }
+html[data-bs-theme="dark"] .cf .ctl:focus { background:var(--dk-panel); }
+/* Form labels use a hardcoded dark slate (#334155) that's unreadable on navy — lighten. */
+html[data-bs-theme="dark"] .cf .fl,
+html[data-bs-theme="dark"] .cf .tgl .tx,
+html[data-bs-theme="dark"] .pf .fl { color:#CBD5E1; }
+html[data-bs-theme="dark"] .cf-alert.err  { background:rgba(225,69,59,.14); border-color:rgba(225,69,59,.42); color:#FCA5A5; }
+html[data-bs-theme="dark"] .cf-alert.warn { background:rgba(217,119,6,.14); border-color:rgba(217,119,6,.42); color:#FBBF24; }
+html[data-bs-theme="dark"] .cf .pf-footer { background:rgba(22,34,60,.88); }
+html[data-bs-theme="dark"] .cf select.ctl,
+html[data-bs-theme="dark"] .pi .toolbar select {
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%239AA7BD' stroke-width='2'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+}
+
+/* .pf detail pages — a few hardcoded light spots live in scoped CSS, so
+   these need !important to win over the component-scoped rules. */
+html[data-bs-theme="dark"] .pf .items thead th { background:#101A2E !important; }
+html[data-bs-theme="dark"] .pf .grn-no { background:var(--dk-field) !important; }
+html[data-bs-theme="dark"] .pf .ctl:focus { background:var(--dk-panel) !important; }
+html[data-bs-theme="dark"] .pf .cr-kpi .ic { background:rgba(255,255,255,.06) !important; color:#C3CDDD !important; }
+html[data-bs-theme="dark"] .pf .cr-kpi.accent .ic { background:var(--accent) !important; color:#fff !important; }
+html[data-bs-theme="dark"] .pf .cr-hero.short { background:rgba(225,69,59,.14) !important; border-color:rgba(225,69,59,.42) !important; }
+html[data-bs-theme="dark"] .pf .cr-hero.ok { background:rgba(255,255,255,.05) !important; border-color:var(--dk-line) !important; }
+
+/* SweetAlert dark */
+html[data-bs-theme="dark"] .swal2-popup.app-swal,
+html[data-bs-theme="dark"] .app-toast { background:#16223C; color:#E6EAF2; }
+html[data-bs-theme="dark"] .app-swal .app-swal-title, html[data-bs-theme="dark"] .app-toast .swal2-title { color:#E6EAF2; }
+html[data-bs-theme="dark"] .app-swal .app-swal-text { color:#9AA7BD; }
+html[data-bs-theme="dark"] .app-swal-ghost { background:rgba(255,255,255,.08); color:#CBD5E1; }
+html[data-bs-theme="dark"] .app-swal-ghost:hover { background:rgba(255,255,255,.14); color:#fff; }

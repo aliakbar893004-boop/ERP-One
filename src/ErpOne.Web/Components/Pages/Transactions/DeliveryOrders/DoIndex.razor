@@ -16,12 +16,12 @@
         <div>
             <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Transactions</span><span class="sep">·</span><span class="here">Delivery Order</span></nav>
             <h1>Delivery Order</h1>
-            <p>Pengiriman barang atas Sales Order.</p>
+            <p>Delivery of goods against a Sales Order.</p>
         </div>
         <AuthorizeView Policy="transactions.delivery-orders.create">
             <Authorized>
                 <div class="pi-actions">
-                    <a class="btn btn-primary" href="/transactions/delivery-orders/new"><i class="bi bi-plus-lg"></i> Pengiriman Baru</a>
+                    <a class="btn btn-primary" href="/transactions/delivery-orders/new"><i class="bi bi-plus-lg"></i> New Delivery</a>
                 </div>
             </Authorized>
         </AuthorizeView>
@@ -59,10 +59,10 @@
     <div class="toolbar">
         <div class="search">
             <i class="bi bi-search"></i>
-            <input placeholder="Cari nomor DO atau SO…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+            <input placeholder="Search DO or SO number…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
         </div>
         <div class="chips">
-            <button class="chip @(_statusFilter is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">Semua</button>
+            <button class="chip @(_statusFilter is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">All</button>
             @foreach (var s in Enum.GetValues<DeliveryOrderStatus>())
             {
                 <button class="chip @(_statusFilter == s ? "on" : "")" @onclick="() => SetStatusAsync(s)">@s</button>
@@ -81,11 +81,11 @@
             <p>
                 @if (string.IsNullOrEmpty(_search) && _statusFilter is null)
                 {
-                    <span>Belum ada Delivery Order. <a href="/transactions/delivery-orders/new">Buat yang pertama.</a></span>
+                    <span>No delivery orders yet. <a href="/transactions/delivery-orders/new">Create the first one.</a></span>
                 }
                 else
                 {
-                    <span>Tidak ada DO yang cocok dengan filter.</span>
+                    <span>No DOs match your filter.</span>
                 }
             </p>
         </div>
@@ -94,16 +94,16 @@
     {
         <div class="card">
             <div class="card-top">
-                <span class="n">Menampilkan <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> dari <b>@_page.Total.ToString("N0")</b></span>
+                <span class="n">Showing <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> of <b>@_page.Total.ToString("N0")</b></span>
             </div>
             <div class="table-responsive">
                 <table>
                     <thead>
                         <tr>
-                            <th>No. DO</th>
+                            <th>DO No.</th>
                             <th>Sales Order</th>
                             <th>Customer</th>
-                            <th>Tanggal</th>
+                            <th>Date</th>
                             <th class="c">Qty</th>
                             <th class="c">Status</th>
                             <th style="width:96px"></th>
@@ -121,12 +121,12 @@
                                 <td class="c"><span class="badge @PillClass(item.Status)">@item.Status</span></td>
                                 <td>
                                     <div class="rowact">
-                                        <a class="ia" href="@($"/transactions/delivery-orders/{item.Id}")" title="Lihat" @onclick:stopPropagation="true"><i class="bi bi-eye"></i></a>
+                                        <a class="ia" href="@($"/transactions/delivery-orders/{item.Id}")" title="View" @onclick:stopPropagation="true"><i class="bi bi-eye"></i></a>
                                         @if (item.Status == "Draft")
                                         {
                                             <AuthorizeView Policy="transactions.delivery-orders.delete">
                                                 <Authorized>
-                                                    <button class="ia del" @onclick="() => DeleteAsync(item.Id, item.DoNumber)" @onclick:stopPropagation="true" title="Hapus"><i class="bi bi-trash3"></i></button>
+                                                    <button class="ia del" @onclick="() => DeleteAsync(item.Id, item.DoNumber)" @onclick:stopPropagation="true" title="Delete"><i class="bi bi-trash3"></i></button>
                                                 </Authorized>
                                             </AuthorizeView>
                                         }
@@ -188,13 +188,13 @@
 
     private async Task DeleteAsync(int id, string doNumber)
     {
-        if (!await Swal.ConfirmAsync("Hapus DO?", $"\"{doNumber}\" akan dihapus permanen."))
+        if (!await Swal.ConfirmAsync("Delete DO?", $"\"{doNumber}\" will be permanently deleted."))
             return;
 
         await Do.DeleteDraftAsync(id);
         _dash = await Do.GetDashboardAsync();
         await LoadAsync();
-        await Swal.ToastAsync("success", "Delivery order dihapus");
+        await Swal.ToastAsync("success", "Delivery order deleted");
     }
 
     private static string PillClass(string status) => status switch

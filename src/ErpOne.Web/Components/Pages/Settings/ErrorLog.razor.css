@@ -1,0 +1,19 @@
+/* Extras layered on top of the shared global ".pi" list design. */
+
+/* Level badge */
+.lvl { display:inline-block; padding:3px 11px; border-radius:99px; font-size:0.72rem; font-weight:700;
+       text-transform:uppercase; letter-spacing:.03em; }
+.lvl-info  { background:#EEF1F4; color:#64748B; }
+.lvl-warn  { background:#FEF6E7; color:#9A6B12; }
+.lvl-err   { background:#FDECEA; color:#B23A30; }
+.lvl-fatal { background:#7F1D1D; color:#fff; }
+
+/* Message + exception */
+.msg { color:#0F1B2D; }
+.exc { margin-top:6px; }
+.exc summary { cursor:pointer; font-size:0.78125rem; font-weight:600; color:#B23A30; list-style:none;
+               display:inline-flex; align-items:center; gap:6px; }
+.exc summary::-webkit-details-marker { display:none; }
+.exc summary:hover { text-decoration:underline; }
+.exc pre { margin:8px 0 0; padding:11px 13px; background:#0F172A; color:#E2E8F0; border-radius:10px;
+           font-size:0.75rem; line-height:1.5; overflow-x:auto; white-space:pre-wrap; word-break:break-word; }

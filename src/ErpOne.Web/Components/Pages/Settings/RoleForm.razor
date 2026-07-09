@@ -9,174 +9,155 @@
 
 <PageTitle>@_title</PageTitle>
 
-<div class="rf-header mb-4">
-    <a class="back-link" href="/settings/roles"><i class="bi bi-arrow-left me-1"></i>Back</a>
-    <h4 class="rf-title">@_title</h4>
-</div>
+<div class="cf">
 
-@if (_loading)
-{
-    <div class="text-center py-5">
-        <div class="spinner-border text-primary" role="status"></div>
-    </div>
-}
-else if (_notFound)
-{
-    <div class="alert alert-warning">Role not found.</div>
-}
-else
-{
-    <div class="row g-4">
-
-        <!-- Left: Role info -->
-        <div class="col-12 col-lg-4">
-            <div class="fs-card sticky-top" style="top:1rem">
-                <div class="fs-card-title">Role Information</div>
-
-                @if (_error is not null)
-                {
-                    <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-3">
-                        <span>&#9888;</span> @_error
-                    </div>
-                }
-
-                <div class="mb-3">
-                    <label class="form-label lbl-required">Role Name</label>
-                    <input class="form-control" @bind="_name" @bind:event="oninput"
-                           placeholder="e.g. Administrators" />
-                </div>
-                <div class="mb-4">
-                    <label class="form-label">Description</label>
-                    <textarea class="form-control" rows="3" @bind="_description"
-                              placeholder="Describe what this role does..."></textarea>
-                </div>
-
-                @if (!string.IsNullOrWhiteSpace(_name))
-                {
-                    <div class="role-preview mb-4">
-                        <span class="text-muted small me-2">Preview:</span>
-                        <span class="role-chip">@_name</span>
-                    </div>
-                }
-
-                <div class="perm-summary mb-4">
-                    <i class="bi bi-shield-check text-primary me-1"></i>
-                    <span class="text-muted small">
-                        @_selectedPerms.Count of @AppMenus.AllPermissions.Count permissions selected
-                    </span>
-                </div>
-
-            </div>
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/settings/roles">Settings</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/settings/roles">Roles</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
         </div>
+        <h1>@_title</h1>
+    </div>
 
-        <!-- Right: Permission matrix -->
-        <div class="col-12 col-lg-8">
-            <div class="fs-card">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="fs-card-title mb-0">Access Permissions per Feature</div>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-primary"
-                                @onclick="SelectAll">
-                            <i class="bi bi-check-all me-1"></i>All
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary"
-                                @onclick="ClearAll">
-                            <i class="bi bi-x-square me-1"></i>Clear
-                        </button>
+    @if (_loading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+    }
+    else if (_notFound)
+    {
+        <div class="cf-alert warn"><i class="bi bi-exclamation-triangle"></i> Role not found.</div>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+        }
+
+        <div class="cf-wrap">
+
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-shield-lock"></i></span>
+                    <div class="hd-tx">
+                        <h2>Role information</h2>
+                        <p>A named group of permissions you can assign to users.</p>
                     </div>
                 </div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c6">
+                            <label class="fl">Role Name <span class="req">*</span></label>
+                            <input class="ctl" placeholder="e.g. Administrators" @bind="_name" @bind:event="oninput" />
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Description</label>
+                            <input class="ctl" placeholder="What this role is for…" @bind="_description" />
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-                <div class="table-responsive">
-                    <table class="table table-bordered align-middle mb-0 perm-table">
-                        <thead>
-                            <tr>
-                                <th class="res-col">Menu / Feature</th>
-                                @foreach (var act in AppMenus.AllActions)
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-ui-checks-grid"></i></span>
+                    <div class="hd-tx">
+                        <h2>Access permissions</h2>
+                        <p>@_selectedPerms.Count of @AppMenus.AllPermissions.Count permissions selected.</p>
+                    </div>
+                    <div class="hd-act">
+                        <button type="button" class="vadd" @onclick="SelectAll"><i class="bi bi-check-all"></i> Select all</button>
+                        <button type="button" class="vadd" @onclick="ClearAll"><i class="bi bi-x-square"></i> Clear</button>
+                    </div>
+                </div>
+                <div class="card-b">
+                    <div class="table-responsive">
+                        <table class="perm-table">
+                            <thead>
+                                <tr>
+                                    <th class="res-col">Menu / Feature</th>
+                                    @foreach (var act in AppMenus.AllActions)
+                                    {
+                                        <th class="act-col">
+                                            <i class="bi @act.Icon"></i>
+                                            <span>@act.Label</span>
+                                        </th>
+                                    }
+                                    <th class="all-col">Row</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var group in AppMenus.Groups)
                                 {
-                                    <th class="act-col text-center">
-                                        <i class="bi @act.Icon d-block mb-1 fs-6"></i>
-                                        <span class="small">@act.Label</span>
-                                    </th>
-                                }
-                                <th class="all-col text-center small text-muted">Row</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var group in AppMenus.Groups)
-                            {
-                                @if (group.GroupLabel is not null)
-                                {
-                                    <tr class="perm-group-row">
-                                        <td colspan="@(AppMenus.AllActions.Count + 2)">
-                                            <i class="bi bi-folder-fill me-2 text-warning"></i>
-                                            <span class="fw-semibold">@group.GroupLabel</span>
-                                        </td>
-                                    </tr>
-                                }
-                                @foreach (var res in group.Resources)
-                                {
-                                    var allOn = res.Actions.All(a =>
-                                        _selectedPerms.Contains(AppMenus.Perm(res.Key, a.Key)));
-
-                                    <tr>
-                                        <td class="res-label">
-                                            <i class="bi @res.Icon me-2 text-muted"></i>
-                                            @res.Label
-                                        </td>
-                                        @foreach (var act in AppMenus.AllActions)
-                                        {
-                                            var key       = AppMenus.Perm(res.Key, act.Key);
-                                            var supported = res.Actions.Any(a => a.Key == act.Key);
-                                            <td class="text-center">
-                                                @if (supported)
-                                                {
-                                                    <input class="form-check-input perm-check"
-                                                           type="checkbox"
-                                                           checked="@_selectedPerms.Contains(key)"
-                                                           @onchange="e => TogglePerm(key, (bool)e.Value!)" />
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-muted">–</span>
-                                                }
+                                    @if (group.GroupLabel is not null)
+                                    {
+                                        <tr class="perm-group-row">
+                                            <td colspan="@(AppMenus.AllActions.Count + 2)">
+                                                <i class="bi bi-folder2-open"></i> @group.GroupLabel
                                             </td>
-                                        }
-                                        <td class="text-center">
-                                            <button type="button"
-                                                    class="btn btn-xs @(allOn ? "btn-outline-danger" : "btn-outline-success")"
-                                                    @onclick="() => ToggleResource(res, !allOn)">
-                                                @(allOn ? "Clear" : "Select")
-                                            </button>
-                                        </td>
-                                    </tr>
+                                        </tr>
+                                    }
+                                    @foreach (var res in group.Resources)
+                                    {
+                                        var allOn = res.Actions.All(a => _selectedPerms.Contains(AppMenus.Perm(res.Key, a.Key)));
+                                        <tr>
+                                            <td class="res-label"><i class="bi @res.Icon"></i> @res.Label</td>
+                                            @foreach (var act in AppMenus.AllActions)
+                                            {
+                                                var key       = AppMenus.Perm(res.Key, act.Key);
+                                                var supported = res.Actions.Any(a => a.Key == act.Key);
+                                                <td>
+                                                    @if (supported)
+                                                    {
+                                                        <input class="perm-check" type="checkbox"
+                                                               checked="@_selectedPerms.Contains(key)"
+                                                               @onchange="e => TogglePerm(key, (bool)(e.Value ?? false))" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="na">–</span>
+                                                    }
+                                                </td>
+                                            }
+                                            <td>
+                                                <button type="button" class="rowtog @(allOn ? "on" : "off")"
+                                                        @onclick="() => ToggleResource(res, !allOn)">
+                                                    @(allOn ? "Clear" : "Select")
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
                                 }
-                            }
-                        </tbody>
-                    </table>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <div class="pf-footer">
+                <div class="in">
+                    <span class="note"><span class="req">*</span> required fields</span>
+                    <a class="btn btn-ghost" href="/settings/roles"><i class="bi bi-x-lg"></i> Cancel</a>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check2"></i>
+                        }
+                        Save role
+                    </button>
                 </div>
             </div>
+
         </div>
-
-    </div>
-
-    <!-- Actions -->
-    <div class="d-flex gap-2 justify-content-end mt-4">
-        <button class="btn btn-primary btn-sm px-3" @onclick="SaveAsync" disabled="@_saving">
-            @if (_saving)
-            {
-                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-            }
-            else
-            {
-                <i class="bi bi-floppy2-fill me-1"></i>
-            }
-            Save
-        </button>
-        <a class="btn btn-outline-secondary btn-sm" href="/settings/roles">
-            <i class="bi bi-x-lg me-1"></i>Cancel
-        </a>
-    </div>
-}
+    }
+</div>
 
 @code {
     [Parameter] public string? Id { get; set; }
@@ -193,7 +174,6 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Check access to this form
         var state = await AuthStateTask;
         var requiredPerm = Id is null
             ? AppMenus.Perm("settings.roles", "create")

@@ -13,86 +13,122 @@
 
 <PageTitle>New Stock Adjustment</PageTitle>
 
-<div class="uf-header mb-4">
-    <a class="back-link" href="/inventory/stock-levels"><i class="bi bi-arrow-left me-1"></i>Back</a>
-    <h4 class="uf-title">Stock Adjustment (Opname)</h4>
-</div>
+<div class="cf">
 
-@if (_error is not null)
-{
-    <div class="alert alert-danger py-2">@_error</div>
-}
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/inventory/stock-levels">Inventory</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/inventory/stock-levels">Stock Levels</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">New Adjustment</span>
+        </div>
+        <h1>Stock Adjustment (Opname)</h1>
+    </div>
 
-<div class="fs-card mb-4">
-    <div class="row g-3">
-        <div class="col-12 col-md-4">
-            <label class="form-label lbl-required">Warehouse</label>
-            <select class="form-select" @bind="_warehouseId">
-                <option value="0">— select —</option>
-                @foreach (var w in _warehouses)
-                {
-                    <option value="@w.Id">@w.Name</option>
-                }
-            </select>
-        </div>
-        <div class="col-12 col-md-4">
-            <label class="form-label lbl-required">Date</label>
-            <input type="date" class="form-control" @bind="_date" />
-        </div>
-        <div class="col-12">
-            <label class="form-label">Note</label>
-            <input class="form-control" maxlength="200" @bind="_note" placeholder="Optional" />
+    @if (_error is not null)
+    {
+        <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+    }
+
+    <div class="cf-wrap">
+        <section class="card">
+            <div class="card-h">
+                <span class="hd-ic"><i class="bi bi-clipboard-check"></i></span>
+                <div class="hd-tx">
+                    <h2>Adjustment details</h2>
+                    <p>Warehouse and date for this stock opname.</p>
+                </div>
+            </div>
+            <div class="card-b">
+                <div class="grid">
+                    <div class="f c4">
+                        <label class="fl">Warehouse <span class="req">*</span></label>
+                        <select class="ctl" @bind="_warehouseId">
+                            <option value="0">— select —</option>
+                            @foreach (var w in _warehouses)
+                            {
+                                <option value="@w.Id">@w.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="f c4">
+                        <label class="fl">Date <span class="req">*</span></label>
+                        <input type="date" class="ctl" @bind="_date" />
+                    </div>
+                    <div class="f c4">
+                        <label class="fl">Note</label>
+                        <input class="ctl" maxlength="200" @bind="_note" placeholder="Optional" />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-h">
+                <span class="hd-ic"><i class="bi bi-list-ul"></i></span>
+                <div class="hd-tx">
+                    <h2>Lines</h2>
+                    <p>Variants to adjust in this opname.</p>
+                </div>
+                <button type="button" class="vadd" @onclick="AddLine"><i class="bi bi-plus-lg"></i> Add line</button>
+            </div>
+            <div class="card-b">
+                <div class="ltbl-wrap">
+                    <table class="ltbl">
+                        <thead>
+                            <tr>
+                                <th>Variant</th>
+                                <th class="num" style="width:130px">Delta Qty</th>
+                                <th class="num" style="width:150px">Unit Cost</th>
+                                <th>Reason</th>
+                                <th style="width:38px"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var line in _lines)
+                            {
+                                <tr>
+                                    <td>
+                                        <select class="ctl" @bind="line.VariantId">
+                                            <option value="0">— select —</option>
+                                            @foreach (var v in _variants)
+                                            {
+                                                <option value="@v.Id">@v.Sku — @v.Name</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td><input type="number" class="ctl num mono" @bind="line.DeltaQuantity" /></td>
+                                    <td><input type="number" step="0.01" class="ctl num mono" @bind="line.UnitCost" /></td>
+                                    <td><input class="ctl" maxlength="200" @bind="line.Reason" placeholder="Optional" /></td>
+                                    <td><button type="button" class="vdel" @onclick="() => _lines.Remove(line)" title="Remove"><i class="bi bi-trash3"></i></button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <p class="ltbl-note">Positive delta adds stock (uses Unit Cost for Moving Average); negative delta removes stock.</p>
+            </div>
+        </section>
+
+        <div class="pf-footer">
+            <div class="in">
+                <span class="note"><span class="req">*</span> required fields</span>
+                <a class="btn btn-ghost" href="/inventory/stock-levels"><i class="bi bi-x-lg"></i> Cancel</a>
+                <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                    @if (_saving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-check2"></i>
+                    }
+                    Save adjustment
+                </button>
+            </div>
         </div>
     </div>
-</div>
-
-<div class="fs-card mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <div class="fs-card-title mb-0">Lines</div>
-        <button class="btn btn-sm btn-outline-primary" @onclick="AddLine"><i class="bi bi-plus-lg me-1"></i>Add line</button>
-    </div>
-    <div class="table-responsive">
-        <table class="table align-middle mb-0">
-            <thead class="table-head">
-                <tr>
-                    <th>Variant</th>
-                    <th style="width:130px" class="text-end">Delta Qty</th>
-                    <th style="width:150px" class="text-end">Unit Cost</th>
-                    <th>Reason</th>
-                    <th style="width:48px"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var line in _lines)
-                {
-                    <tr>
-                        <td>
-                            <select class="form-select form-select-sm" @bind="line.VariantId">
-                                <option value="0">— select —</option>
-                                @foreach (var v in _variants)
-                                {
-                                    <option value="@v.Id">@v.Sku — @v.Name</option>
-                                }
-                            </select>
-                        </td>
-                        <td><input type="number" class="form-control form-control-sm text-end" @bind="line.DeltaQuantity" /></td>
-                        <td><input type="number" step="0.01" class="form-control form-control-sm text-end" @bind="line.UnitCost" /></td>
-                        <td><input class="form-control form-control-sm" maxlength="200" @bind="line.Reason" /></td>
-                        <td><button class="btn btn-sm btn-outline-danger" @onclick="() => _lines.Remove(line)"><i class="bi bi-trash3"></i></button></td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-    <div class="form-text mt-2">Positive delta adds stock (uses Unit Cost for Moving Average); negative delta removes stock.</div>
-</div>
-
-<div class="d-flex gap-2 justify-content-end">
-    <button class="btn btn-primary btn-sm px-3" @onclick="SaveAsync" disabled="@_saving">
-        @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> } else { <i class="bi bi-floppy2-fill me-1"></i> }
-        Save
-    </button>
-    <a class="btn btn-outline-secondary btn-sm" href="/inventory/stock-levels"><i class="bi bi-x-lg me-1"></i>Cancel</a>
 </div>
 
 @code {

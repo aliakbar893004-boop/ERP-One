@@ -1,0 +1,16 @@
+/* Custom bits layered on top of the global ".cf" Atlas form. */
+
+/* success alert variant (cf-alert only ships err/warn globally) */
+.cf-alert.ok { background:var(--accent-soft); border:1px solid #C7D2FE; color:var(--accent-deep); }
+
+/* ── Ordered step rows ───────────────────────────────────── */
+.ac-step { display:grid; grid-template-columns:34px 1fr 40px 40px; gap:9px; align-items:center; margin-bottom:9px; }
+.ac-step:last-child { margin-bottom:0; }
+.ac-num { width:34px; height:34px; border-radius:9px; display:grid; place-items:center; flex:none;
+          background:var(--accent-soft); color:var(--accent-deep); font-weight:800; font-size:0.84375rem;
+          font-variant-numeric:tabular-nums; }
+.ac-btn { width:40px; height:40px; flex:none; display:grid; place-items:center; border:1.5px solid var(--line);
+          background:#fff; color:var(--muted); border-radius:9px; cursor:pointer; transition:.15s; font-size:0.9375rem; }
+.ac-btn:hover:not(:disabled) { border-color:var(--accent); color:var(--accent-deep); background:var(--accent-soft); }
+.ac-btn:disabled { opacity:.45; cursor:default; }
+.ac-btn.del:hover:not(:disabled) { border-color:var(--danger); color:var(--danger); background:#FDECEA; }

@@ -99,3 +99,59 @@ tbody tr:hover .rowact { opacity:1; }
             background:var(--accent-soft); color:var(--accent-deep); font-size:26px; }
 .empty p { margin:0; font-size:14px; }
 .empty a { color:var(--accent-deep); font-weight:600; }
+
+/* ── Open New Shift panel ────────────────────────────────── */
+.os-panel { background:var(--panel); border:1px solid var(--line); border-radius:16px;
+            box-shadow:0 10px 34px -20px rgba(15,27,45,.35); overflow:hidden; margin-bottom:16px; }
+.os-head { display:flex; align-items:center; gap:13px; padding:15px 18px; border-bottom:1px solid var(--line); }
+.os-ic { width:40px; height:40px; border-radius:11px; flex:none; display:grid; place-items:center;
+         background:var(--accent-soft); color:var(--accent-deep); font-size:1.15rem; }
+.os-htx { min-width:0; }
+.os-htx h3 { font-size:0.96875rem; font-weight:700; margin:0; color:var(--ink); }
+.os-htx p { margin:2px 0 0; font-size:0.78125rem; color:var(--muted); }
+.os-x { margin-left:auto; width:32px; height:32px; flex:none; border:0; background:transparent; color:var(--muted);
+        border-radius:8px; cursor:pointer; display:grid; place-items:center; transition:.15s; font-size:0.9rem; }
+.os-x:hover { background:rgba(100,116,139,.14); color:var(--ink); }
+
+.os-body { padding:18px; display:grid; grid-template-columns:1fr 240px; gap:15px 16px; }
+.os-field { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.os-lbl { font-size:0.78125rem; font-weight:600; color:var(--ink); }
+.os-ctl { width:100%; border:1.5px solid var(--line); background:var(--field); border-radius:11px;
+          padding:11px 13px; font:inherit; font-size:0.875rem; color:var(--ink); outline:none;
+          transition:border-color .15s, box-shadow .15s, background .15s; }
+.os-ctl::placeholder { color:#94A3B8; }
+.os-ctl:focus { border-color:var(--accent); background:var(--panel); box-shadow:0 0 0 4px var(--accent-soft); }
+.os-ctl.mono { font-variant-numeric:tabular-nums; }
+select.os-ctl { -webkit-appearance:none; -moz-appearance:none; appearance:none; padding-right:36px; cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center; }
+
+.os-ig { position:relative; display:flex; }
+.os-pre { position:absolute; left:0; top:0; bottom:0; width:40px; display:grid; place-items:center;
+          font-size:0.8125rem; font-weight:700; color:var(--muted); border-right:1px solid var(--line); pointer-events:none; }
+.os-ig:focus-within .os-pre { color:var(--accent-deep); border-right-color:var(--accent); }
+.os-ctl.has-pre { padding-left:52px; }
+
+.os-foot { display:flex; justify-content:flex-end; gap:9px; padding:0 18px 18px; }
+
+@media (max-width:560px) { .os-body { grid-template-columns:1fr; } }
+
+/* ── Open-shift live banner ──────────────────────────────── */
+.live-shifts { display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
+.live-row { display:flex; align-items:center; gap:13px; padding:13px 16px; border-radius:14px; flex-wrap:wrap;
+            background:var(--accent-soft); border:1px solid color-mix(in srgb, var(--accent) 34%, transparent); }
+.live-dot { width:38px; height:38px; border-radius:11px; flex:none; display:grid; place-items:center;
+            background:var(--accent); color:#fff; font-size:1.05rem; box-shadow:0 6px 16px -8px var(--accent); }
+.live-tx { min-width:0; flex:1; }
+.live-t { font-size:0.875rem; font-weight:600; color:var(--ink); }
+.live-t b { color:var(--accent-deep); }
+.live-s { font-size:0.78125rem; color:var(--muted); margin-top:1px; }
+.live-act { display:flex; gap:8px; flex:none; flex-wrap:wrap; }
+.btn-sm { padding:7px 13px; font-size:12.5px; }
+
+/* Dark-mode fixes for controls that hardcode light colours */
+html[data-bs-theme="dark"] .btn-out { background:var(--field); border-color:var(--line); color:#CBD5E1; }
+html[data-bs-theme="dark"] .btn-out:hover { border-color:var(--accent); color:#fff; }
+html[data-bs-theme="dark"] select.os-ctl {
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%239AA7BD' stroke-width='2'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+}

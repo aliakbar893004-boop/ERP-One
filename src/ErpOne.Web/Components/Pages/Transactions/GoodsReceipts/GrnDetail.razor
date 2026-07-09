@@ -27,7 +27,7 @@
     }
     else if (_grn is null)
     {
-        <div class="pf-alert warn"><i class="bi bi-exclamation-triangle"></i> Goods receipt tidak ditemukan.</div>
+        <div class="pf-alert warn"><i class="bi bi-exclamation-triangle"></i> Goods receipt not found.</div>
     }
     else
     {
@@ -59,37 +59,56 @@
         <section class="card">
             <div class="card-h">
                 <span class="hd-ic"><i class="bi bi-receipt"></i></span>
-                <h2>Informasi</h2>
+                <h2>Information</h2>
             </div>
             <div class="card-b">
-                <dl class="dl">
-                    <dt>GRN#</dt><dd><span class="grn-no">@_grn.GrnNumber</span></dd>
-                    <dt>PO#</dt><dd><a href="/transactions/purchase-orders/@_grn.PurchaseOrderId">@_grn.PoNumber</a></dd>
-                    <dt>Supplier</dt><dd>@_grn.SupplierName</dd>
-                    <dt>Gudang</dt><dd>@_grn.WarehouseName</dd>
-                    <dt>Tanggal Terima</dt><dd>@_grn.ReceiptDate.ToString("dd MMM yyyy")</dd>
-                    <dt>Catatan</dt><dd>@(_grn.Notes ?? "—")</dd>
-                    <dt>Dibuat</dt><dd>@_grn.CreatedAt.ToString("dd MMM yyyy HH:mm")</dd>
-                    <dt>Oleh</dt><dd>@(_grn.CreatedBy ?? "—")</dd>
-                </dl>
+                <div class="info-grid">
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-receipt"></i> GRN #</span>
+                        <span class="v"><span class="grn-no">@_grn.GrnNumber</span></span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-file-earmark-text"></i> PO #</span>
+                        <span class="v"><a href="/transactions/purchase-orders/@_grn.PurchaseOrderId">@_grn.PoNumber</a></span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-building"></i> Supplier</span>
+                        <span class="v">@_grn.SupplierName</span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-box-seam"></i> Warehouse</span>
+                        <span class="v">@_grn.WarehouseName</span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-calendar3"></i> Receipt Date</span>
+                        <span class="v">@_grn.ReceiptDate.ToString("dd MMM yyyy")</span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-clock"></i> Created</span>
+                        <span class="v">@_grn.CreatedAt.ToString("dd MMM yyyy HH:mm")@(string.IsNullOrEmpty(_grn.CreatedBy) ? "" : " · " + _grn.CreatedBy)</span>
+                    </div>
+                    <div class="info-cell wide">
+                        <span class="k"><i class="bi bi-sticky"></i> Notes</span>
+                        <span class="v @(string.IsNullOrEmpty(_grn.Notes) ? "muted-v" : "")">@(_grn.Notes ?? "—")</span>
+                    </div>
+                </div>
             </div>
         </section>
 
         <section class="card">
             <div class="card-h">
                 <span class="hd-ic"><i class="bi bi-box-seam"></i></span>
-                <h2>Item</h2>
+                <h2>Items</h2>
             </div>
             <div class="card-b">
                 <div class="table-responsive">
                     <table class="items">
                         <thead>
                             <tr>
-                                <th>Produk</th>
-                                <th>SKU</th>
-                                <th class="r">Dipesan</th>
-                                <th class="r">Diterima</th>
-                                <th class="r">HPP/unit</th>
+                                <th>Product</th>
+                                <th class="r">Ordered</th>
+                                <th class="c">Received</th>
+                                <th class="r">Cost/unit</th>
                                 <th class="r">Subtotal</th>
                             </tr>
                         </thead>
@@ -97,15 +116,25 @@
                             @foreach (var l in _grn.Lines)
                             {
                                 <tr>
-                                    <td class="pn">@l.ProductName</td>
-                                    <td class="sku">@l.VariantSku</td>
+                                    <td class="prod">
+                                        <span class="pn">@l.ProductName</span>
+                                        <span class="sku">@l.VariantSku</span>
+                                    </td>
                                     <td class="r mono">@l.OrderedQuantity</td>
-                                    <td class="r mono">@l.QuantityReceived</td>
+                                    <td class="c">
+                                        <span class="recv @(l.QuantityReceived == 0 ? "none" : l.QuantityReceived >= l.OrderedQuantity ? "full" : "part")">@l.QuantityReceived</span>
+                                    </td>
                                     <td class="r mono">@l.UnitCost.ToString("N2")</td>
-                                    <td class="r mono">@l.LineCost.ToString("N2")</td>
+                                    <td class="r mono total">@l.LineCost.ToString("N2")</td>
                                 </tr>
                             }
                         </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4" class="r gt-l">Total</td>
+                                <td class="r grand">@_grn.Lines.Sum(l => l.LineCost).ToString("N2")</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -130,7 +159,7 @@
 
     private async Task PostAsync()
     {
-        if (!await Swal.ConfirmAsync("Post Goods Receipt?", "Stok & HPP akan diperbarui dan tidak bisa dibatalkan.", "Ya, Post")) return;
+        if (!await Swal.ConfirmAsync("Post Goods Receipt?", "Stock & cost will be updated and cannot be undone.", "Yes, Post")) return;
         _error = null; _posting = true;
         try { await Grn.PostAsync(Id); await LoadAsync(); }
         catch (FluentValidation.ValidationException ex) { _error = string.Join("; ", ex.Errors.Select(e => e.ErrorMessage)); }

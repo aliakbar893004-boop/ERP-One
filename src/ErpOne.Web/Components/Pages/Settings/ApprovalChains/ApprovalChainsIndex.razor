@@ -7,40 +7,63 @@
 
 <PageTitle>Approval Chains</PageTitle>
 
-<div class="sh-header mb-4">
-    <div>
-        <h4 class="sh-title">Approval Chains</h4>
-        <p class="sh-subtitle">Configure the role approval sequence for each document type. An empty chain means a document is approved immediately on submit.</p>
-    </div>
-</div>
+<div class="pi">
 
-<div class="data-card">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-head">
-                <tr><th class="ps-3">Dokumen</th><th>Rantai (urutan role)</th><th class="text-end pe-3" style="width:100px"></th></tr>
-            </thead>
-            <tbody>
-                @foreach (var dt in Enum.GetValues<ApprovalDocumentType>())
-                {
-                    var chain = _chains.GetValueOrDefault(dt, []);
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Settings</span><span class="sep">·</span><span class="here">Approval Chains</span></nav>
+            <h1>Approval Chains</h1>
+            <p>Configure the role approval sequence for each document type. An empty chain means a document is approved immediately on submit.</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table>
+                <thead>
                     <tr>
-                        <td class="ps-3 fw-medium">@dt</td>
-                        <td>
-                            @if (chain.Count == 0) { <span class="text-muted">— kosong (auto-approve) —</span> }
-                            else { @string.Join(" → ", chain.Select(c => c.RoleName)) }
-                        </td>
-                        <td class="text-end pe-3">
-                            <AuthorizeView Policy="settings.approval-chains.edit">
-                                <Authorized>
-                                    <a class="btn btn-sm btn-outline-primary" href="@($"/settings/approval-chains/{dt}")"><i class="bi bi-pencil"></i></a>
-                                </Authorized>
-                            </AuthorizeView>
-                        </td>
+                        <th style="width:240px">Document</th>
+                        <th>Chain (role order)</th>
+                        <th class="text-end pe-3" style="width:90px"></th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var dt in Enum.GetValues<ApprovalDocumentType>())
+                    {
+                        var chain = _chains.GetValueOrDefault(dt, []);
+                        <tr>
+                            <td class="nm">@dt</td>
+                            <td>
+                                @if (chain.Count == 0)
+                                {
+                                    <span class="muted-txt">— empty (auto-approve) —</span>
+                                }
+                                else
+                                {
+                                    <span class="chain">
+                                        @for (var i = 0; i < chain.Count; i++)
+                                        {
+                                            <span class="step">@chain[i].RoleName</span>
+                                            @if (i < chain.Count - 1)
+                                            {
+                                                <i class="bi bi-arrow-right sep"></i>
+                                            }
+                                        }
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-end pe-3">
+                                <AuthorizeView Policy="settings.approval-chains.edit">
+                                    <Authorized>
+                                        <a class="btn btn-sm btn-outline-primary" href="@($"/settings/approval-chains/{dt}")" title="Edit"><i class="bi bi-pencil"></i></a>
+                                    </Authorized>
+                                </AuthorizeView>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 

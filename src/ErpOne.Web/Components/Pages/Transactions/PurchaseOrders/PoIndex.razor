@@ -21,7 +21,7 @@
         <AuthorizeView Policy="transactions.purchase-orders.create">
             <Authorized>
                 <div class="pi-actions">
-                    <a class="btn btn-primary" href="/transactions/purchase-orders/new"><i class="bi bi-plus-lg"></i> Buat PO</a>
+                    <a class="btn btn-primary" href="/transactions/purchase-orders/new"><i class="bi bi-plus-lg"></i> Create PO</a>
                 </div>
             </Authorized>
         </AuthorizeView>
@@ -49,7 +49,7 @@
                 <div class="ic ic-amb"><i class="bi bi-hourglass-split"></i></div>
                 <div class="kpi-tx">
                     <div class="v">@_dash.PendingApprovalCount.ToString("N0")</div>
-                    <div class="l">Menunggu Approval</div>
+                    <div class="l">Pending Approval</div>
                 </div>
             </div>
             <div class="kpi">
@@ -66,10 +66,10 @@
     <div class="toolbar">
         <div class="search">
             <i class="bi bi-search"></i>
-            <input placeholder="Cari nomor PO…" @bind="_search" @bind:event="oninput" @onkeyup="ReloadAsync" />
+            <input placeholder="Search PO number…" @bind="_search" @bind:event="oninput" @onkeyup="ReloadAsync" />
         </div>
         <div class="chips">
-            <button class="chip @(_statusFilter is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">Semua</button>
+            <button class="chip @(_statusFilter is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">All</button>
             @foreach (var s in Enum.GetValues<PurchaseOrderStatus>())
             {
                 <button class="chip @(_statusFilter == s ? "on" : "")" @onclick="() => SetStatusAsync(s)">@s</button>
@@ -88,11 +88,11 @@
             <p>
                 @if (string.IsNullOrEmpty(_search) && _statusFilter is null)
                 {
-                    <span>Belum ada Purchase Order. <a href="/transactions/purchase-orders/new">Buat yang pertama.</a></span>
+                    <span>No purchase orders yet. <a href="/transactions/purchase-orders/new">Create the first one.</a></span>
                 }
                 else
                 {
-                    <span>Tidak ada PO yang cocok dengan filter.</span>
+                    <span>No POs match your filter.</span>
                 }
             </p>
         </div>
@@ -101,15 +101,15 @@
     {
         <div class="card">
             <div class="card-top">
-                <span class="n">Menampilkan <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> dari <b>@_page.Total.ToString("N0")</b></span>
+                <span class="n">Showing <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> of <b>@_page.Total.ToString("N0")</b></span>
             </div>
             <div class="table-responsive">
                 <table>
                     <thead>
                         <tr>
-                            <th>No. PO</th>
+                            <th>PO No.</th>
                             <th>Supplier</th>
-                            <th>Tanggal</th>
+                            <th>Date</th>
                             <th class="r">Total</th>
                             <th class="c">Status</th>
                             <th style="width:64px"></th>
@@ -126,7 +126,7 @@
                                 <td class="c"><span class="badge @StatusClass(item.Status)">@item.Status</span></td>
                                 <td>
                                     <div class="rowact">
-                                        <a class="ia" href="@($"/transactions/purchase-orders/{item.Id}")" title="Lihat" @onclick:stopPropagation="true"><i class="bi bi-eye"></i></a>
+                                        <a class="ia" href="@($"/transactions/purchase-orders/{item.Id}")" title="View" @onclick:stopPropagation="true"><i class="bi bi-eye"></i></a>
                                     </div>
                                 </td>
                             </tr>

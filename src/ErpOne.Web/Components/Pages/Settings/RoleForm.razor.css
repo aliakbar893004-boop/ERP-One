@@ -1,112 +1,38 @@
-.rf-header { margin-bottom: 0; }
+/* Custom bits layered on top of the global ".cf" Atlas form:
+   the header actions and the permission matrix. Everything else is global .cf. */
 
-.back-link {
-    display: inline-block;
-    color: #64748b;
-    text-decoration: none;
-    font-size: 0.85rem;
-    margin-bottom: 0.4rem;
-    transition: color 0.15s;
-}
-.back-link:hover { color: #0f172a; }
+.hd-act { margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
 
-.rf-title {
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0;
-}
+/* ── Permission matrix ───────────────────────────────────── */
+.perm-table { width:100%; border-collapse:separate; border-spacing:0; font-size:0.84375rem;
+              font-variant-numeric:tabular-nums; }
+.perm-table thead th { background:#F7F9FB; color:var(--muted); font-weight:700; font-size:0.68rem;
+              text-transform:uppercase; letter-spacing:.04em; padding:9px 8px; text-align:center;
+              vertical-align:middle; white-space:nowrap; border-bottom:1px solid var(--line); }
+.perm-table thead th.res-col { text-align:left; }
+.perm-table thead th.act-col i { display:block; font-size:1rem; margin-bottom:2px; color:var(--accent-deep); }
+.perm-table thead th:first-child { border-radius:10px 0 0 0; }
+.perm-table thead th:last-child  { border-radius:0 10px 0 0; }
+.res-col { width:30%; min-width:160px; }
+.act-col { width:13%; }
+.all-col { width:78px; }
 
-/* ── Form section card ───────────────────────────────────── */
-.fs-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
-}
+.perm-group-row td { background:var(--accent-soft); color:var(--accent-deep); font-weight:700;
+              font-size:0.7rem; text-transform:uppercase; letter-spacing:.03em; padding:7px 12px; }
+.perm-group-row td i { margin-right:5px; }
 
-.fs-card-title {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #64748b;
-    padding-bottom: 0.85rem;
-    margin-bottom: 1.25rem;
-    border-bottom: 1px solid #f1f5f9;
-}
+.perm-table tbody td { padding:9px 8px; text-align:center; vertical-align:middle;
+              border-bottom:1px solid var(--line); color:var(--ink); }
+.perm-table tbody tr:last-child td { border-bottom:0; }
+.perm-table tbody tr:hover td { background:var(--field); }
+.perm-table td.res-label { text-align:left; font-weight:500; }
+.perm-table td.res-label i { margin-right:7px; color:var(--muted); }
+.perm-table td .na { color:var(--faint); }
 
-.lbl-required::after {
-    content: " *";
-    color: #ef4444;
-}
+.perm-check { width:1.1rem; height:1.1rem; cursor:pointer; accent-color:var(--accent); }
 
-.role-preview { display: flex; align-items: center; }
-
-.role-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.3em 0.9em;
-    background: #ede9fe;
-    color: #6d28d9;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-
-.perm-summary {
-    padding: 0.5rem 0.75rem;
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    border-radius: 8px;
-    font-size: 0.82rem;
-}
-
-/* ── Permission matrix table ─────────────────────────────── */
-.perm-table {
-    font-size: 0.875rem;
-    border-color: #e2e8f0;
-}
-
-.perm-table thead th {
-    background: #f8fafc;
-    color: #475569;
-    font-weight: 600;
-    border-color: #e2e8f0;
-    white-space: nowrap;
-    vertical-align: middle;
-}
-
-.res-col  { width: 30%; min-width: 140px; }
-.act-col  { width: 14%; }
-.all-col  { width: 10%; }
-
-.perm-group-row td {
-    background: #faf5ff;
-    border-color: #e2e8f0;
-    padding: 0.45rem 0.75rem;
-    font-size: 0.8rem;
-    letter-spacing: 0.02em;
-}
-
-.res-label {
-    color: #334155;
-    font-weight: 500;
-}
-
-.perm-check {
-    width: 1.1rem;
-    height: 1.1rem;
-    cursor: pointer;
-}
-
-.perm-table td { border-color: #e2e8f0; vertical-align: middle; }
-
-/* ── Tiny row-toggle button ──────────────────────────────── */
-.btn-xs {
-    padding: 0.15rem 0.5rem;
-    font-size: 0.72rem;
-    border-radius: 4px;
-    white-space: nowrap;
-}
+.rowtog { border:1.5px solid var(--line); background:#fff; border-radius:8px; padding:3px 11px;
+          font:inherit; font-size:0.72rem; font-weight:700; cursor:pointer; transition:.15s; color:var(--muted); }
+.rowtog.off:hover { border-color:var(--accent); color:var(--accent-deep); background:var(--accent-soft); }
+.rowtog.on { border-color:#F6C9C4; color:var(--danger); }
+.rowtog.on:hover { background:#FDECEA; }

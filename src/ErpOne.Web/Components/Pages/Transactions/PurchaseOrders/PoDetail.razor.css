@@ -71,24 +71,53 @@
 .card-h h2 { font-size:0.96875rem; font-weight:700; margin:0; }
 .card-b { padding:15px 20px 18px; }
 
-/* ── Info definition grid ────────────────────────────────── */
-.dl { display:grid; grid-template-columns:140px 1fr; gap:9px 12px; margin:0; font-size:0.84375rem; }
-.dl dt { color:var(--muted); font-weight:600; }
-.dl dd { margin:0; color:var(--ink); }
-.dl dt.dng, .dl dd.dng { color:var(--danger); }
+/* ── Info field grid ─────────────────────────────────────── */
+.info-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; }
+.info-cell { display:flex; flex-direction:column; gap:5px; min-width:0;
+             background:var(--field); border:1px solid var(--line); border-radius:12px; padding:11px 14px; }
+.info-cell.wide { grid-column:1 / -1; }
+.info-cell .k { display:flex; align-items:center; gap:7px; font-size:0.6875rem; font-weight:700;
+                text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+.info-cell .k i { font-size:0.8125rem; color:var(--accent-deep); opacity:.9; }
+.info-cell .v { font-size:0.9375rem; font-weight:600; color:var(--ink); line-height:1.35; word-break:break-word; }
+.info-cell .v.muted-v { color:var(--muted); font-weight:400; }
+.info-cell.reject { background:#FDECEA; border-color:#F6C9C4; }
+.info-cell.reject .k, .info-cell.reject .k i, .info-cell.reject .v { color:var(--danger); }
+@media (max-width:520px) { .info-grid { grid-template-columns:1fr; } }
 
 /* ── Items table ─────────────────────────────────────────── */
-.items { width:100%; border-collapse:collapse; }
-.items th { font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
-            color:var(--muted); text-align:left; padding:0 10px 9px; border-bottom:1.5px solid var(--line); }
+.items { width:100%; border-collapse:separate; border-spacing:0; font-variant-numeric:tabular-nums; }
+.items thead th { font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+            color:var(--muted); text-align:left; padding:9px 12px; background:#F7F9FB; border-bottom:1px solid var(--line); }
+.items thead th:first-child { border-radius:10px 0 0 0; }
+.items thead th:last-child  { border-radius:0 10px 0 0; }
 .items th.r, .items td.r { text-align:right; }
-.items td { padding:9px 10px; border-bottom:1px solid var(--line); font-size:0.84375rem; vertical-align:middle; }
-.items tbody tr:last-child td { border-bottom:1px solid var(--line); }
-.items .sku { font-weight:600; }
-.items .pn { color:var(--muted); font-size:0.78125rem; }
+.items th.c, .items td.c { text-align:center; }
+.items td { padding:11px 12px; border-bottom:1px solid var(--line); font-size:0.84375rem;
+            vertical-align:middle; color:var(--ink); transition:background .12s; }
+.items tbody tr:hover td { background:var(--field); }
+.items tbody tr:last-child td { border-bottom:0; }
 .items .mono { font-variant-numeric:tabular-nums; }
-.items tfoot td { padding:11px 10px 0; font-weight:700; border:0; }
-.items tfoot .grand { color:var(--accent-deep); font-variant-numeric:tabular-nums; }
+.items td.zero { color:var(--muted); }
+.items td.total { font-weight:700; }
+
+/* Product cell — stacked name + SKU */
+.items .prod { display:flex; flex-direction:column; gap:2px; }
+.items .prod .pn { font-weight:600; color:var(--ink); font-size:0.875rem; }
+.items .prod .sku { font-size:0.72rem; font-weight:600; color:var(--muted); letter-spacing:.02em;
+                    font-variant-numeric:tabular-nums; }
+
+/* Received fulfillment pill */
+.recv { display:inline-block; font-size:0.75rem; font-weight:700; padding:3px 9px; border-radius:99px;
+        font-variant-numeric:tabular-nums; white-space:nowrap; }
+.recv.none { background:#EEF1F4; color:#64748B; }
+.recv.part { background:#FEF6E7; color:#9A6B12; }
+.recv.full { background:var(--accent-soft); color:var(--accent-deep); }
+
+/* Grand total footer */
+.items tfoot td { padding:13px 12px 0; border:0; border-top:1.5px solid var(--line); }
+.items tfoot .gt-l { font-weight:700; color:var(--muted); text-transform:uppercase; font-size:0.72rem; letter-spacing:.05em; }
+.items tfoot .grand { font-weight:800; font-size:1.0625rem; color:var(--accent-deep); font-variant-numeric:tabular-nums; }
 
 /* ── Reject panel ────────────────────────────────────────── */
 .ctl { width:100%; border:1.5px solid var(--line); background:var(--field); border-radius:11px;

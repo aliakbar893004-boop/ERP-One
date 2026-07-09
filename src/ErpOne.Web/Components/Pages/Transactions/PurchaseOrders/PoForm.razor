@@ -236,7 +236,7 @@
 
     private string Title => Id is null ? "Add Purchase Order" : "Edit Purchase Order";
 
-    // Atlas nav: required-field progress (Supplier + Gudang + ≥1 item line)
+    // Atlas nav: required-field progress (Supplier + Warehouse + ≥1 item line)
     private const int ReqTotal = 3;
     private int ReqFilled => (_supplierId > 0 ? 1 : 0) + (_warehouseId > 0 ? 1 : 0) + (ValidLineCount > 0 ? 1 : 0);
     private bool InfoComplete => _supplierId > 0 && _warehouseId > 0;
@@ -292,7 +292,7 @@
     {
         row.VariantId = int.TryParse(value, out var id) ? id : 0;
         var v = _variants.FirstOrDefault(x => x.VariantId == row.VariantId);
-        if (v is not null && row.UnitPrice == 0) row.UnitPrice = v.CostPrice; // saran harga = HPP
+        if (v is not null && row.UnitPrice == 0) row.UnitPrice = v.CostPrice; // suggested price = cost price
     }
 
     private decimal LineTotal(Row r)

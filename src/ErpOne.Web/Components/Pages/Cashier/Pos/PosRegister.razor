@@ -16,7 +16,7 @@
 @inject NavigationManager Nav
 @inject ErpOne.Web.Services.IPosSessionRegistry Sessions
 
-<PageTitle>Kasir (POS)</PageTitle>
+<PageTitle>Cashier (POS)</PageTitle>
 
 <div class="pos" tabindex="0" @onkeydown="OnKeyDown">
 
@@ -24,7 +24,7 @@
         <div class="pos-brand">
             <span class="pos-logo"><i class="bi bi-bag-check-fill"></i></span>
             <div class="pos-brandtx">
-                <b>Kasir (POS)</b>
+                <b>Cashier (POS)</b>
                 @if (_shift is not null)
                 {
                     <span>@_shift.WarehouseName · @_userName</span>
@@ -33,7 +33,7 @@
         </div>
         <div class="pos-baractions">
             <span class="pos-clock"><i class="bi bi-clock"></i> @_clock</span>
-            <a class="btn btn-line" href="/cashier/shifts" title="Keluar dari layar kasir"><i class="bi bi-box-arrow-left"></i> Keluar</a>
+            <a class="btn btn-line" href="/cashier/shifts" title="Exit the cashier screen"><i class="bi bi-box-arrow-left"></i> Exit</a>
         </div>
     </header>
 
@@ -42,11 +42,11 @@
         <div class="pos-noshift">
             <div class="ns-card">
                 <div class="ns-ic"><i class="bi bi-shield-lock"></i></div>
-                <h2>Kasir sedang dibuka di tempat lain</h2>
-                <p>Akun Anda sudah membuka layar kasir di tab atau perangkat lain@(_blockedSince is null ? "" : $" (sejak {_blockedSince:HH:mm})"). Satu akun hanya boleh membuka satu layar kasir.</p>
+                <h2>Cashier is already open elsewhere</h2>
+                <p>Your account has already opened the cashier screen in another tab or device@(_blockedSince is null ? "" : $" (since {_blockedSince:HH:mm})"). One account may only open a single cashier screen.</p>
                 <div style="display:flex;gap:8px;justify-content:center">
-                    <button class="btn btn-primary" @onclick="RetryLockAsync"><i class="bi bi-arrow-clockwise"></i> Coba lagi</button>
-                    <a class="btn btn-line" href="/cashier/shifts"><i class="bi bi-box-arrow-left"></i> Keluar</a>
+                    <button class="btn btn-primary" @onclick="RetryLockAsync"><i class="bi bi-arrow-clockwise"></i> Try again</button>
+                    <a class="btn btn-line" href="/cashier/shifts"><i class="bi bi-box-arrow-left"></i> Exit</a>
                 </div>
             </div>
         </div>
@@ -56,13 +56,13 @@
         <div class="pos-noshift">
             <div class="ns-card">
                 <div class="ns-ic"><i class="bi bi-shop"></i></div>
-                <h2>Pilih outlet</h2>
-                <p>Ada beberapa shift terbuka. Pilih laci/outlet yang Anda layani.</p>
+                <h2>Select outlet</h2>
+                <p>Several shifts are open. Select the drawer/outlet you're serving.</p>
                 <div class="outlet-list">
                     @foreach (var s in _openShifts)
                     {
                         <button class="btn btn-line" @onclick="() => SelectOutlet(s)">
-                            <i class="bi bi-cash-stack"></i> @s.WarehouseName — <span class="mono">@s.ShiftNumber</span> (dibuka @s.CashierName)
+                            <i class="bi bi-cash-stack"></i> @s.WarehouseName — <span class="mono">@s.ShiftNumber</span> (opened by @s.CashierName)
                         </button>
                     }
                 </div>
@@ -74,9 +74,9 @@
         <div class="pos-noshift">
             <div class="ns-card">
                 <div class="ns-ic"><i class="bi bi-lock"></i></div>
-                <h2>Belum ada shift terbuka</h2>
-                <p>Buka sesi kasir dulu sebelum mulai menjual.</p>
-                <a class="btn btn-primary" href="/cashier/shifts"><i class="bi bi-unlock"></i> Buka Shift</a>
+                <h2>No open shift yet</h2>
+                <p>Open a cashier session before you start selling.</p>
+                <a class="btn btn-primary" href="/cashier/shifts"><i class="bi bi-unlock"></i> Open Shift</a>
             </div>
         </div>
     }
@@ -84,11 +84,11 @@
     {
         <div class="pos-grid">
 
-            <!-- ── Kiri: pencarian + keranjang ─────────────────────────── -->
+            <!-- ── Left: search + cart ─────────────────────────── -->
             <section class="pos-left">
                 <div class="pos-search">
                     <i class="bi bi-upc-scan"></i>
-                    <input @ref="_searchRef" placeholder="Scan barcode / cari SKU atau nama produk… (F2)"
+                    <input @ref="_searchRef" placeholder="Scan barcode / search SKU or product name… (F2)"
                            value="@_term" @oninput="OnTermInput" @onkeyup="OnTermKey" />
                     <button class="btn btn-primary btn-sm" @onclick="SearchAsync"><i class="bi bi-search"></i></button>
                 </div>
@@ -101,7 +101,7 @@
                             <button class="res" @onclick="() => AddToCart(r)">
                                 <span class="res-nm">@r.ProductName</span>
                                 <span class="res-sku mono">@r.Sku</span>
-                                <span class="res-stk @(r.OnHand <= 0 ? "out" : "")">stok @r.OnHand</span>
+                                <span class="res-stk @(r.OnHand <= 0 ? "out" : "")">stock @r.OnHand</span>
                                 <span class="res-pr mono">
                                     @if (r.UnitPrice < r.Price)
                                     {
@@ -120,7 +120,7 @@
                     {
                         <div class="cart-empty">
                             <i class="bi bi-cart3"></i>
-                            <p>Keranjang kosong. Scan atau cari produk untuk memulai.</p>
+                            <p>Cart is empty. Scan or search for a product to start.</p>
                         </div>
                     }
                     else
@@ -128,10 +128,10 @@
                         <table class="cart-tbl">
                             <thead>
                                 <tr>
-                                    <th>Produk</th>
+                                    <th>Product</th>
                                     <th class="c" style="width:130px">Qty</th>
-                                    <th class="r" style="width:120px">Harga</th>
-                                    <th class="c" style="width:80px">Disk%</th>
+                                    <th class="r" style="width:120px">Price</th>
+                                    <th class="c" style="width:80px">Disc%</th>
                                     <th class="r" style="width:130px">Total</th>
                                     <th style="width:44px"></th>
                                 </tr>
@@ -143,7 +143,7 @@
                                         <td>
                                             <div class="ci-nm">@l.Name</div>
                                             <div class="ci-sku mono">
-                                                @l.Sku · stok @l.OnHand
+                                                @l.Sku · stock @l.OnHand
                                                 @if (l.OrigPrice > l.UnitPrice)
                                                 {
                                                     <span class="was mono">@l.OrigPrice.ToString("N0")</span>
@@ -165,7 +165,7 @@
                                         </td>
                                         <td class="r mono">@l.LineTotal.ToString("N0")</td>
                                         <td class="c">
-                                            <button class="rm" @onclick="() => Remove(l)" @onclick:stopPropagation="true" title="Hapus (Del)"><i class="bi bi-trash"></i></button>
+                                            <button class="rm" @onclick="() => Remove(l)" @onclick:stopPropagation="true" title="Remove (Del)"><i class="bi bi-trash"></i></button>
                                         </td>
                                     </tr>
                                 }
@@ -175,30 +175,30 @@
                 </div>
             </section>
 
-            <!-- ── Kanan: ringkasan + pembayaran ───────────────────────── -->
+            <!-- ── Right: summary + payment ───────────────────────── -->
             <aside class="pos-right">
                 <div class="sum">
                     <div class="sum-row"><span>Subtotal</span><b class="mono">@Subtotal.ToString("N0")</b></div>
                     <div class="sum-row">
-                        <span>Diskon transaksi</span>
+                        <span>Transaction discount</span>
                         <input class="fld mono" type="number" min="0" step="1" @bind="_transactionDiscount" />
                     </div>
                     <div class="sum-row">
-                        <span>Pajak</span>
+                        <span>Tax</span>
                         <select class="fld sel" @bind="_taxId">
-                            <option value="">Tanpa Pajak</option>
+                            <option value="">No Tax</option>
                             @foreach (var t in _taxes)
                             {
                                 <option value="@t.Id">@t.Name (@t.Rate.ToString("0.##")%)</option>
                             }
                         </select>
                     </div>
-                    <div class="sum-row"><span>PPN</span><b class="mono">@TaxTotal.ToString("N0")</b></div>
+                    <div class="sum-row"><span>Tax amount</span><b class="mono">@TaxTotal.ToString("N0")</b></div>
                     <div class="sum-grand"><span>Total</span><b class="mono">@GrandTotal.ToString("N0")</b></div>
                 </div>
 
                 <div class="pay">
-                    <label class="pay-lbl">Metode Pembayaran</label>
+                    <label class="pay-lbl">Payment Method</label>
                     <select class="fld sel" @bind="_paymentMethodId">
                         @foreach (var m in _methods)
                         {
@@ -208,16 +208,16 @@
 
                     @if (IsCash)
                     {
-                        <label class="pay-lbl">Uang Diterima</label>
+                        <label class="pay-lbl">Amount Received</label>
                         <input class="fld mono big" type="text" inputmode="numeric"
                                value="@(_amountTendered > 0 ? _amountTendered.ToString("N0") : "")" @oninput="OnTenderedInput" />
                         <div class="quick">
-                            <button @onclick="() => _amountTendered = GrandTotal">Uang Pas</button>
-                            <button @onclick="() => _amountTendered += 50_000m">+50rb</button>
-                            <button @onclick="() => _amountTendered += 100_000m">+100rb</button>
+                            <button @onclick="() => _amountTendered = GrandTotal">Exact</button>
+                            <button @onclick="() => _amountTendered += 50_000m">+50k</button>
+                            <button @onclick="() => _amountTendered += 100_000m">+100k</button>
                             <button @onclick="() => _amountTendered = 0m">Reset</button>
                         </div>
-                        <div class="sum-row change"><span>Kembalian</span><b class="mono">@Change.ToString("N0")</b></div>
+                        <div class="sum-row change"><span>Change</span><b class="mono">@Change.ToString("N0")</b></div>
                     }
                 </div>
 
@@ -229,15 +229,15 @@
                 <button class="btn btn-pay" @onclick="PayAsync" disabled="@(_busy || _cart.Count == 0)">
                     @if (_busy)
                     {
-                        <span class="spinner-border spinner-border-sm"></span> <span>Memproses…</span>
+                        <span class="spinner-border spinner-border-sm"></span> <span>Processing…</span>
                     }
                     else
                     {
-                        <i class="bi bi-cash-coin"></i> <span>Bayar &amp; Cetak (F9)</span>
+                        <i class="bi bi-cash-coin"></i> <span>Pay &amp; Print (F9)</span>
                     }
                 </button>
                 <div class="pos-hints">
-                    <span><kbd>F2</kbd> Cari</span><span><kbd>F9</kbd> Bayar</span><span><kbd>Del</kbd> Hapus baris</span><span><kbd>Esc</kbd> Kosongkan</span>
+                    <span><kbd>F2</kbd> Search</span><span><kbd>F9</kbd> Pay</span><span><kbd>Del</kbd> Remove line</span><span><kbd>Esc</kbd> Clear</span>
                 </div>
             </aside>
         </div>
@@ -248,7 +248,7 @@
 {
     <div class="pos-receipt">
         <div class="rc-title">@_lastSale.WarehouseName</div>
-        <div class="rc-sub">Struk Penjualan · @_lastSale.SaleNumber<br />@_lastSale.SaleDate.ToString("dd MMM yyyy HH:mm") · @_lastSale.CashierName</div>
+        <div class="rc-sub">Sales Receipt · @_lastSale.SaleNumber<br />@_lastSale.SaleDate.ToString("dd MMM yyyy HH:mm") · @_lastSale.CashierName</div>
         <table>
             @foreach (var l in _lastSale.Lines)
             {
@@ -263,20 +263,20 @@
             <tr class="rc-rule"><td>Subtotal</td><td class="rc-r">@_lastSale.Subtotal.ToString("N0")</td></tr>
             @if (_lastSale.TransactionDiscount > 0)
             {
-                <tr><td>Diskon</td><td class="rc-r">-@_lastSale.TransactionDiscount.ToString("N0")</td></tr>
+                <tr><td>Discount</td><td class="rc-r">-@_lastSale.TransactionDiscount.ToString("N0")</td></tr>
             }
             @if (_lastSale.TaxTotal > 0)
             {
-                <tr><td>PPN (@_lastSale.TaxRateSnapshot.ToString("0.##")%)</td><td class="rc-r">@_lastSale.TaxTotal.ToString("N0")</td></tr>
+                <tr><td>Tax (@_lastSale.TaxRateSnapshot.ToString("0.##")%)</td><td class="rc-r">@_lastSale.TaxTotal.ToString("N0")</td></tr>
             }
             <tr class="rc-grand rc-rule"><td>TOTAL</td><td class="rc-r">@_lastSale.GrandTotal.ToString("N0")</td></tr>
             <tr><td>@_lastSale.PaymentMethodName</td><td class="rc-r">@_lastSale.AmountTendered.ToString("N0")</td></tr>
             @if (_lastSale.IsCashPayment)
             {
-                <tr><td>Kembali</td><td class="rc-r">@_lastSale.ChangeGiven.ToString("N0")</td></tr>
+                <tr><td>Change</td><td class="rc-r">@_lastSale.ChangeGiven.ToString("N0")</td></tr>
             }
         </table>
-        <div class="rc-foot">Terima kasih atas kunjungan Anda 🙏</div>
+        <div class="rc-foot">Thank you for your visit 🙏</div>
     </div>
 }
 
@@ -383,7 +383,7 @@
 
     private const int MinSearchChars = 2;
 
-    // Live search saat mengetik (debounce): tampil produk yang cocok tanpa auto-add.
+    // Live search while typing (debounced): show matching products without auto-add.
     private async Task OnTermInput(ChangeEventArgs e)
     {
         _term = e.Value?.ToString();
@@ -396,14 +396,14 @@
         var token = _searchCts.Token;
         try
         {
-            await Task.Delay(250, token); // debounce ketukan
+            await Task.Delay(250, token); // debounce keystrokes
             var found = await Pos.SearchProductsAsync(_shift.WarehouseId, term, token);
             if (!token.IsCancellationRequested) { _results = found; StateHasChanged(); }
         }
-        catch (OperationCanceledException) { /* ketukan berikutnya membatalkan yang ini */ }
+        catch (OperationCanceledException) { /* the next keystroke cancels this one */ }
     }
 
-    // Enter / tombol cari: cari langsung + auto-add bila barcode cocok persis.
+    // Enter / search button: search immediately + auto-add when a barcode matches exactly.
     private async Task SearchAsync()
     {
         _searchCts?.Cancel();
@@ -424,7 +424,7 @@
         _term = ""; _results = [];
     }
 
-    // Uang diterima: tampil berformat ribuan (mis. 500.000) seperti Total; ambil digitnya saja.
+    // Amount received: displayed with thousands formatting (e.g. 500,000) like Total; keep only the digits.
     private void OnTenderedInput(ChangeEventArgs e)
     {
         var digits = new string((e.Value?.ToString() ?? "").Where(char.IsDigit).ToArray());
@@ -439,9 +439,9 @@
     private async Task PayAsync()
     {
         _error = null;
-        if (_shift is null) { _error = "Tidak ada shift terbuka."; return; }
-        if (_cart.Count == 0) { _error = "Keranjang kosong."; return; }
-        if (IsCash && _amountTendered < GrandTotal) { _error = "Uang bayar kurang dari total."; return; }
+        if (_shift is null) { _error = "No open shift."; return; }
+        if (_cart.Count == 0) { _error = "Cart is empty."; return; }
+        if (IsCash && _amountTendered < GrandTotal) { _error = "Amount paid is less than the total."; return; }
         _busy = true;
         try
         {

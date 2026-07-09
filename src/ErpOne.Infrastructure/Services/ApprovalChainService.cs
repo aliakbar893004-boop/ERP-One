@@ -24,9 +24,15 @@ public class ApprovalChainService(AppDbContext db) : IApprovalChainService
         db.ApprovalChainSteps.RemoveRange(existing);
         await db.SaveChangesAsync(ct);
 
+        // A role may appear at most once per chain — the same approver must not
+        // be able to approve two steps of the same document. Skip duplicates.
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var order = 1;
         foreach (var s in steps)
+        {
+            if (!seen.Add(s.RoleName)) continue;
             db.ApprovalChainSteps.Add(new ApprovalChainStep(docType, order++, s.RoleName));
+        }
         await db.SaveChangesAsync(ct);
 
         await tx.CommitAsync(ct);

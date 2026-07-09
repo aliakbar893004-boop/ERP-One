@@ -5,15 +5,15 @@
 @inject IPosSaleService Pos
 @inject IJSRuntime JS
 
-<PageTitle>@(_sale?.SaleNumber ?? "Penjualan")</PageTitle>
+<PageTitle>@(_sale?.SaleNumber ?? "Sale")</PageTitle>
 
 <div class="pf">
 
     <div class="pf-top">
         <div class="crumbs">
-            <a href="/cashier/sales">Kasir</a>
+            <a href="/cashier/sales">Cashier</a>
             <i class="bi bi-chevron-right"></i>
-            <a href="/cashier/sales">Riwayat Penjualan</a>
+            <a href="/cashier/sales">Sales History</a>
             <i class="bi bi-chevron-right"></i>
             <span class="here">@(_sale?.SaleNumber ?? "Detail")</span>
         </div>
@@ -25,7 +25,7 @@
     }
     else if (_sale is null)
     {
-        <div class="pf-alert warn"><i class="bi bi-exclamation-triangle"></i> Transaksi tidak ditemukan.</div>
+        <div class="pf-alert warn"><i class="bi bi-exclamation-triangle"></i> Transaction not found.</div>
     }
     else
     {
@@ -33,41 +33,55 @@
             <h1>@_sale.SaleNumber</h1>
             <span class="badge @(_sale.IsCashPayment ? "b-done" : "b-dark")">@_sale.PaymentMethodName</span>
             <div class="actions">
-                <button class="btn btn-primary" @onclick="ReprintAsync"><i class="bi bi-printer"></i> Cetak Ulang</button>
+                <button class="btn btn-primary" @onclick="ReprintAsync"><i class="bi bi-printer"></i> Reprint</button>
             </div>
         </div>
 
         <section class="card">
             <div class="card-h">
                 <span class="hd-ic"><i class="bi bi-receipt"></i></span>
-                <h2>Informasi</h2>
+                <h2>Information</h2>
             </div>
             <div class="card-b">
-                <dl class="dl">
-                    <dt>No. Struk</dt><dd><span class="grn-no">@_sale.SaleNumber</span></dd>
-                    <dt>Tanggal</dt><dd>@_sale.SaleDate.ToString("dd MMM yyyy HH:mm")</dd>
-                    <dt>Kasir</dt><dd>@_sale.CashierName</dd>
-                    <dt>Gudang</dt><dd>@_sale.WarehouseName</dd>
-                    <dt>Metode</dt><dd>@_sale.PaymentMethodName @(_sale.IsCashPayment ? "(tunai)" : "")</dd>
-                </dl>
+                <div class="info-grid">
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-receipt"></i> Receipt No.</span>
+                        <span class="v"><span class="grn-no">@_sale.SaleNumber</span></span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-calendar3"></i> Date</span>
+                        <span class="v">@_sale.SaleDate.ToString("dd MMM yyyy HH:mm")</span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-person"></i> Cashier</span>
+                        <span class="v">@_sale.CashierName</span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="k"><i class="bi bi-box-seam"></i> Warehouse</span>
+                        <span class="v">@_sale.WarehouseName</span>
+                    </div>
+                    <div class="info-cell wide">
+                        <span class="k"><i class="bi bi-credit-card"></i> Payment Method</span>
+                        <span class="v">@_sale.PaymentMethodName@(_sale.IsCashPayment ? " (cash)" : "")</span>
+                    </div>
+                </div>
             </div>
         </section>
 
         <section class="card">
             <div class="card-h">
                 <span class="hd-ic"><i class="bi bi-basket"></i></span>
-                <h2>Item</h2>
+                <h2>Items</h2>
             </div>
             <div class="card-b">
                 <div class="table-responsive">
                     <table class="items">
                         <thead>
                             <tr>
-                                <th>Produk</th>
-                                <th>SKU</th>
+                                <th>Product</th>
                                 <th class="r">Qty</th>
-                                <th class="r">Harga</th>
-                                <th class="r">Disk%</th>
+                                <th class="r">Price</th>
+                                <th class="r">Disc%</th>
                                 <th class="r">Total</th>
                             </tr>
                         </thead>
@@ -75,12 +89,14 @@
                             @foreach (var l in _sale.Lines)
                             {
                                 <tr>
-                                    <td class="pn">@l.ProductName</td>
-                                    <td class="sku mono">@l.VariantSku</td>
+                                    <td class="prod">
+                                        <span class="pn">@l.ProductName</span>
+                                        <span class="sku">@l.VariantSku</span>
+                                    </td>
                                     <td class="r mono">@l.Quantity</td>
                                     <td class="r mono">@l.UnitPrice.ToString("N2")</td>
-                                    <td class="r mono">@l.DiscountPercent.ToString("0.##")</td>
-                                    <td class="r mono">@l.LineTotal.ToString("N2")</td>
+                                    <td class="r mono @(l.DiscountPercent == 0 ? "zero" : "")">@(l.DiscountPercent == 0 ? "—" : l.DiscountPercent.ToString("0.##"))</td>
+                                    <td class="r mono total">@l.LineTotal.ToString("N2")</td>
                                 </tr>
                             }
                         </tbody>
@@ -92,17 +108,37 @@
         <section class="card">
             <div class="card-h">
                 <span class="hd-ic"><i class="bi bi-cash-coin"></i></span>
-                <h2>Ringkasan</h2>
+                <h2>Summary</h2>
             </div>
             <div class="card-b">
-                <dl class="dl">
-                    <dt>Subtotal</dt><dd class="mono">@_sale.Subtotal.ToString("N2")</dd>
-                    <dt>Diskon Transaksi</dt><dd class="mono">@_sale.TransactionDiscount.ToString("N2")</dd>
-                    <dt>PPN (@_sale.TaxRateSnapshot.ToString("0.##")%)</dt><dd class="mono">@_sale.TaxTotal.ToString("N2")</dd>
-                    <dt>Grand Total</dt><dd class="mono"><b>@_sale.GrandTotal.ToString("N2")</b></dd>
-                    <dt>Bayar</dt><dd class="mono">@_sale.AmountTendered.ToString("N2")</dd>
-                    <dt>Kembalian</dt><dd class="mono">@_sale.ChangeGiven.ToString("N2")</dd>
-                </dl>
+                <div class="cr-kpis">
+                    <div class="cr-kpi">
+                        <span class="ic sub"><i class="bi bi-receipt-cutoff"></i></span>
+                        <div class="tx"><span class="l">Subtotal</span><span class="v">@_sale.Subtotal.ToString("N2")</span></div>
+                    </div>
+                    <div class="cr-kpi">
+                        <span class="ic disc"><i class="bi bi-tag"></i></span>
+                        <div class="tx"><span class="l">Discount</span><span class="v">@(_sale.TransactionDiscount > 0 ? "−" : "")@_sale.TransactionDiscount.ToString("N2")</span></div>
+                    </div>
+                    <div class="cr-kpi">
+                        <span class="ic tax"><i class="bi bi-percent"></i></span>
+                        <div class="tx"><span class="l">Tax (@_sale.TaxRateSnapshot.ToString("0.##")%)</span><span class="v">@_sale.TaxTotal.ToString("N2")</span></div>
+                    </div>
+                </div>
+
+                <div class="cr-hero total">
+                    <div class="hero-main">
+                        <span class="hero-ic"><i class="bi bi-cash-coin"></i></span>
+                        <div class="hero-tx">
+                            <span class="hero-l">Grand Total</span>
+                            <span class="hero-v mono">@_sale.GrandTotal.ToString("N2")</span>
+                        </div>
+                    </div>
+                    <div class="hero-cmp">
+                        <div><span class="l">Paid</span><span class="v mono">@_sale.AmountTendered.ToString("N2")</span></div>
+                        <div><span class="l">Change</span><span class="v mono">@_sale.ChangeGiven.ToString("N2")</span></div>
+                    </div>
+                </div>
             </div>
         </section>
     }
@@ -112,7 +148,7 @@
 {
     <div class="pos-receipt">
         <div class="rc-title">@_sale.WarehouseName</div>
-        <div class="rc-sub">Struk Penjualan · @_sale.SaleNumber<br />@_sale.SaleDate.ToString("dd MMM yyyy HH:mm") · @_sale.CashierName</div>
+        <div class="rc-sub">Sales Receipt · @_sale.SaleNumber<br />@_sale.SaleDate.ToString("dd MMM yyyy HH:mm") · @_sale.CashierName</div>
         <table>
             @foreach (var l in _sale.Lines)
             {
@@ -125,20 +161,20 @@
             <tr class="rc-rule"><td>Subtotal</td><td class="rc-r">@_sale.Subtotal.ToString("N0")</td></tr>
             @if (_sale.TransactionDiscount > 0)
             {
-                <tr><td>Diskon</td><td class="rc-r">-@_sale.TransactionDiscount.ToString("N0")</td></tr>
+                <tr><td>Discount</td><td class="rc-r">-@_sale.TransactionDiscount.ToString("N0")</td></tr>
             }
             @if (_sale.TaxTotal > 0)
             {
-                <tr><td>PPN (@_sale.TaxRateSnapshot.ToString("0.##")%)</td><td class="rc-r">@_sale.TaxTotal.ToString("N0")</td></tr>
+                <tr><td>Tax (@_sale.TaxRateSnapshot.ToString("0.##")%)</td><td class="rc-r">@_sale.TaxTotal.ToString("N0")</td></tr>
             }
             <tr class="rc-grand rc-rule"><td>TOTAL</td><td class="rc-r">@_sale.GrandTotal.ToString("N0")</td></tr>
             <tr><td>@_sale.PaymentMethodName</td><td class="rc-r">@_sale.AmountTendered.ToString("N0")</td></tr>
             @if (_sale.IsCashPayment)
             {
-                <tr><td>Kembali</td><td class="rc-r">@_sale.ChangeGiven.ToString("N0")</td></tr>
+                <tr><td>Change</td><td class="rc-r">@_sale.ChangeGiven.ToString("N0")</td></tr>
             }
         </table>
-        <div class="rc-foot">Terima kasih atas kunjungan Anda 🙏</div>
+        <div class="rc-foot">Thank you for your visit 🙏</div>
     </div>
 }
 

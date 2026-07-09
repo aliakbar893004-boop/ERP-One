@@ -1,109 +1,20 @@
-/* ── Page header ─────────────────────────────────────────── */
-.sh-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
-}
+/* Extras layered on top of the shared global ".pi" list design. */
 
-.sh-title {
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0;
-}
+/* User identity cell (avatar + name + @username) */
+.u-cell { display:flex; align-items:center; gap:11px; }
+.u-avatar { width:34px; height:34px; border-radius:50%; flex:none; display:grid; place-items:center;
+            font-weight:700; font-size:0.72rem; color:#fff; text-transform:uppercase; letter-spacing:.03em; }
+.u-id { min-width:0; }
+.u-id .nm { font-weight:600; color:#0F1B2D; line-height:1.2; }
+.u-id .un { font-size:0.75rem; color:#64748B; font-variant-numeric:tabular-nums; }
 
-.sh-subtitle {
-    color: #64748b;
-    font-size: 0.85rem;
-    margin: 0.2rem 0 0;
-}
+/* Role chips */
+.role-chip { display:inline-block; padding:2px 9px; margin:2px 4px 2px 0; font-size:0.72rem; font-weight:600;
+             border-radius:99px; background:#EEF2FF; color:#4338CA; }
 
-/* ── Search bar ──────────────────────────────────────────── */
-.search-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 1rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
-}
-
-/* ── Data card / table wrapper ───────────────────────────── */
-.data-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, .06);
-}
-
-.data-card-header {
-    padding: 0.65rem 1.25rem;
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.table-head th {
-    background: #f8fafc;
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #64748b;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-/* ── Avatar ──────────────────────────────────────────────── */
-.u-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 0.72rem;
-    flex-shrink: 0;
-    color: #fff;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-
-.av-blue   { background: linear-gradient(135deg, #3b82f6, #1e40af); }
-.av-green  { background: linear-gradient(135deg, #10b981, #047857); }
-.av-purple { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
-.av-orange { background: linear-gradient(135deg, #f97316, #c2410c); }
-.av-teal   { background: linear-gradient(135deg, #14b8a6, #0e7490); }
-
-/* ── Badges ──────────────────────────────────────────────── */
-.role-badge {
-    display: inline-block;
-    padding: 0.2em 0.6em;
-    font-size: 0.72rem;
-    font-weight: 600;
-    border-radius: 20px;
-    background: #ede9fe;
-    color: #6d28d9;
-    margin-right: 0.25rem;
-}
-
-.status-badge {
-    display: inline-block;
-    padding: 0.25em 0.7em;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border-radius: 20px;
-}
-
-.status-active   { background: #dcfce7; color: #16a34a; }
-.status-inactive { background: #fee2e2; color: #dc2626; }
-
-/* ── Empty state ─────────────────────────────────────────── */
-.empty-state {
-    text-align: center;
-    padding: 4rem 1rem;
-    color: #94a3b8;
-}
-
-.empty-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
-.empty-text { font-size: 0.95rem; margin: 0; }
+/* Avatar gradients */
+.av-blue   { background:linear-gradient(135deg,#3b82f6,#1e40af); }
+.av-green  { background:linear-gradient(135deg,#10b981,#047857); }
+.av-purple { background:linear-gradient(135deg,#8b5cf6,#6d28d9); }
+.av-orange { background:linear-gradient(135deg,#f97316,#c2410c); }
+.av-teal   { background:linear-gradient(135deg,#14b8a6,#0e7490); }

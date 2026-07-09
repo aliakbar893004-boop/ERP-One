@@ -191,9 +191,9 @@
         {
             <div class="pf-alert" style="background:#FEF3C7;border:1px solid #F59E0B;color:#92400E">
                 <i class="bi bi-exclamation-triangle"></i>
-                Peringatan kredit: perkiraan outstanding @_credit.EstimatedOutstanding.ToString("N2")
-                + order ini @_credit.ThisOrderTotal.ToString("N2")
-                melebihi limit @_credit.CreditLimit.ToString("N2"). SO tetap dapat disimpan.
+                Credit warning: estimated outstanding @_credit.EstimatedOutstanding.ToString("N2")
+                + this order @_credit.ThisOrderTotal.ToString("N2")
+                exceeds the limit @_credit.CreditLimit.ToString("N2"). The SO can still be saved.
             </div>
         }
 
@@ -247,7 +247,7 @@
 
     private string Title => Id is null ? "Add Sales Order" : "Edit Sales Order";
 
-    // Atlas nav: required-field progress (Customer + Gudang + ≥1 item line)
+    // Atlas nav: required-field progress (Customer + Warehouse + ≥1 item line)
     private const int ReqTotal = 3;
     private int ReqFilled => (_customerId > 0 ? 1 : 0) + (_warehouseId > 0 ? 1 : 0) + (ValidLineCount > 0 ? 1 : 0);
     private bool InfoComplete => _customerId > 0 && _warehouseId > 0;
@@ -316,7 +316,7 @@
     {
         row.VariantId = int.TryParse(value, out var id) ? id : 0;
         var v = _variants.FirstOrDefault(x => x.VariantId == row.VariantId);
-        if (v is not null && row.UnitPrice == 0) row.UnitPrice = v.DiscountPrice ?? v.Price; // saran harga jual
+        if (v is not null && row.UnitPrice == 0) row.UnitPrice = v.DiscountPrice ?? v.Price; // suggested selling price
         await RefreshCreditAsync();
     }
 

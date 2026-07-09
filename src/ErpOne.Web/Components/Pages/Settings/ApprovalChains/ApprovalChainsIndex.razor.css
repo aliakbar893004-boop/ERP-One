@@ -1,0 +1,6 @@
+/* Extras layered on top of the shared global ".pi" list design. */
+.muted-txt { color:#94A3B8; }
+.chain { display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.chain .step { display:inline-block; padding:3px 11px; font-size:0.78125rem; font-weight:700;
+               border-radius:99px; background:#EEF2FF; color:#4338CA; }
+.chain .sep { font-size:0.7rem; color:#94A3B8; }

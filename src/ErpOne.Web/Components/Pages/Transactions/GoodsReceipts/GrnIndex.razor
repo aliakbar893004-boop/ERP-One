@@ -16,12 +16,12 @@
         <div>
             <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Transactions</span><span class="sep">·</span><span class="here">Goods Receipt</span></nav>
             <h1>Goods Receipt</h1>
-            <p>Penerimaan barang atas Purchase Order.</p>
+            <p>Receipt of goods against a Purchase Order.</p>
         </div>
         <AuthorizeView Policy="transactions.goods-receipts.create">
             <Authorized>
                 <div class="pi-actions">
-                    <a class="btn btn-primary" href="/transactions/goods-receipts/new"><i class="bi bi-plus-lg"></i> Penerimaan Baru</a>
+                    <a class="btn btn-primary" href="/transactions/goods-receipts/new"><i class="bi bi-plus-lg"></i> New Receipt</a>
                 </div>
             </Authorized>
         </AuthorizeView>
@@ -59,10 +59,10 @@
     <div class="toolbar">
         <div class="search">
             <i class="bi bi-search"></i>
-            <input placeholder="Cari nomor GRN atau PO…" @bind="_search" @bind:event="oninput" @onkeyup="ReloadAsync" />
+            <input placeholder="Search GRN or PO number…" @bind="_search" @bind:event="oninput" @onkeyup="ReloadAsync" />
         </div>
         <div class="chips">
-            <button class="chip @(_status is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">Semua</button>
+            <button class="chip @(_status is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">All</button>
             @foreach (var s in Enum.GetValues<GoodsReceiptStatus>())
             {
                 <button class="chip @(_status == s ? "on" : "")" @onclick="() => SetStatusAsync(s)">@s</button>
@@ -81,11 +81,11 @@
             <p>
                 @if (string.IsNullOrEmpty(_search) && _status is null)
                 {
-                    <span>Belum ada Goods Receipt. <a href="/transactions/goods-receipts/new">Buat yang pertama.</a></span>
+                    <span>No goods receipts yet. <a href="/transactions/goods-receipts/new">Create the first one.</a></span>
                 }
                 else
                 {
-                    <span>Tidak ada GRN yang cocok dengan filter.</span>
+                    <span>No GRNs match your filter.</span>
                 }
             </p>
         </div>
@@ -94,7 +94,7 @@
     {
         <div class="card">
             <div class="card-top">
-                <span class="n">Menampilkan <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> dari <b>@_page.Total.ToString("N0")</b></span>
+                <span class="n">Showing <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> of <b>@_page.Total.ToString("N0")</b></span>
             </div>
             <div class="table-responsive">
                 <table>
@@ -103,7 +103,7 @@
                             <th>GRN#</th>
                             <th>PO#</th>
                             <th>Supplier</th>
-                            <th>Tanggal</th>
+                            <th>Date</th>
                             <th class="c">Status</th>
                             <th class="r">Qty</th>
                             <th style="width:96px"></th>
@@ -121,12 +121,12 @@
                                 <td class="r mono">@item.TotalQuantity</td>
                                 <td @onclick:stopPropagation>
                                     <div class="rowact">
-                                        <a class="ia" href="@($"/transactions/goods-receipts/{item.Id}")" title="Lihat"><i class="bi bi-eye"></i></a>
+                                        <a class="ia" href="@($"/transactions/goods-receipts/{item.Id}")" title="View"><i class="bi bi-eye"></i></a>
                                         @if (item.Status == "Draft")
                                         {
                                             <AuthorizeView Policy="transactions.goods-receipts.delete">
                                                 <Authorized>
-                                                    <button class="ia del" @onclick="() => DeleteAsync(item.Id, item.GrnNumber)" title="Hapus"><i class="bi bi-trash3"></i></button>
+                                                    <button class="ia del" @onclick="() => DeleteAsync(item.Id, item.GrnNumber)" title="Delete"><i class="bi bi-trash3"></i></button>
                                                 </Authorized>
                                             </AuthorizeView>
                                         }
@@ -188,13 +188,13 @@
 
     private async Task DeleteAsync(int id, string grnNumber)
     {
-        if (!await Swal.ConfirmAsync("Hapus penerimaan draft ini?", $"\"{grnNumber}\" akan dihapus secara permanen."))
+        if (!await Swal.ConfirmAsync("Delete this draft receipt?", $"\"{grnNumber}\" will be permanently deleted."))
             return;
 
         await Grn.DeleteDraftAsync(id);
         _dash = await Grn.GetDashboardAsync();
         await LoadAsync();
-        await Swal.ToastAsync("success", "Goods Receipt dihapus");
+        await Swal.ToastAsync("success", "Goods Receipt deleted");
     }
 
     private static string StatusClass(string status) => status switch

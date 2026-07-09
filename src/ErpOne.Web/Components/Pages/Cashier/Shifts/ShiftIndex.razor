@@ -11,20 +11,20 @@
 @inject NavigationManager Nav
 @inject SwalService Swal
 
-<PageTitle>Sesi Kasir</PageTitle>
+<PageTitle>Cashier Sessions</PageTitle>
 
 <div class="pi">
 
     <div class="pi-head">
         <div>
-            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Kasir</span><span class="sep">·</span><span class="here">Sesi Kasir</span></nav>
-            <h1>Sesi Kasir</h1>
-            <p>Buka shift, catat penjualan per metode, tutup dengan rekonsiliasi kas.</p>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Cashier</span><span class="sep">·</span><span class="here">Cashier Sessions</span></nav>
+            <h1>Cashier Sessions</h1>
+            <p>Open a shift, record sales per method, and close with cash reconciliation.</p>
         </div>
         <AuthorizeView Policy="cashier.shifts.create">
             <Authorized>
                 <div class="pi-actions">
-                    <button class="btn btn-primary" @onclick="() => _showOpen = !_showOpen"><i class="bi bi-unlock"></i> Buka Shift</button>
+                    <button class="btn btn-primary" @onclick="() => _showOpen = !_showOpen"><i class="bi bi-unlock"></i> Open Shift</button>
                 </div>
             </Authorized>
         </AuthorizeView>
@@ -37,15 +37,19 @@
 
     @if (_openShifts.Count > 0)
     {
-        <div class="card" style="margin-bottom:14px">
+        <div class="live-shifts">
             @foreach (var s in _openShifts)
             {
-                <div class="card-top">
-                    <span class="n"><i class="bi bi-unlock-fill text-success"></i> Shift terbuka: <b class="mono">@s.ShiftNumber</b> · @s.WarehouseName · dibuka @s.OpenedAt.ToString("dd MMM yyyy HH:mm")</span>
-                    <span style="display:flex;gap:8px">
-                        <a class="btn btn-primary btn-sm" href="/cashier/pos"><i class="bi bi-bag-check"></i> Masuk Kasir</a>
-                        <a class="btn btn-line btn-sm" href="@($"/cashier/shifts/{s.Id}")"><i class="bi bi-box-arrow-in-right"></i> Buka detail</a>
-                    </span>
+                <div class="live-row">
+                    <span class="live-dot"><i class="bi bi-unlock-fill"></i></span>
+                    <div class="live-tx">
+                        <div class="live-t">Open shift · <b class="mono">@s.ShiftNumber</b></div>
+                        <div class="live-s">@s.WarehouseName · opened @s.OpenedAt.ToString("dd MMM yyyy HH:mm")</div>
+                    </div>
+                    <div class="live-act">
+                        <a class="btn btn-primary btn-sm" href="/cashier/pos"><i class="bi bi-bag-check"></i> Enter Register</a>
+                        <a class="btn btn-out btn-sm" href="@($"/cashier/shifts/{s.Id}")"><i class="bi bi-box-arrow-in-right"></i> Details</a>
+                    </div>
                 </div>
             }
         </div>
@@ -53,27 +57,47 @@
 
     @if (_showOpen)
     {
-        <div class="card" style="margin-bottom:14px">
-            <div class="card-top"><span class="n"><b>Buka Shift Baru</b></span></div>
-            <div style="padding:16px;display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
-                <div>
-                    <label class="fl">Gudang</label>
-                    <select class="ctl sel" @bind="_openWhId">
-                        <option value="0">— pilih gudang —</option>
+        <div class="os-panel">
+            <div class="os-head">
+                <span class="os-ic"><i class="bi bi-unlock-fill"></i></span>
+                <div class="os-htx">
+                    <h3>Open New Shift</h3>
+                    <p>Start a cashier session for a warehouse with its opening cash.</p>
+                </div>
+                <button type="button" class="os-x" @onclick="() => { _showOpen = false; _error = null; }" title="Close"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="os-body">
+                <div class="os-field">
+                    <label class="os-lbl">Warehouse</label>
+                    <select class="os-ctl" @bind="_openWhId">
+                        <option value="0">— select warehouse —</option>
                         @foreach (var w in _warehouses)
                         {
                             <option value="@w.Id">@w.Name</option>
                         }
                     </select>
                 </div>
-                <div>
-                    <label class="fl">Saldo Awal Kas (Rp)</label>
-                    <input class="ctl mono" type="number" min="0" step="1" @bind="_openFloat" />
+                <div class="os-field">
+                    <label class="os-lbl">Opening Cash Float</label>
+                    <div class="os-ig">
+                        <span class="os-pre">Rp</span>
+                        <input class="os-ctl mono has-pre" type="number" min="0" step="1" @bind="_openFloat" placeholder="0" />
+                    </div>
                 </div>
-                <div style="display:flex;gap:8px">
-                    <button class="btn btn-primary" @onclick="OpenShiftAsync" disabled="@_busy"><i class="bi bi-check-lg"></i> Buka</button>
-                    <button class="btn btn-line" @onclick="() => { _showOpen = false; _error = null; }">Batal</button>
-                </div>
+            </div>
+            <div class="os-foot">
+                <button class="btn btn-out" @onclick="() => { _showOpen = false; _error = null; }">Cancel</button>
+                <button class="btn btn-primary" @onclick="OpenShiftAsync" disabled="@_busy">
+                    @if (_busy)
+                    {
+                        <span class="spinner-border spinner-border-sm"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-unlock"></i>
+                    }
+                    Open shift
+                </button>
             </div>
         </div>
     }
@@ -81,10 +105,10 @@
     <div class="toolbar">
         <div class="search">
             <i class="bi bi-search"></i>
-            <input placeholder="Cari nomor shift atau kasir…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+            <input placeholder="Search shift number or cashier…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
         </div>
         <div class="chips">
-            <button class="chip @(_statusFilter is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">Semua</button>
+            <button class="chip @(_statusFilter is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">All</button>
             @foreach (var s in Enum.GetValues<CashierShiftStatus>())
             {
                 <button class="chip @(_statusFilter == s ? "on" : "")" @onclick="() => SetStatusAsync(s)">@s</button>
@@ -100,25 +124,25 @@
     {
         <div class="empty">
             <div class="empty-ic"><i class="bi bi-cash-stack"></i></div>
-            <p>Belum ada sesi kasir yang cocok.</p>
+            <p>No matching cashier sessions yet.</p>
         </div>
     }
     else
     {
         <div class="card">
             <div class="card-top">
-                <span class="n">Menampilkan <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> dari <b>@_page.Total.ToString("N0")</b></span>
+                <span class="n">Showing <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> of <b>@_page.Total.ToString("N0")</b></span>
             </div>
             <div class="table-responsive">
                 <table>
                     <thead>
                         <tr>
-                            <th>No. Shift</th>
-                            <th>Gudang</th>
-                            <th>Kasir</th>
-                            <th>Buka</th>
-                            <th>Tutup</th>
-                            <th class="c">Total Penjualan</th>
+                            <th>Shift No.</th>
+                            <th>Warehouse</th>
+                            <th>Cashier</th>
+                            <th>Opened</th>
+                            <th>Closed</th>
+                            <th class="c">Total Sales</th>
                             <th class="c">Status</th>
                             <th style="width:60px"></th>
                         </tr>
@@ -136,7 +160,7 @@
                                 <td class="c"><span class="badge @PillClass(item.Status)">@item.Status</span></td>
                                 <td>
                                     <div class="rowact">
-                                        <a class="ia" href="@($"/cashier/shifts/{item.Id}")" title="Lihat" @onclick:stopPropagation="true"><i class="bi bi-eye"></i></a>
+                                        <a class="ia" href="@($"/cashier/shifts/{item.Id}")" title="View" @onclick:stopPropagation="true"><i class="bi bi-eye"></i></a>
                                     </div>
                                 </td>
                             </tr>
@@ -190,11 +214,11 @@
         _error = null; _busy = true;
         try
         {
-            if (_openWhId <= 0) { _error = "Pilih gudang terlebih dahulu."; return; }
+            if (_openWhId <= 0) { _error = "Please select a warehouse first."; return; }
             await Shifts.OpenAsync(_userId, _userName, new OpenShiftRequest(_openWhId, _openFloat));
             _showOpen = false; _openFloat = 0m; _openWhId = 0;
             await LoadAsync();
-            await Swal.ToastAsync("success", "Shift dibuka");
+            await Swal.ToastAsync("success", "Shift opened");
         }
         catch (ValidationException ex) { _error = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage)); }
         finally { _busy = false; }

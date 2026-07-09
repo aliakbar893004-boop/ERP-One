@@ -11,55 +11,87 @@
 
 <PageTitle>Approval Chain — @DocType</PageTitle>
 
-<div class="uf-header mb-4">
-    <a class="back-link" href="/settings/approval-chains"><i class="bi bi-arrow-left me-1"></i>Approval Chains</a>
-    <h4 class="uf-title">Rantai Approval — @DocType</h4>
-</div>
+<div class="cf">
 
-@if (!_valid)
-{
-    <div class="alert alert-warning">Tipe dokumen tidak dikenal.</div>
-}
-else
-{
-    @if (_saved) { <div class="alert alert-success py-2">Tersimpan.</div> }
-
-    <div class="fs-card mb-4" style="max-width:640px">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <div class="fs-card-title mb-0">Langkah (urut dari atas)</div>
-            <button class="btn btn-sm btn-outline-primary" @onclick="AddStep"><i class="bi bi-plus-lg me-1"></i>Tambah</button>
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/settings/approval-chains">Settings</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/settings/approval-chains">Approval Chains</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">@DocType</span>
         </div>
-        @if (_steps.Count == 0)
-        {
-            <p class="text-muted small">Tidak ada langkah — dokumen akan langsung disetujui saat submit.</p>
-        }
-        else
-        {
-            @for (var i = 0; i < _steps.Count; i++)
-            {
-                var idx = i;
-                <div class="d-flex gap-2 align-items-center mb-2">
-                    <span class="badge bg-secondary">@(idx + 1)</span>
-                    <select class="form-select form-select-sm" @bind="_steps[idx]">
-                        <option value="">— pilih role —</option>
-                        @foreach (var r in _roles)
-                        {
-                            <option value="@r">@r</option>
-                        }
-                    </select>
-                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => MoveUp(idx)" disabled="@(idx == 0)"><i class="bi bi-arrow-up"></i></button>
-                    <button class="btn btn-sm btn-outline-danger" @onclick="() => _steps.RemoveAt(idx)"><i class="bi bi-x-lg"></i></button>
-                </div>
-            }
-        }
-        <div class="d-flex gap-2 justify-content-end pt-2">
-            <button class="btn btn-primary btn-sm px-3" @onclick="SaveAsync" disabled="@_saving">
-                @if (_saving) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> }
-                Simpan
-            </button>
-        </div>
+        <h1>Approval Chain — @DocType</h1>
     </div>
-}
+
+    @if (!_valid)
+    {
+        <div class="cf-alert warn"><i class="bi bi-exclamation-triangle"></i> Unknown document type.</div>
+    }
+    else
+    {
+        @if (_saved)
+        {
+            <div class="cf-alert ok"><i class="bi bi-check-circle"></i> Saved.</div>
+        }
+
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-diagram-3"></i></span>
+                    <div class="hd-tx">
+                        <h2>Steps (top to bottom)</h2>
+                        <p>Each role approves in order and can be used only once — the same person can't approve twice. An empty chain auto-approves on submit.</p>
+                    </div>
+                    <button type="button" class="vadd" @onclick="AddStep" disabled="@(_steps.Count >= _roles.Count)"><i class="bi bi-plus-lg"></i> Add step</button>
+                </div>
+                <div class="card-b">
+                    @if (_steps.Count == 0)
+                    {
+                        <p class="vempty">No steps yet — the document will be approved immediately on submit.</p>
+                    }
+                    else
+                    {
+                        @for (var i = 0; i < _steps.Count; i++)
+                        {
+                            var idx = i;
+                            <div class="ac-step">
+                                <span class="ac-num">@(idx + 1)</span>
+                                <select class="ctl" @bind="_steps[idx]">
+                                    <option value="">— select role —</option>
+                                    @foreach (var r in _roles.Where(r => !UsedByOther(idx, r)))
+                                    {
+                                        <option value="@r">@r</option>
+                                    }
+                                </select>
+                                <button type="button" class="ac-btn" @onclick="() => MoveUp(idx)" disabled="@(idx == 0)" title="Move up"><i class="bi bi-arrow-up"></i></button>
+                                <button type="button" class="ac-btn del" @onclick="() => _steps.RemoveAt(idx)" title="Remove"><i class="bi bi-x-lg"></i></button>
+                            </div>
+                        }
+                    }
+                </div>
+            </section>
+
+            <div class="pf-footer">
+                <div class="in">
+                    <span class="note">@_steps.Count(s => !string.IsNullOrWhiteSpace(s)) role(s) in this chain</span>
+                    <a class="btn btn-ghost" href="/settings/approval-chains"><i class="bi bi-x-lg"></i> Back</a>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check2"></i>
+                        }
+                        Save chain
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
     [Parameter] public string DocType { get; set; } = "";
@@ -79,17 +111,25 @@ else
         foreach (var c in chain) _steps.Add(c.RoleName);
     }
 
-    private void AddStep() => _steps.Add("");
+    private void AddStep() { _steps.Add(""); _saved = false; }
+
     private void MoveUp(int idx)
     {
         if (idx <= 0) return;
         (_steps[idx - 1], _steps[idx]) = (_steps[idx], _steps[idx - 1]);
     }
 
+    // A role already chosen in another step is hidden from this step's dropdown,
+    // so a role (and its holder) can never appear twice in the chain.
+    private bool UsedByOther(int idx, string role) =>
+        _steps.Where((s, i) => i != idx)
+              .Any(s => string.Equals(s, role, StringComparison.OrdinalIgnoreCase));
+
     private async Task SaveAsync()
     {
         _saving = true; _saved = false;
         var inputs = _steps.Where(s => !string.IsNullOrWhiteSpace(s))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select((role, i) => new ApprovalChainStepInput(i + 1, role)).ToList();
         await ChainService.ReplaceChainAsync(_dt, inputs);
         _saved = true; _saving = false;

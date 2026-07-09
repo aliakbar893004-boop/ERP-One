@@ -1,38 +1,57 @@
-// SweetAlert2 helpers dipanggil dari Blazor via IJSRuntime (SwalService).
+// SweetAlert2 helpers called from Blazor via IJSRuntime (SwalService).
+// One shared config so every dialog looks the same and stays centered.
+// `buttonsStyling:false` hands button styling to our CSS classes (app.css),
+// `heightAuto:false` keeps the popup centered in the viewport (default true
+// grows <body> and can push the dialog to the bottom on tall pages).
 window.appSwal = {
+    _cls: {
+        popup: 'app-swal',
+        title: 'app-swal-title',
+        htmlContainer: 'app-swal-text',
+        actions: 'app-swal-actions',
+        icon: 'app-swal-icon'
+    },
+
     confirm: async (title, text, confirmText) => {
         const result = await Swal.fire({
-            title: title,
-            text: text,
+            title, text,
             icon: 'warning',
+            heightAuto: false,
+            buttonsStyling: false,
             showCancelButton: true,
             confirmButtonText: confirmText || 'Yes',
             cancelButtonText: 'Cancel',
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            reverseButtons: true
+            reverseButtons: true,
+            focusCancel: true,
+            customClass: {
+                ...window.appSwal._cls,
+                confirmButton: 'app-swal-btn app-swal-danger',
+                cancelButton: 'app-swal-btn app-swal-ghost'
+            }
         });
         return result.isConfirmed;
     },
 
-    toast: (icon, title) => {
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: icon,
-            title: title,
-            showConfirmButton: false,
-            timer: 2400,
-            timerProgressBar: true
-        });
-    },
-
     alert: (title, text) => Swal.fire({
-        title: title,
-        text: text,
+        title, text,
         icon: 'info',
+        heightAuto: false,
+        buttonsStyling: false,
         confirmButtonText: 'OK',
-        confirmButtonColor: '#2563eb'
+        customClass: {
+            ...window.appSwal._cls,
+            confirmButton: 'app-swal-btn app-swal-primary'
+        }
+    }),
+
+    toast: (icon, title) => Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon, title,
+        showConfirmButton: false,
+        timer: 2600,
+        timerProgressBar: true,
+        customClass: { popup: 'app-toast' }
     })
 };
 

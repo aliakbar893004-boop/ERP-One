@@ -6,20 +6,20 @@
 @inject IPosSaleService Pos
 @inject NavigationManager Nav
 
-<PageTitle>Riwayat Penjualan</PageTitle>
+<PageTitle>Sales History</PageTitle>
 
 <div class="pi">
 
     <div class="pi-head">
         <div>
-            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Kasir</span><span class="sep">·</span><span class="here">Riwayat Penjualan</span></nav>
-            <h1>Riwayat Penjualan</h1>
-            <p>Transaksi penjualan langsung (POS). Klik baris untuk detail &amp; cetak ulang struk.</p>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Cashier</span><span class="sep">·</span><span class="here">Sales History</span></nav>
+            <h1>Sales History</h1>
+            <p>Direct point-of-sale transactions. Click a row for details &amp; to reprint the receipt.</p>
         </div>
         <div class="pi-actions">
             <AuthorizeView Policy="cashier.pos.create">
                 <Authorized>
-                    <a class="btn btn-primary" href="/cashier/pos"><i class="bi bi-bag-check-fill"></i> Buka Kasir</a>
+                    <a class="btn btn-primary" href="/cashier/pos"><i class="bi bi-bag-check-fill"></i> Open Register</a>
                 </Authorized>
             </AuthorizeView>
         </div>
@@ -28,7 +28,7 @@
     <div class="toolbar">
         <div class="search">
             <i class="bi bi-search"></i>
-            <input placeholder="Cari nomor struk…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+            <input placeholder="Search receipt number…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
         </div>
     </div>
 
@@ -40,23 +40,23 @@
     {
         <div class="empty">
             <div class="empty-ic"><i class="bi bi-receipt"></i></div>
-            <p>Belum ada penjualan yang cocok.</p>
+            <p>No matching sales yet.</p>
         </div>
     }
     else
     {
         <div class="card">
             <div class="card-top">
-                <span class="n">Menampilkan <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> dari <b>@_page.Total.ToString("N0")</b></span>
+                <span class="n">Showing <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> of <b>@_page.Total.ToString("N0")</b></span>
             </div>
             <div class="table-responsive">
                 <table>
                     <thead>
                         <tr>
-                            <th>No. Struk</th>
-                            <th>Tanggal</th>
-                            <th>Kasir</th>
-                            <th>Metode</th>
+                            <th>Receipt No.</th>
+                            <th>Date</th>
+                            <th>Cashier</th>
+                            <th>Method</th>
                             <th class="c">Total</th>
                             <th style="width:60px"></th>
                         </tr>
@@ -72,7 +72,7 @@
                                 <td class="c mono">@item.GrandTotal.ToString("N2")</td>
                                 <td>
                                     <div class="rowact">
-                                        <a class="ia" href="@($"/cashier/sales/{item.Id}")" title="Lihat" @onclick:stopPropagation="true"><i class="bi bi-eye"></i></a>
+                                        <a class="ia" href="@($"/cashier/sales/{item.Id}")" title="View" @onclick:stopPropagation="true"><i class="bi bi-eye"></i></a>
                                     </div>
                                 </td>
                             </tr>
