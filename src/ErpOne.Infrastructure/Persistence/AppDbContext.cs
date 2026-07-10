@@ -50,6 +50,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
     public DbSet<SupplierPaymentAllocation> SupplierPaymentAllocations => Set<SupplierPaymentAllocation>();
     public DbSet<CustomerInvoice> CustomerInvoices => Set<CustomerInvoice>();
     public DbSet<CustomerInvoiceLine> CustomerInvoiceLines => Set<CustomerInvoiceLine>();
+    public DbSet<CustomerReceipt> CustomerReceipts => Set<CustomerReceipt>();
+    public DbSet<CustomerReceiptAllocation> CustomerReceiptAllocations => Set<CustomerReceiptAllocation>();
     public DbSet<ApprovalChainStep> ApprovalChainSteps => Set<ApprovalChainStep>();
     public DbSet<ApprovalStep> ApprovalSteps => Set<ApprovalStep>();
     public DbSet<ProductAttribute> ProductAttributes => Set<ProductAttribute>();
@@ -233,7 +235,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
                 new { Id = 6, Code = "CashierShift",  Prefix = "SHIFT", DateFormat = "yyyyMMdd", Padding = 4, ResetPeriod = ResetPeriod.Daily,   Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
                 new { Id = 7, Code = "SupplierInvoice", Prefix = "APV", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
                 new { Id = 8, Code = "SupplierPayment", Prefix = "APP", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
-                new { Id = 9, Code = "CustomerInvoice", Prefix = "ARV", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" }
+                new { Id = 9, Code = "CustomerInvoice", Prefix = "ARV", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
+                new { Id = 10, Code = "CustomerReceipt", Prefix = "ARR", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" }
             );
         });
 
@@ -698,6 +701,34 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             e.HasOne<SalesOrder>().WithMany().HasForeignKey(x => x.SalesOrderId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<CustomerReceipt>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ReceiptNumber).HasMaxLength(30).IsRequired();
+            e.HasIndex(x => x.ReceiptNumber).IsUnique();
+            e.Property(x => x.Currency).HasMaxLength(3).IsRequired();
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.Property(x => x.Notes).HasMaxLength(500);
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+
+            e.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<CashBankAccount>().WithMany().HasForeignKey(x => x.CashBankAccountId).OnDelete(DeleteBehavior.Restrict);
+
+            e.HasMany(x => x.Allocations)
+                .WithOne()
+                .HasForeignKey(a => a.CustomerReceiptId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.Metadata.FindNavigation(nameof(CustomerReceipt.Allocations))!
+                .SetPropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<CustomerReceiptAllocation>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.HasOne<CustomerInvoice>().WithMany().HasForeignKey(x => x.CustomerInvoiceId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<ApprovalChainStep>(e =>
         {
             e.HasKey(x => x.Id);
@@ -805,6 +836,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             [nameof(SupplierPaymentAllocation)] = "T_",
             [nameof(CustomerInvoice)] = "T_",
             [nameof(CustomerInvoiceLine)] = "T_",
+            [nameof(CustomerReceipt)] = "T_",
+            [nameof(CustomerReceiptAllocation)] = "T_",
             [nameof(SalesOrder)] = "T_",
             [nameof(SalesOrderLine)] = "T_",
             [nameof(DeliveryOrder)] = "T_",
