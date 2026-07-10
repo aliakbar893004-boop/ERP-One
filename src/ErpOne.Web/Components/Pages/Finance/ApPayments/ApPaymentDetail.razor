@@ -1,0 +1,194 @@
+@page "/finance/ap-payments/{Id:int}"
+@attribute [Authorize(Policy = "finance.ap-payments.index")]
+@rendermode InteractiveServer
+@using FluentValidation
+@using ErpOne.Application.Approvals
+@inject ISupplierPaymentService PaymentService
+@inject IAuthorizationService Auth
+@inject SwalService Swal
+
+<PageTitle>@(_p?.PaymentNumber ?? "Payment")</PageTitle>
+
+@if (_loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+}
+else if (_p is null)
+{
+    <div class="pf"><div class="pf-alert err"><i class="bi bi-exclamation-octagon"></i> Payment not found.</div></div>
+}
+else
+{
+    <div class="pf">
+        <div class="pf-top">
+            <div class="crumbs"><a href="/finance/ap-payments">Supplier Payments</a><i class="bi bi-chevron-right"></i><span class="here">@_p.PaymentNumber</span></div>
+        </div>
+        <div class="pd-head">
+            <h1>@_p.PaymentNumber</h1>
+            <span class="badge @StatusClass(_p.Status)">@_p.Status</span>
+            <div class="actions">
+                @if (_p.Status == "Draft")
+                {
+                    <AuthorizeView Policy="finance.ap-payments.edit"><Authorized>
+                        <a class="btn btn-line btn-sm" href="@($"/finance/ap-payments/{_p.Id}/edit")"><i class="bi bi-pencil"></i> Edit</a>
+                        <button class="btn btn-primary btn-sm" @onclick="SubmitAsync" disabled="@_busy"><i class="bi bi-send"></i> Submit</button>
+                    </Authorized></AuthorizeView>
+                }
+                @if (_p.Status == "PendingApproval" && _canApprove)
+                {
+                    <button class="btn btn-ok btn-sm" @onclick="ApproveAsync" disabled="@_busy"><i class="bi bi-check2-circle"></i> Approve</button>
+                    <button class="btn btn-danger btn-sm" @onclick="@(() => _showReject = true)" disabled="@_busy"><i class="bi bi-x-circle"></i> Reject</button>
+                }
+                @if (_p.Status == "Posted")
+                {
+                    <AuthorizeView Policy="finance.ap-payments.void"><Authorized>
+                        <button class="btn btn-danger btn-sm" @onclick="VoidAsync" disabled="@_busy"><i class="bi bi-x-octagon"></i> Void</button>
+                    </Authorized></AuthorizeView>
+                }
+            </div>
+        </div>
+
+        @if (_error is not null) { <div class="pf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+
+        @if (_showReject)
+        {
+            <section class="card danger">
+                <div class="card-b">
+                    <textarea class="ctl" rows="2" placeholder="Rejection reason" @bind="_rejectReason"></textarea>
+                    <div class="row-end">
+                        <button class="btn btn-ghost btn-sm" @onclick="@(() => _showReject = false)">Cancel</button>
+                        <button class="btn btn-danger btn-sm" @onclick="RejectAsync" disabled="@_busy">Reject payment</button>
+                    </div>
+                </div>
+            </section>
+        }
+
+        <section class="card">
+            <div class="card-h"><span class="hd-ic"><i class="bi bi-cash-coin"></i></span><h2>Payment</h2></div>
+            <div class="card-b">
+                <div class="info-grid">
+                    <div class="info-cell"><span class="k"><i class="bi bi-truck"></i> Supplier</span><span class="v">@_p.SupplierName</span></div>
+                    <div class="info-cell"><span class="k"><i class="bi bi-bank"></i> Paid from</span><span class="v">@_p.CashBankAccountName</span></div>
+                    <div class="info-cell"><span class="k"><i class="bi bi-calendar3"></i> Date</span><span class="v">@_p.PaymentDate.ToString("d MMM yyyy")</span></div>
+                    <div class="info-cell"><span class="k"><i class="bi bi-cash-stack"></i> Amount</span><span class="v">@_p.Currency @_p.Amount.ToString("N2")</span></div>
+                    @if (!string.IsNullOrWhiteSpace(_p.RejectionNote)) { <div class="info-cell wide reject"><span class="k"><i class="bi bi-exclamation-triangle"></i> Rejection note</span><span class="v">@_p.RejectionNote</span></div> }
+                    @if (!string.IsNullOrWhiteSpace(_p.Notes)) { <div class="info-cell wide"><span class="k"><i class="bi bi-sticky"></i> Notes</span><span class="v">@_p.Notes</span></div> }
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-h"><span class="hd-ic"><i class="bi bi-list-ul"></i></span><h2>Allocations</h2></div>
+            <div class="card-b">
+                <table class="items">
+                    <thead><tr><th>Invoice</th><th class="r">Grand total</th><th class="r">Outstanding</th><th class="r">Paid</th></tr></thead>
+                    <tbody>
+                        @foreach (var a in _p.Allocations)
+                        {
+                            <tr><td class="mono">@a.InvoiceNumber</td><td class="r mono">@a.InvoiceGrandTotal.ToString("N2")</td><td class="r mono">@a.InvoiceOutstanding.ToString("N2")</td><td class="r mono total">@a.Amount.ToString("N2")</td></tr>
+                        }
+                    </tbody>
+                    <tfoot><tr><td colspan="3" class="r gt-l">Total</td><td class="r grand">@_p.Amount.ToString("N2")</td></tr></tfoot>
+                </table>
+            </div>
+        </section>
+
+        @if (_steps.Count > 0)
+        {
+            <section class="card">
+                <div class="card-h"><span class="hd-ic"><i class="bi bi-diagram-3"></i></span><h2>Approval</h2></div>
+                <div class="card-b">
+                    <ul class="tl">
+                        @foreach (var s in _steps)
+                        {
+                            <li>
+                                <span class="dot @StepDot(s.Status)"><i class="bi @StepIcon(s.Status)"></i></span>
+                                <div>
+                                    <div class="ti">Step @s.StepOrder · @s.RoleName</div>
+                                    <div class="meta">@s.Status@(s.ActedByName is null ? "" : $" · {s.ActedByName}")</div>
+                                    @if (!string.IsNullOrWhiteSpace(s.Note)) { <div class="note">@s.Note</div> }
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </section>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private SupplierPaymentDto? _p;
+    private IReadOnlyList<ApprovalStepDto> _steps = [];
+    private bool _loading = true, _busy, _canApprove, _showReject;
+    private string _rejectReason = string.Empty;
+    private string? _error;
+    private System.Security.Claims.ClaimsPrincipal _user = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user = (await AuthStateTask).User;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _p = await PaymentService.GetByIdAsync(Id);
+        _steps = _p is null ? [] : await PaymentService.GetApprovalStepsAsync(Id);
+        _canApprove = await EvaluateCanApproveAsync();
+        _loading = false;
+    }
+
+    private async Task<bool> EvaluateCanApproveAsync()
+    {
+        if (_p is null || _p.Status != "PendingApproval") return false;
+        if (!(await Auth.AuthorizeAsync(_user, "finance.ap-payments.approve")).Succeeded) return false;
+        if (string.Equals(_p.CreatedBy, _user.Identity?.Name, StringComparison.OrdinalIgnoreCase)) return false;
+        var current = _steps.FirstOrDefault(s => s.Status == "Pending");
+        return current is not null && _user.IsInRole(current.RoleName);
+    }
+
+    private async Task SubmitAsync() => await RunAsync(() => PaymentService.SubmitAsync(Id), "Payment submitted");
+    private async Task ApproveAsync() =>
+        await RunAsync(() => PaymentService.ApproveAsync(Id, _user.Identity?.Name ?? "", _user.IsInRole), "Payment approved & posted");
+
+    private async Task RejectAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_rejectReason)) { _error = "Rejection reason is required."; return; }
+        var reason = _rejectReason;
+        _showReject = false;
+        _rejectReason = string.Empty;
+        await RunAsync(() => PaymentService.RejectAsync(Id, _user.Identity?.Name ?? "", _user.IsInRole, reason), "Payment rejected, returned to Draft");
+    }
+
+    private async Task VoidAsync()
+    {
+        if (!await Swal.ConfirmAsync("Void payment?", "This reverses the cash movement and invoice payments.")) return;
+        await RunAsync(() => PaymentService.VoidAsync(Id), "Payment voided");
+    }
+
+    private async Task RunAsync(Func<Task> action, string okMsg)
+    {
+        _error = null; _busy = true;
+        try
+        {
+            await action();
+            await LoadAsync();
+            await Swal.ToastAsync("success", okMsg);
+        }
+        catch (ValidationException ex) { _error = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage)); }
+        catch (InvalidOperationException ex) { _error = ex.Message; }
+        finally { _busy = false; }
+    }
+
+    private static string StatusClass(string s) => s switch
+    {
+        "Draft" => "b-draft", "PendingApproval" => "b-warn", "Posted" => "b-done", "Voided" => "b-danger", _ => "b-dark"
+    };
+    private static string StepIcon(string s) => s switch { "Approved" => "bi-check-lg", "Rejected" => "bi-x-lg", _ => "bi-clock" };
+    private static string StepDot(string s) => s switch { "Approved" => "ok", "Rejected" => "no", _ => "wait" };
+}

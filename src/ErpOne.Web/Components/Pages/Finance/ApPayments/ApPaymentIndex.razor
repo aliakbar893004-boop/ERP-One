@@ -1,0 +1,85 @@
+@page "/finance/ap-payments"
+@attribute [Authorize(Policy = "finance.ap-payments.index")]
+@rendermode InteractiveServer
+@inject ISupplierPaymentService PaymentService
+@inject NavigationManager Nav
+
+<PageTitle>Supplier Payments</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Finance</span><span class="sep">·</span><span class="here">Supplier Payments</span></nav>
+            <h1>Supplier Payments</h1>
+            <p>Payments made to suppliers against invoices.</p>
+        </div>
+        <AuthorizeView Policy="finance.ap-payments.create">
+            <Authorized>
+                <div class="pi-actions"><a class="btn btn-primary" href="/finance/ap-payments/new"><i class="bi bi-plus-lg"></i> New payment</a></div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    @if (_dash is not null)
+    {
+        <div class="cr-kpis mb-3">
+            <div class="cr-kpi"><div class="tx"><div class="v">@_dash.Total</div><div class="l">Total</div></div></div>
+            <div class="cr-kpi"><div class="tx"><div class="v">@_dash.Draft</div><div class="l">Draft</div></div></div>
+            <div class="cr-kpi"><div class="tx"><div class="v">@_dash.PendingApproval</div><div class="l">Pending approval</div></div></div>
+            <div class="cr-kpi accent"><div class="tx"><div class="v">Rp @_dash.PostedThisMonth.ToString("N0")</div><div class="l">Posted total</div></div></div>
+        </div>
+    }
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-cash-coin"></i></div><p>No payments yet.</p></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th style="width:150px">Payment</th><th>Supplier</th><th style="width:110px">Date</th><th>Account</th><th class="text-end" style="width:140px">Amount</th><th class="text-center" style="width:130px">Status</th></tr></thead>
+                    <tbody>
+                        @foreach (var p in _page.Items)
+                        {
+                            <tr style="cursor:pointer" @onclick="@(() => Nav.NavigateTo($"/finance/ap-payments/{p.Id}"))">
+                                <td class="code mono">@p.PaymentNumber</td>
+                                <td class="nm">@p.SupplierName</td>
+                                <td class="code">@p.PaymentDate.ToString("d MMM yyyy")</td>
+                                <td>@p.CashBankAccountName</td>
+                                <td class="text-end mono">@p.Amount.ToString("N2")</td>
+                                <td class="text-center"><span class="badge @StatusClass(p.Status)">@p.Status</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (_page.TotalPages > 1) { <div class="card-foot"><Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" /></div> }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<SupplierPaymentListItemDto>? _page;
+    private SupplierPaymentDashboardDto? _dash;
+    private int _currentPage = 1;
+
+    protected override async Task OnInitializedAsync() { _dash = await PaymentService.GetDashboardAsync(); await LoadAsync(); }
+    private async Task LoadAsync() => _page = await PaymentService.GetPagedAsync(_currentPage, PageSize);
+    private async Task GoToPageAsync(int page) { _currentPage = page; await LoadAsync(); }
+
+    private static string StatusClass(string s) => s switch
+    {
+        "Draft" => "bg-secondary-subtle text-secondary-emphasis",
+        "PendingApproval" => "bg-warning-subtle text-warning-emphasis",
+        "Posted" => "bg-success-subtle text-success-emphasis",
+        "Voided" => "bg-danger-subtle text-danger-emphasis",
+        _ => "bg-light text-muted"
+    };
+}

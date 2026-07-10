@@ -1,0 +1,172 @@
+@page "/finance/ap-payments/new"
+@page "/finance/ap-payments/{Id:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using FluentValidation
+@inject ISupplierPaymentService PaymentService
+@inject ISupplierService SupplierService
+@inject ICashBankAccountService AccountService
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+
+<PageTitle>@Title</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/finance/ap-payments">Finance</a><i class="bi bi-chevron-right"></i>
+            <a href="/finance/ap-payments">Supplier Payments</a><i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+        <h1>@Title</h1>
+    </div>
+
+    @if (_loading) { <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div> }
+    else
+    {
+        @if (_error is not null) { <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h"><span class="hd-ic"><i class="bi bi-cash-coin"></i></span><div class="hd-tx"><h2>Payment</h2><p>Pay a supplier against outstanding invoices.</p></div></div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c6">
+                            <label class="fl">Supplier <span class="req">*</span></label>
+                            <select class="ctl" @bind="_supplierId" @bind:after="OnSupplierChangedAsync" disabled="@(Id is not null)">
+                                <option value="0">— Select supplier —</option>
+                                @foreach (var s in _suppliers) { <option value="@s.Id">@s.Code — @s.Name</option> }
+                            </select>
+                        </div>
+                        <div class="f c3">
+                            <label class="fl">Payment date <span class="req">*</span></label>
+                            <input type="date" class="ctl" @bind="_paymentDate" />
+                        </div>
+                        <div class="f c3">
+                            <label class="fl">Cash / bank <span class="req">*</span></label>
+                            <select class="ctl" @bind="_accountId">
+                                <option value="0">— Select account —</option>
+                                @foreach (var a in _accounts) { <option value="@a.Id">@a.Code — @a.Name (@a.Currency)</option> }
+                            </select>
+                        </div>
+                        <div class="f c12">
+                            <label class="fl">Notes</label>
+                            <input class="ctl" maxlength="500" @bind="_notes" placeholder="Optional" />
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-h"><span class="hd-ic"><i class="bi bi-receipt"></i></span><div class="hd-tx"><h2>Allocate to invoices</h2><p>Enter the amount to pay against each outstanding invoice.</p></div></div>
+                <div class="card-b">
+                    @if (_supplierId == 0) { <div class="text-muted small">Select a supplier to list outstanding invoices.</div> }
+                    else if (_invoices.Count == 0) { <div class="text-muted small">No outstanding invoices for this supplier.</div> }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead class="table-light"><tr><th>Invoice</th><th>Due</th><th class="text-end">Grand total</th><th class="text-end">Outstanding</th><th class="text-end" style="width:180px">Pay amount</th></tr></thead>
+                                <tbody>
+                                    @foreach (var inv in _invoices)
+                                    {
+                                        <tr>
+                                            <td class="mono">@inv.InvoiceNumber</td>
+                                            <td>@inv.DueDate.ToString("d MMM yyyy")</td>
+                                            <td class="text-end mono">@inv.GrandTotal.ToString("N2")</td>
+                                            <td class="text-end mono">@inv.Outstanding.ToString("N2")</td>
+                                            <td class="text-end"><input type="number" step="0.01" min="0" max="@inv.Outstanding" class="ctl mono" style="text-align:right"
+                                                       value="@GetAlloc(inv.SupplierInvoiceId)" @onchange="@(e => SetAlloc(inv.SupplierInvoiceId, e.Value?.ToString()))" /></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot><tr><td colspan="4" class="text-end fw-semibold">Total payment</td><td class="text-end mono fw-semibold">@Total().ToString("N2")</td></tr></tfoot>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </section>
+
+            <div class="pf-footer">
+                <div class="in">
+                    <span class="note"><span class="req">*</span> required fields</span>
+                    <a class="btn btn-ghost" href="/finance/ap-payments"><i class="bi bi-x-lg"></i> Cancel</a>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@(_saving || _accountId == 0 || Total() <= 0)">
+                        @if (_saving) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> } else { <i class="bi bi-check2"></i> }
+                        Save draft
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private int _supplierId, _accountId;
+    private DateTime _paymentDate = DateTime.Today;
+    private string? _notes;
+    private IReadOnlyList<SupplierDto> _suppliers = [];
+    private IReadOnlyList<CashBankAccountDto> _accounts = [];
+    private List<PayableInvoiceDto> _invoices = [];
+    private readonly Dictionary<int, decimal> _alloc = new();
+    private bool _loading = true, _saving;
+    private string? _error;
+
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+    private string Title => Id is null ? "New Supplier Payment" : "Edit Supplier Payment";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateTask;
+        var perm = Id is null ? AppMenus.Perm("finance.ap-payments", "create") : AppMenus.Perm("finance.ap-payments", "edit");
+        if (!(await Auth.AuthorizeAsync(state.User, perm)).Succeeded) { Nav.NavigateTo("/finance/ap-payments"); return; }
+
+        _suppliers = await SupplierService.GetAllAsync();
+        _accounts = await AccountService.GetActiveAsync();
+
+        if (Id is int id)
+        {
+            var p = await PaymentService.GetByIdAsync(id);
+            if (p is not null)
+            {
+                _supplierId = p.SupplierId; _accountId = p.CashBankAccountId; _paymentDate = p.PaymentDate; _notes = p.Notes;
+                _invoices = (await PaymentService.GetPayableInvoicesAsync(p.SupplierId)).ToList();
+                foreach (var a in p.Allocations) _alloc[a.SupplierInvoiceId] = a.Amount;
+            }
+        }
+        _loading = false;
+    }
+
+    private async Task OnSupplierChangedAsync()
+    {
+        _alloc.Clear();
+        _invoices = _supplierId == 0 ? [] : (await PaymentService.GetPayableInvoicesAsync(_supplierId)).ToList();
+    }
+
+    private decimal GetAlloc(int invId) => _alloc.GetValueOrDefault(invId, 0m);
+    private void SetAlloc(int invId, string? raw)
+    {
+        if (decimal.TryParse(raw, out var v) && v > 0) _alloc[invId] = v;
+        else _alloc.Remove(invId);
+    }
+    private decimal Total() => _alloc.Values.Sum();
+
+    private async Task SaveAsync()
+    {
+        _error = null; _saving = true;
+        try
+        {
+            var allocations = _alloc.Where(kv => kv.Value > 0).Select(kv => new PaymentAllocationInput(kv.Key, kv.Value)).ToList();
+            if (Id is int id)
+                await PaymentService.UpdateDraftAsync(id, new UpdateSupplierPaymentRequest(_accountId, _paymentDate, _notes, allocations));
+            else
+                await PaymentService.CreateDraftAsync(new CreateSupplierPaymentRequest(_supplierId, _accountId, _paymentDate, _notes, allocations));
+            Nav.NavigateTo("/finance/ap-payments");
+        }
+        catch (ValidationException ex) { _error = ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Validation failed."; }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+}

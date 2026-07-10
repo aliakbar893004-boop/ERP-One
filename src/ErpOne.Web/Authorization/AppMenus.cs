@@ -15,6 +15,7 @@ public static class AppMenus
     public static readonly AppAction ActApprove = new("approve", "Approve", "bi-check2-circle");
     public static readonly AppAction ActPost  = new("post",  "Post",  "bi-box-arrow-in-down");
     public static readonly AppAction ActClose = new("close", "Close", "bi-lock-fill");
+    public static readonly AppAction ActVoid = new("void", "Void", "bi-x-octagon-fill");
 
     public static readonly IReadOnlyList<AppAction> AllActions =
         [ActIndex, ActCreate, ActEdit, ActDelete];
@@ -28,6 +29,7 @@ public static class AppMenus
     private static AppAction[] SalesOrderActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActApprove, ActClose];
     private static AppAction[] CashierShiftActions => [ActIndex, ActCreate, ActClose];
     private static AppAction[] PosActions => [ActIndex, ActCreate];
+    private static AppAction[] SupplierPaymentActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActApprove, ActVoid];
 
     public static readonly IReadOnlyList<ResourceGroup> Groups =
     [
@@ -71,6 +73,7 @@ public static class AppMenus
         [
             new("finance.cash-bank", "Cash & Bank", "bi-bank", CRUD),
             new("finance.ap-invoices", "Supplier Invoices", "bi-receipt", CRUD),
+            new("finance.ap-payments", "Supplier Payments", "bi-cash-coin", SupplierPaymentActions),
         ]),
         new("Settings",
         [
