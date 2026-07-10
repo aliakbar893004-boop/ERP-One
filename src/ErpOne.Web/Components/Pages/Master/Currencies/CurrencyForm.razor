@@ -1,0 +1,158 @@
+@page "/master/currencies/new"
+@page "/master/currencies/{Id:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using FluentValidation
+@inject ICurrencyService CurrencyService
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+
+<PageTitle>@Title</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/master/currencies">Master</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/master/currencies">Currencies</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+        <h1>@Title</h1>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+    }
+    else if (_notFound)
+    {
+        <div class="cf-alert warn"><i class="bi bi-exclamation-triangle"></i> Currency not found.</div>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+        }
+
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-currency-exchange"></i></span>
+                    <div class="hd-tx">
+                        <h2>Currency information</h2>
+                        <p>A currency that documents and partners can be denominated in.</p>
+                    </div>
+                </div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c3">
+                            <label class="fl">Code <span class="req">*</span></label>
+                            <input class="ctl mono up @(_codeError is not null ? "bad" : "")"
+                                   placeholder="IDR" maxlength="3" @bind="_code" @bind:event="oninput" />
+                            @if (_codeError is not null) { <div class="err-txt">@_codeError</div> }
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Name <span class="req">*</span></label>
+                            <input class="ctl @(_nameError is not null ? "bad" : "")"
+                                   placeholder="Rupiah" maxlength="60" @bind="_name" @bind:event="oninput" />
+                            @if (_nameError is not null) { <div class="err-txt">@_nameError</div> }
+                        </div>
+                        <div class="f c3">
+                            <label class="fl">Symbol <span class="req">*</span></label>
+                            <input class="ctl @(_symbolError is not null ? "bad" : "")"
+                                   placeholder="Rp" maxlength="6" @bind="_symbol" @bind:event="oninput" />
+                            @if (_symbolError is not null) { <div class="err-txt">@_symbolError</div> }
+                        </div>
+                        <div class="f c3">
+                            <label class="fl">Decimal places</label>
+                            <input type="number" min="0" max="6" class="ctl" @bind="_decimalPlaces" />
+                        </div>
+                        <div class="f c9 d-flex align-items-end gap-4">
+                            <label class="fl-check"><input type="checkbox" @bind="_isBase" /> Base currency</label>
+                            <label class="fl-check"><input type="checkbox" @bind="_isActive" /> Active</label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="pf-footer">
+                <div class="in">
+                    <span class="note"><span class="req">*</span> required fields</span>
+                    <a class="btn btn-ghost" href="/master/currencies"><i class="bi bi-x-lg"></i> Cancel</a>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                        @if (_saving) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> }
+                        else { <i class="bi bi-check2"></i> }
+                        Save currency
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private string _code = string.Empty;
+    private string _name = string.Empty;
+    private string _symbol = string.Empty;
+    private int _decimalPlaces = 2;
+    private bool _isBase, _isActive = true;
+    private bool _loading = true, _saving, _notFound;
+    private string? _error, _codeError, _nameError, _symbolError;
+
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private string Title => Id is null ? "Add Currency" : "Edit Currency";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateTask;
+        var perm = Id is null ? AppMenus.Perm("master.currencies", "create") : AppMenus.Perm("master.currencies", "edit");
+        if (!(await Auth.AuthorizeAsync(state.User, perm)).Succeeded)
+        {
+            Nav.NavigateTo("/master/currencies");
+            return;
+        }
+
+        if (Id is int id)
+        {
+            var c = await CurrencyService.GetByIdAsync(id);
+            if (c is null) _notFound = true;
+            else
+            {
+                _code = c.Code; _name = c.Name; _symbol = c.Symbol;
+                _decimalPlaces = c.DecimalPlaces; _isBase = c.IsBase; _isActive = c.IsActive;
+            }
+        }
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = _codeError = _nameError = _symbolError = null;
+        _saving = true;
+        try
+        {
+            if (Id is int id)
+                await CurrencyService.UpdateAsync(id, new UpdateCurrencyRequest(_code, _name, _symbol, _decimalPlaces, _isBase, _isActive));
+            else
+                await CurrencyService.CreateAsync(new CreateCurrencyRequest(_code, _name, _symbol, _decimalPlaces, _isBase, _isActive));
+
+            Nav.NavigateTo("/master/currencies");
+        }
+        catch (ValidationException ex)
+        {
+            foreach (var e in ex.Errors)
+            {
+                if (e.PropertyName == nameof(CreateCurrencyRequest.Code)) _codeError = e.ErrorMessage;
+                else if (e.PropertyName == nameof(CreateCurrencyRequest.Name)) _nameError = e.ErrorMessage;
+                else if (e.PropertyName == nameof(CreateCurrencyRequest.Symbol)) _symbolError = e.ErrorMessage;
+                else _error = e.ErrorMessage;
+            }
+        }
+        finally { _saving = false; }
+    }
+}

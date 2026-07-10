@@ -4,6 +4,7 @@
 @rendermode InteractiveServer
 @using FluentValidation
 @inject ICustomerService CustomerService
+@inject ICurrencyService CurrencyService
 @inject IAuthorizationService Auth
 @inject NavigationManager Nav
 
@@ -113,7 +114,12 @@
                         </div>
                         <div class="f c4">
                             <label class="fl">Default currency</label>
-                            <input class="ctl mono up" maxlength="3" placeholder="IDR" @bind="_currency" />
+                            <select class="ctl" @bind="_currency">
+                                @foreach (var c in _currencies)
+                                {
+                                    <option value="@c.Code">@c.Code — @c.Name</option>
+                                }
+                            </select>
                         </div>
                         <div class="f c4">
                             <label class="fl">Credit limit</label>
@@ -159,6 +165,7 @@
     private string? _contactPerson, _phone, _email, _address, _taxId;
     private int _paymentTermDays;
     private string _currency = "IDR";
+    private IReadOnlyList<CurrencyDto> _currencies = [];
     private decimal _creditLimit;
     private bool _isActive = true;
     private bool _loading = true, _saving, _notFound;
@@ -180,6 +187,8 @@
             Nav.NavigateTo("/master/customers");
             return;
         }
+
+        _currencies = await CurrencyService.GetActiveAsync();
 
         if (Id is int id)
         {

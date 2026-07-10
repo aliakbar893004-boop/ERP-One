@@ -47,6 +47,7 @@ public static class AppMenus
             new("master.attributes",  "Attribute",        "bi-sliders",            CRUD),
             new("master.suppliers",  "Supplier",  "bi-truck",         CRUD),
             new("master.customers",  "Customer",  "bi-person-vcard-fill", CRUD),
+            new("master.currencies", "Currency",  "bi-currency-exchange", CRUD),
         ]),
         new("Inventory",
         [
