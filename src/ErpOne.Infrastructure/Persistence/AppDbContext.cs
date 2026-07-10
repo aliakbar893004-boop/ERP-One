@@ -25,6 +25,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
     public DbSet<NumberSequence> NumberSequences => Set<NumberSequence>();
     public DbSet<NumberSequenceCounter> NumberSequenceCounters => Set<NumberSequenceCounter>();
     public DbSet<CompanySetting> CompanySettings => Set<CompanySetting>();
+    public DbSet<CashBankAccount> CashBankAccounts => Set<CashBankAccount>();
     public DbSet<Warehouse> Warehouses => Set<Warehouse>();
     public DbSet<Tax> Taxes => Set<Tax>();
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
@@ -252,6 +253,33 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             {
                 Id = 1,
                 CompanyName = (string?)"ERP_One",
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                CreatedBy = (string?)"system"
+            });
+        });
+
+        modelBuilder.Entity<CashBankAccount>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            e.HasIndex(x => x.Code).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Type).HasConversion<string>().HasMaxLength(20).IsRequired();
+            e.Property(x => x.Currency).HasMaxLength(3).IsRequired();
+            e.Property(x => x.OpeningBalance).HasPrecision(18, 2);
+            e.Property(x => x.BankName).HasMaxLength(100);
+            e.Property(x => x.AccountNumber).HasMaxLength(50);
+            e.Property(x => x.AccountHolder).HasMaxLength(100);
+
+            e.HasData(new
+            {
+                Id = 1,
+                Code = "CASH",
+                Name = "Main Cash",
+                Type = CashBankType.Cash,
+                Currency = "IDR",
+                OpeningBalance = 0m,
+                IsActive = true,
                 CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 CreatedBy = (string?)"system"
             });
@@ -629,6 +657,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             [nameof(NumberSequence)] = "M_",
             [nameof(NumberSequenceCounter)] = "M_",
             [nameof(CompanySetting)] = "M_",
+            [nameof(CashBankAccount)] = "M_",
             [nameof(Warehouse)] = "M_",
             [nameof(Tax)] = "M_",
             [nameof(PaymentMethod)] = "M_",
