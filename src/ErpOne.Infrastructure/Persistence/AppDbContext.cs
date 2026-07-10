@@ -45,6 +45,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
     public DbSet<GoodsReceiptLine> GoodsReceiptLines => Set<GoodsReceiptLine>();
     public DbSet<SupplierInvoice> SupplierInvoices => Set<SupplierInvoice>();
     public DbSet<SupplierInvoiceLine> SupplierInvoiceLines => Set<SupplierInvoiceLine>();
+    public DbSet<CashBankMovement> CashBankMovements => Set<CashBankMovement>();
+    public DbSet<SupplierPayment> SupplierPayments => Set<SupplierPayment>();
+    public DbSet<SupplierPaymentAllocation> SupplierPaymentAllocations => Set<SupplierPaymentAllocation>();
     public DbSet<ApprovalChainStep> ApprovalChainSteps => Set<ApprovalChainStep>();
     public DbSet<ApprovalStep> ApprovalSteps => Set<ApprovalStep>();
     public DbSet<ProductAttribute> ProductAttributes => Set<ProductAttribute>();
@@ -226,7 +229,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
                 new { Id = 4, Code = "DeliveryOrder", Prefix = "DO",    DateFormat = "yyyyMM",   Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
                 new { Id = 5, Code = "PosSale",       Prefix = "POS",   DateFormat = "yyyyMMdd", Padding = 4, ResetPeriod = ResetPeriod.Daily,   Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
                 new { Id = 6, Code = "CashierShift",  Prefix = "SHIFT", DateFormat = "yyyyMMdd", Padding = 4, ResetPeriod = ResetPeriod.Daily,   Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
-                new { Id = 7, Code = "SupplierInvoice", Prefix = "APV", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" }
+                new { Id = 7, Code = "SupplierInvoice", Prefix = "APV", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
+                new { Id = 8, Code = "SupplierPayment", Prefix = "APP", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" }
             );
         });
 
@@ -611,6 +615,46 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             e.HasOne<GoodsReceipt>().WithMany().HasForeignKey(x => x.GoodsReceiptId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<CashBankMovement>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Direction).HasConversion<string>().HasMaxLength(4).IsRequired();
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.Property(x => x.RefType).HasMaxLength(40).IsRequired();
+            e.Property(x => x.Note).HasMaxLength(300);
+            e.HasOne<CashBankAccount>().WithMany().HasForeignKey(x => x.CashBankAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.CashBankAccountId, x.Date });
+        });
+
+        modelBuilder.Entity<SupplierPayment>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.PaymentNumber).HasMaxLength(30).IsRequired();
+            e.HasIndex(x => x.PaymentNumber).IsUnique();
+            e.Property(x => x.Currency).HasMaxLength(3).IsRequired();
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.Property(x => x.Notes).HasMaxLength(500);
+            e.Property(x => x.RejectionNote).HasMaxLength(500);
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+
+            e.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<CashBankAccount>().WithMany().HasForeignKey(x => x.CashBankAccountId).OnDelete(DeleteBehavior.Restrict);
+
+            e.HasMany(x => x.Allocations)
+                .WithOne()
+                .HasForeignKey(a => a.SupplierPaymentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.Metadata.FindNavigation(nameof(SupplierPayment.Allocations))!
+                .SetPropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<SupplierPaymentAllocation>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.HasOne<SupplierInvoice>().WithMany().HasForeignKey(x => x.SupplierInvoiceId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<ApprovalChainStep>(e =>
         {
             e.HasKey(x => x.Id);
@@ -714,6 +758,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             [nameof(GoodsReceiptLine)] = "T_",
             [nameof(SupplierInvoice)] = "T_",
             [nameof(SupplierInvoiceLine)] = "T_",
+            [nameof(SupplierPayment)] = "T_",
+            [nameof(SupplierPaymentAllocation)] = "T_",
             [nameof(SalesOrder)] = "T_",
             [nameof(SalesOrderLine)] = "T_",
             [nameof(DeliveryOrder)] = "T_",
@@ -726,6 +772,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             // Stok
             [nameof(ProductStock)] = "S_",
             [nameof(StockMovement)] = "S_",
+            [nameof(CashBankMovement)] = "S_",
         };
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

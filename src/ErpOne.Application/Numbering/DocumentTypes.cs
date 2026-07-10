@@ -10,4 +10,5 @@ public static class DocumentTypes
     public const string PosSale       = "PosSale";
     public const string CashierShift  = "CashierShift";
     public const string SupplierInvoice = "SupplierInvoice";
+    public const string SupplierPayment = "SupplierPayment";
 }

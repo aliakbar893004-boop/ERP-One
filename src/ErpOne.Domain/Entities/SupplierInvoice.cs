@@ -62,6 +62,26 @@ public class SupplierInvoice : AuditableEntity
         Status = SupplierInvoiceStatus.Cancelled;
     }
 
+    public void ApplyPayment(decimal amount)
+    {
+        if (amount <= 0) throw new ArgumentException("Payment amount must be > 0.", nameof(amount));
+        if (Status == SupplierInvoiceStatus.Cancelled)
+            throw new InvalidOperationException("Cannot pay a cancelled invoice.");
+        if (PaidAmount + amount > GrandTotal)
+            throw new InvalidOperationException("Payment exceeds the invoice outstanding amount.");
+        PaidAmount += amount;
+        Status = PaidAmount >= GrandTotal ? SupplierInvoiceStatus.Paid : SupplierInvoiceStatus.PartiallyPaid;
+    }
+
+    public void ReversePayment(decimal amount)
+    {
+        if (amount <= 0) throw new ArgumentException("Reversal amount must be > 0.", nameof(amount));
+        if (amount > PaidAmount)
+            throw new InvalidOperationException("Reversal exceeds the paid amount.");
+        PaidAmount -= amount;
+        Status = PaidAmount <= 0 ? SupplierInvoiceStatus.Open : SupplierInvoiceStatus.PartiallyPaid;
+    }
+
     private void SetHeader(DateTime invoiceDate, DateTime dueDate, string? supplierInvoiceNo, string? notes)
     {
         if (dueDate.Date < invoiceDate.Date)

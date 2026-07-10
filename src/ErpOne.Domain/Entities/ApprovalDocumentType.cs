@@ -4,5 +4,6 @@ namespace ErpOne.Domain.Entities;
 public enum ApprovalDocumentType
 {
     PurchaseOrder,
-    SalesOrder
+    SalesOrder,
+    SupplierPayment
 }
