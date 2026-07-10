@@ -21,3 +21,5 @@ public record PosSaleDto(
 
 public record PosSaleListItemDto(
     int Id, string SaleNumber, DateTime SaleDate, string CashierName, string PaymentMethodName, decimal GrandTotal);
+
+public record PosCashierDto(string UserId, string Name);

@@ -130,13 +130,15 @@ public class PosSaleService(
     }
 
     public async Task<PagedResult<PosSaleListItemDto>> GetPagedAsync(
-        int page, int pageSize, string? search, int? shiftId, CancellationToken ct = default)
+        int page, int pageSize, string? search, int? shiftId, int? paymentMethodId = null, string? cashierUserId = null, CancellationToken ct = default)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 200);
 
         var query = db.PosSales.AsNoTracking().AsQueryable();
         if (shiftId is { } sid) query = query.Where(s => s.CashierShiftId == sid);
+        if (paymentMethodId is { } pmid) query = query.Where(s => s.PaymentMethodId == pmid);
+        if (!string.IsNullOrWhiteSpace(cashierUserId)) query = query.Where(s => s.CashierUserId == cashierUserId);
         if (!string.IsNullOrWhiteSpace(search)) query = query.Where(s => s.SaleNumber.Contains(search));
 
         var total = await query.CountAsync(ct);
@@ -157,6 +159,13 @@ public class PosSaleService(
 
         return new PagedResult<PosSaleListItemDto>(items, total, page, pageSize);
     }
+
+    public async Task<IReadOnlyList<PosCashierDto>> GetCashiersAsync(CancellationToken ct = default) =>
+        await db.PosSales.AsNoTracking()
+            .GroupBy(s => new { s.CashierUserId, s.CashierName })
+            .OrderBy(g => g.Key.CashierName)
+            .Select(g => new PosCashierDto(g.Key.CashierUserId, g.Key.CashierName))
+            .ToListAsync(ct);
 
 
     private static ValidationException Fail(string message) =>

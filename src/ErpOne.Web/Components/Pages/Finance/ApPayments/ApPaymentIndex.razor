@@ -30,6 +30,16 @@
         </div>
     }
 
+    <div class="toolbar">
+        <div class="chips">
+            <button class="chip @(_status is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">All</button>
+            @foreach (var s in Enum.GetValues<SupplierPaymentStatus>())
+            {
+                <button class="chip @(_status == s ? "on" : "")" @onclick="() => SetStatusAsync(s)">@s</button>
+            }
+        </div>
+    </div>
+
     @if (_page is null)
     {
         <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
@@ -69,9 +79,11 @@
     private PagedResult<SupplierPaymentListItemDto>? _page;
     private SupplierPaymentDashboardDto? _dash;
     private int _currentPage = 1;
+    private SupplierPaymentStatus? _status;
 
     protected override async Task OnInitializedAsync() { _dash = await PaymentService.GetDashboardAsync(); await LoadAsync(); }
-    private async Task LoadAsync() => _page = await PaymentService.GetPagedAsync(_currentPage, PageSize);
+    private async Task LoadAsync() => _page = await PaymentService.GetPagedAsync(_currentPage, PageSize, null, _status);
+    private async Task SetStatusAsync(SupplierPaymentStatus? status) { _status = status; _currentPage = 1; await LoadAsync(); }
     private async Task GoToPageAsync(int page) { _currentPage = page; await LoadAsync(); }
 
     private static string StatusClass(string s) => s switch

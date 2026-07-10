@@ -37,6 +37,13 @@
             <i class="bi bi-search"></i>
             <input placeholder="Search invoice no…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
         </div>
+        <div class="chips">
+            <button class="chip @(_status is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">All</button>
+            @foreach (var s in Enum.GetValues<SupplierInvoiceStatus>())
+            {
+                <button class="chip @(_status == s ? "on" : "")" @onclick="() => SetStatusAsync(s)">@s</button>
+            }
+        </div>
     </div>
 
     @if (_page is null)
@@ -93,6 +100,7 @@
     private SupplierInvoiceDashboardDto? _dash;
     private int _currentPage = 1;
     private string? _search;
+    private SupplierInvoiceStatus? _status;
 
     protected override async Task OnInitializedAsync()
     {
@@ -100,8 +108,9 @@
         await LoadAsync();
     }
 
-    private async Task LoadAsync() => _page = await InvoiceService.GetPagedAsync(_currentPage, PageSize, _search);
+    private async Task LoadAsync() => _page = await InvoiceService.GetPagedAsync(_currentPage, PageSize, _search, _status);
 
+    private async Task SetStatusAsync(SupplierInvoiceStatus? status) { _status = status; _currentPage = 1; await LoadAsync(); }
     private async Task OnSearchKeyUp(KeyboardEventArgs e) { _currentPage = 1; await LoadAsync(); }
     private async Task GoToPageAsync(int page) { _currentPage = page; await LoadAsync(); }
 

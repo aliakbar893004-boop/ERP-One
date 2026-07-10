@@ -3,7 +3,9 @@
 @rendermode InteractiveServer
 @using ErpOne.Application.Common
 @using ErpOne.Application.PosSales
+@using ErpOne.Application.PaymentMethods
 @inject IPosSaleService Pos
+@inject IPaymentMethodService PaymentMethods
 @inject NavigationManager Nav
 
 <PageTitle>Sales History</PageTitle>
@@ -30,6 +32,14 @@
             <i class="bi bi-search"></i>
             <input placeholder="Search receipt number…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
         </div>
+        <select class="ctl" style="max-width:220px" @bind="_methodId" @bind:after="ReloadAsync">
+            <option value="0">All methods</option>
+            @foreach (var m in _methods) { <option value="@m.Id">@m.Name</option> }
+        </select>
+        <select class="ctl" style="max-width:220px" @bind="_cashierUserId" @bind:after="ReloadAsync">
+            <option value="">All cashiers</option>
+            @foreach (var c in _cashiers) { <option value="@c.UserId">@c.Name</option> }
+        </select>
     </div>
 
     @if (_page is null)
@@ -97,11 +107,24 @@
     private PagedResult<PosSaleListItemDto>? _page;
     private int _currentPage = 1;
     private string? _search;
+    private int _methodId;
+    private string _cashierUserId = "";
+    private IReadOnlyList<PaymentMethodDto> _methods = [];
+    private IReadOnlyList<PosCashierDto> _cashiers = [];
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        _methods = await PaymentMethods.GetAllAsync();
+        _cashiers = await Pos.GetCashiersAsync();
+        await LoadAsync();
+    }
 
-    private async Task LoadAsync() => _page = await Pos.GetPagedAsync(_currentPage, PageSize, _search, null);
+    private async Task LoadAsync() =>
+        _page = await Pos.GetPagedAsync(_currentPage, PageSize, _search, null,
+            _methodId == 0 ? null : _methodId,
+            string.IsNullOrEmpty(_cashierUserId) ? null : _cashierUserId);
 
+    private async Task ReloadAsync() { _currentPage = 1; await LoadAsync(); }
     private async Task OnSearchKeyUp(KeyboardEventArgs e) { _currentPage = 1; await LoadAsync(); }
     private async Task GoToPageAsync(int page) { _currentPage = page; await LoadAsync(); }
     private void Open(int id) => Nav.NavigateTo($"/cashier/sales/{id}");
