@@ -8,6 +8,7 @@ using ErpOne.Application.Logs;
 using ErpOne.Application.ProductCategories;
 using ErpOne.Application.Products;
 using ErpOne.Application.Brands;
+using ErpOne.Application.CashBank;
 using ErpOne.Application.CompanySettings;
 using ErpOne.Application.Currencies;
 using ErpOne.Application.Numbering;
@@ -54,6 +55,7 @@ public static class DependencyInjection
         services.AddScoped<IDocumentNumberService, DocumentNumberService>();
         services.AddScoped<INumberSequenceService, NumberSequenceService>();
         services.AddScoped<ICompanySettingService, CompanySettingService>();
+        services.AddScoped<ICashBankAccountService, CashBankAccountService>();
         services.AddScoped<IWarehouseService, WarehouseService>();
         services.AddScoped<ITaxService, TaxService>();
         services.AddScoped<IPaymentMethodService, PaymentMethodService>();
