@@ -38,18 +38,18 @@
                                 @foreach (var s in _suppliers) { <option value="@s.Id">@s.Code — @s.Name</option> }
                             </select>
                         </div>
-                        <div class="f c3">
-                            <label class="fl">Payment date <span class="req">*</span></label>
-                            <input type="date" class="ctl" @bind="_paymentDate" />
-                        </div>
-                        <div class="f c3">
-                            <label class="fl">Cash / bank <span class="req">*</span></label>
+                        <div class="f c6">
+                            <label class="fl">Cash / bank account <span class="req">*</span></label>
                             <select class="ctl" @bind="_accountId">
                                 <option value="0">— Select account —</option>
                                 @foreach (var a in _accounts) { <option value="@a.Id">@a.Code — @a.Name (@a.Currency)</option> }
                             </select>
                         </div>
-                        <div class="f c12">
+                        <div class="f c4">
+                            <label class="fl">Payment date <span class="req">*</span></label>
+                            <input type="date" class="ctl" @bind="_paymentDate" />
+                        </div>
+                        <div class="f c8">
                             <label class="fl">Notes</label>
                             <input class="ctl" maxlength="500" @bind="_notes" placeholder="Optional" />
                         </div>
@@ -61,11 +61,11 @@
                 <div class="card-h"><span class="hd-ic"><i class="bi bi-receipt"></i></span><div class="hd-tx"><h2>Allocate to invoices</h2><p>Enter the amount to pay against each outstanding invoice.</p></div></div>
                 <div class="card-b">
                     @if (_supplierId == 0) { <div class="text-muted small">Select a supplier to list outstanding invoices.</div> }
-                    else if (_invoices.Count == 0) { <div class="text-muted small">No outstanding invoices for this supplier.</div> }
+                    else if (_rows.Count == 0) { <div class="text-muted small">No outstanding invoices for this supplier.</div> }
                     else
                     {
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-muted small">@_invoices.Count outstanding invoice(s)</span>
+                            <span class="text-muted small">@_rows.Count outstanding invoice(s)</span>
                             <div class="d-flex gap-2">
                                 <button type="button" class="btn btn-sm btn-outline-primary" @onclick="PayAll"><i class="bi bi-check2-all"></i> Pay all outstanding</button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ClearAll"><i class="bi bi-eraser"></i> Clear</button>
@@ -75,18 +75,17 @@
                             <table class="table align-middle">
                                 <thead class="table-light"><tr><th>Invoice</th><th>Due</th><th class="text-end">Grand total</th><th class="text-end">Outstanding</th><th class="text-end" style="width:210px">Pay amount</th></tr></thead>
                                 <tbody>
-                                    @foreach (var inv in _invoices)
+                                    @foreach (var r in _rows)
                                     {
-                                        <tr class="@(GetAlloc(inv.SupplierInvoiceId) > 0 ? "table-active" : "")">
-                                            <td class="mono">@inv.InvoiceNumber</td>
-                                            <td class="text-nowrap">@inv.DueDate.ToString("d MMM yyyy") <span class="badge @AgingClass(inv.DueDate)">@AgingLabel(inv.DueDate)</span></td>
-                                            <td class="text-end mono">@inv.GrandTotal.ToString("N2")</td>
-                                            <td class="text-end mono">@inv.Outstanding.ToString("N2")</td>
+                                        <tr class="@(r.Amount > 0 ? "table-active" : "")">
+                                            <td class="mono">@r.Inv.InvoiceNumber</td>
+                                            <td class="text-nowrap">@r.Inv.DueDate.ToString("d MMM yyyy") <span class="badge @AgingClass(r.Inv.DueDate)">@AgingLabel(r.Inv.DueDate)</span></td>
+                                            <td class="text-end mono">@r.Inv.GrandTotal.ToString("N2")</td>
+                                            <td class="text-end mono">@r.Inv.Outstanding.ToString("N2")</td>
                                             <td>
                                                 <div class="input-group input-group-sm">
-                                                    <input type="number" step="0.01" min="0" max="@inv.Outstanding" class="ctl mono" style="text-align:right"
-                                                           value="@GetAlloc(inv.SupplierInvoiceId)" @onchange="@(e => SetAlloc(inv.SupplierInvoiceId, e.Value?.ToString()))" />
-                                                    <button type="button" class="btn btn-outline-secondary" title="Pay full outstanding" @onclick="@(() => PayFull(inv.SupplierInvoiceId, inv.Outstanding))">Full</button>
+                                                    <input type="number" step="0.01" min="0" max="@r.Inv.Outstanding" class="ctl mono" style="text-align:right" @bind="r.Amount" />
+                                                    <button type="button" class="btn btn-outline-secondary" title="Pay full outstanding" @onclick="@(() => r.Amount = r.Inv.Outstanding)">Full</button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -97,7 +96,7 @@
 
                         <div class="d-flex justify-content-end mt-2">
                             <div class="pay-summary">
-                                <div><span class="k">@_alloc.Count(a => a.Value > 0) invoice(s) allocated</span></div>
+                                <div><span class="k">@_rows.Count(r => r.Amount > 0) invoice(s) allocated</span></div>
                                 <div class="grand"><span>Total payment</span><span class="mono">@Total().ToString("N2")</span></div>
                                 @if (SelectedAccount() is { } acc)
                                 {
@@ -127,13 +126,18 @@
 @code {
     [Parameter] public int? Id { get; set; }
 
+    private sealed class Row
+    {
+        public PayableInvoiceDto Inv { get; set; } = default!;
+        public decimal Amount { get; set; }
+    }
+
     private int _supplierId, _accountId;
     private DateTime _paymentDate = DateTime.Today;
     private string? _notes;
     private IReadOnlyList<SupplierDto> _suppliers = [];
     private IReadOnlyList<CashBankAccountDto> _accounts = [];
-    private List<PayableInvoiceDto> _invoices = [];
-    private readonly Dictionary<int, decimal> _alloc = new();
+    private List<Row> _rows = [];
     private bool _loading = true, _saving;
     private string? _error;
 
@@ -155,30 +159,23 @@
             if (p is not null)
             {
                 _supplierId = p.SupplierId; _accountId = p.CashBankAccountId; _paymentDate = p.PaymentDate; _notes = p.Notes;
-                _invoices = (await PaymentService.GetPayableInvoicesAsync(p.SupplierId)).ToList();
-                foreach (var a in p.Allocations) _alloc[a.SupplierInvoiceId] = a.Amount;
+                _rows = (await PaymentService.GetPayableInvoicesAsync(p.SupplierId)).Select(i => new Row { Inv = i }).ToList();
+                foreach (var a in p.Allocations)
+                {
+                    var row = _rows.FirstOrDefault(r => r.Inv.SupplierInvoiceId == a.SupplierInvoiceId);
+                    if (row is not null) row.Amount = a.Amount;
+                }
             }
         }
         _loading = false;
     }
 
-    private async Task OnSupplierChangedAsync()
-    {
-        _alloc.Clear();
-        _invoices = _supplierId == 0 ? [] : (await PaymentService.GetPayableInvoicesAsync(_supplierId)).ToList();
-    }
+    private async Task OnSupplierChangedAsync() =>
+        _rows = _supplierId == 0 ? [] : (await PaymentService.GetPayableInvoicesAsync(_supplierId)).Select(i => new Row { Inv = i }).ToList();
 
-    private decimal GetAlloc(int invId) => _alloc.GetValueOrDefault(invId, 0m);
-    private void SetAlloc(int invId, string? raw)
-    {
-        if (decimal.TryParse(raw, out var v) && v > 0) _alloc[invId] = v;
-        else _alloc.Remove(invId);
-    }
-    private decimal Total() => _alloc.Values.Sum();
-
-    private void PayFull(int invId, decimal outstanding) => _alloc[invId] = outstanding;
-    private void PayAll() { foreach (var inv in _invoices) _alloc[inv.SupplierInvoiceId] = inv.Outstanding; }
-    private void ClearAll() => _alloc.Clear();
+    private decimal Total() => _rows.Sum(r => r.Amount);
+    private void PayAll() { foreach (var r in _rows) r.Amount = r.Inv.Outstanding; }
+    private void ClearAll() { foreach (var r in _rows) r.Amount = 0m; }
 
     private CashBankAccountDto? SelectedAccount() => _accounts.FirstOrDefault(a => a.Id == _accountId);
 
@@ -200,7 +197,7 @@
         _error = null; _saving = true;
         try
         {
-            var allocations = _alloc.Where(kv => kv.Value > 0).Select(kv => new PaymentAllocationInput(kv.Key, kv.Value)).ToList();
+            var allocations = _rows.Where(r => r.Amount > 0).Select(r => new PaymentAllocationInput(r.Inv.SupplierInvoiceId, r.Amount)).ToList();
             if (Id is int id)
                 await PaymentService.UpdateDraftAsync(id, new UpdateSupplierPaymentRequest(_accountId, _paymentDate, _notes, allocations));
             else
