@@ -7,5 +7,6 @@ public enum ApprovalDocumentType
     SalesOrder,
     SupplierPayment,
     SupplierPaymentVoid,
-    CustomerReceiptVoid
+    CustomerReceiptVoid,
+    ExpenseVoid
 }

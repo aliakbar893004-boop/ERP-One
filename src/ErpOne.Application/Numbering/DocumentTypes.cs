@@ -13,4 +13,5 @@ public static class DocumentTypes
     public const string SupplierPayment = "SupplierPayment";
     public const string CustomerInvoice = "CustomerInvoice";
     public const string CustomerReceipt = "CustomerReceipt";
+    public const string Expense = "Expense";
 }

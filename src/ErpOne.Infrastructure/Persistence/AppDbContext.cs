@@ -52,6 +52,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
     public DbSet<CustomerInvoiceLine> CustomerInvoiceLines => Set<CustomerInvoiceLine>();
     public DbSet<CustomerReceipt> CustomerReceipts => Set<CustomerReceipt>();
     public DbSet<CustomerReceiptAllocation> CustomerReceiptAllocations => Set<CustomerReceiptAllocation>();
+    public DbSet<ExpenseCategory> ExpenseCategories => Set<ExpenseCategory>();
+    public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<ApprovalChainStep> ApprovalChainSteps => Set<ApprovalChainStep>();
     public DbSet<ApprovalStep> ApprovalSteps => Set<ApprovalStep>();
     public DbSet<ProductAttribute> ProductAttributes => Set<ProductAttribute>();
@@ -236,7 +238,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
                 new { Id = 7, Code = "SupplierInvoice", Prefix = "APV", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
                 new { Id = 8, Code = "SupplierPayment", Prefix = "APP", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
                 new { Id = 9, Code = "CustomerInvoice", Prefix = "ARV", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
-                new { Id = 10, Code = "CustomerReceipt", Prefix = "ARR", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" }
+                new { Id = 10, Code = "CustomerReceipt", Prefix = "ARR", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
+                new { Id = 11, Code = "Expense", Prefix = "EXP", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" }
             );
         });
 
@@ -729,6 +732,29 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             e.HasOne<CustomerInvoice>().WithMany().HasForeignKey(x => x.CustomerInvoiceId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<ExpenseCategory>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            e.HasIndex(x => x.Code).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+        });
+
+        modelBuilder.Entity<Expense>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ExpenseNumber).HasMaxLength(30).IsRequired();
+            e.HasIndex(x => x.ExpenseNumber).IsUnique();
+            e.Property(x => x.Currency).HasMaxLength(3).IsRequired();
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.Property(x => x.Payee).HasMaxLength(150);
+            e.Property(x => x.Description).HasMaxLength(300).IsRequired();
+            e.Property(x => x.Notes).HasMaxLength(500);
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            e.HasOne<CashBankAccount>().WithMany().HasForeignKey(x => x.CashBankAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ExpenseCategory>().WithMany().HasForeignKey(x => x.ExpenseCategoryId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelBuilder.Entity<ApprovalChainStep>(e =>
         {
             e.HasKey(x => x.Id);
@@ -815,6 +841,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             [nameof(Unit)] = "M_",
             [nameof(Brand)] = "M_",
             [nameof(Currency)] = "M_",
+            [nameof(ExpenseCategory)] = "M_",
             [nameof(NumberSequence)] = "M_",
             [nameof(NumberSequenceCounter)] = "M_",
             [nameof(CompanySetting)] = "M_",
@@ -838,6 +865,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             [nameof(CustomerInvoiceLine)] = "T_",
             [nameof(CustomerReceipt)] = "T_",
             [nameof(CustomerReceiptAllocation)] = "T_",
+            [nameof(Expense)] = "T_",
             [nameof(SalesOrder)] = "T_",
             [nameof(SalesOrderLine)] = "T_",
             [nameof(DeliveryOrder)] = "T_",
