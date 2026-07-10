@@ -24,6 +24,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
     public DbSet<Currency> Currencies => Set<Currency>();
     public DbSet<NumberSequence> NumberSequences => Set<NumberSequence>();
     public DbSet<NumberSequenceCounter> NumberSequenceCounters => Set<NumberSequenceCounter>();
+    public DbSet<CompanySetting> CompanySettings => Set<CompanySetting>();
     public DbSet<Warehouse> Warehouses => Set<Warehouse>();
     public DbSet<Tax> Taxes => Set<Tax>();
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
@@ -232,6 +233,28 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             e.Property(x => x.PeriodKey).HasMaxLength(12).IsRequired();
             e.HasIndex(x => new { x.SequenceCode, x.PeriodKey }).IsUnique();
             e.Property(x => x.Version).IsConcurrencyToken();
+        });
+
+        modelBuilder.Entity<CompanySetting>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.CompanyName).HasMaxLength(200);
+            e.Property(x => x.Address).HasMaxLength(400);
+            e.Property(x => x.Phone).HasMaxLength(40);
+            e.Property(x => x.Email).HasMaxLength(120);
+            e.Property(x => x.TaxId).HasMaxLength(40);
+            e.Property(x => x.LogoUrl).HasMaxLength(400);
+            e.Property(x => x.ReceiptHeader).HasMaxLength(500);
+            e.Property(x => x.ReceiptFooter).HasMaxLength(500);
+
+            // Baris tunggal default agar service selalu punya row untuk di-update.
+            e.HasData(new
+            {
+                Id = 1,
+                CompanyName = (string?)"ERP_One",
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                CreatedBy = (string?)"system"
+            });
         });
 
         modelBuilder.Entity<Warehouse>(e =>
@@ -605,6 +628,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             [nameof(Currency)] = "M_",
             [nameof(NumberSequence)] = "M_",
             [nameof(NumberSequenceCounter)] = "M_",
+            [nameof(CompanySetting)] = "M_",
             [nameof(Warehouse)] = "M_",
             [nameof(Tax)] = "M_",
             [nameof(PaymentMethod)] = "M_",
