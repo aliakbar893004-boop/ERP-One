@@ -3,6 +3,7 @@
 @rendermode InteractiveServer
 @using ErpOne.Application.PosSales
 @inject IPosSaleService Pos
+@inject ICompanySettingService CompanyService
 @inject IJSRuntime JS
 
 <PageTitle>@(_sale?.SaleNumber ?? "Sale")</PageTitle>
@@ -147,8 +148,12 @@
 @if (_sale is not null)
 {
     <div class="pos-receipt">
-        <div class="rc-title">@_sale.WarehouseName</div>
-        <div class="rc-sub">Sales Receipt · @_sale.SaleNumber<br />@_sale.SaleDate.ToString("dd MMM yyyy HH:mm") · @_sale.CashierName</div>
+        <div class="rc-title">@(string.IsNullOrWhiteSpace(_company?.CompanyName) ? _sale.WarehouseName : _company!.CompanyName)</div>
+        @if (!string.IsNullOrWhiteSpace(_company?.Address)) { <div class="rc-sub">@_company!.Address</div> }
+        @if (!string.IsNullOrWhiteSpace(_company?.Phone)) { <div class="rc-sub">@_company!.Phone</div> }
+        @if (!string.IsNullOrWhiteSpace(_company?.TaxId)) { <div class="rc-sub">NPWP: @_company!.TaxId</div> }
+        @if (!string.IsNullOrWhiteSpace(_company?.ReceiptHeader)) { <div class="rc-sub">@_company!.ReceiptHeader</div> }
+        <div class="rc-sub">@_sale.WarehouseName · @_sale.SaleNumber<br />@_sale.SaleDate.ToString("dd MMM yyyy HH:mm") · @_sale.CashierName</div>
         <table>
             @foreach (var l in _sale.Lines)
             {
@@ -174,7 +179,7 @@
                 <tr><td>Change</td><td class="rc-r">@_sale.ChangeGiven.ToString("N0")</td></tr>
             }
         </table>
-        <div class="rc-foot">Thank you for your visit 🙏</div>
+        <div class="rc-foot">@(string.IsNullOrWhiteSpace(_company?.ReceiptFooter) ? "Thank you for your visit 🙏" : _company!.ReceiptFooter)</div>
     </div>
 }
 
@@ -182,11 +187,13 @@
     [Parameter] public int Id { get; set; }
 
     private PosSaleDto? _sale;
+    private CompanySettingDto? _company;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
         _sale = await Pos.GetByIdAsync(Id);
+        _company = await CompanyService.GetAsync();
         _loading = false;
     }
 
