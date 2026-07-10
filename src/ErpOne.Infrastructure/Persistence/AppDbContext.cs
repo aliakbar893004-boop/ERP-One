@@ -21,6 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
     public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<Brand> Brands => Set<Brand>();
+    public DbSet<Currency> Currencies => Set<Currency>();
     public DbSet<Warehouse> Warehouses => Set<Warehouse>();
     public DbSet<Tax> Taxes => Set<Tax>();
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
@@ -176,6 +177,29 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             e.HasIndex(x => x.Code).IsUnique();
             e.Property(x => x.Name).HasMaxLength(100).IsRequired();
             e.Property(x => x.Description).HasMaxLength(300);
+        });
+
+        modelBuilder.Entity<Currency>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(3).IsRequired();
+            e.HasIndex(x => x.Code).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(60).IsRequired();
+            e.Property(x => x.Symbol).HasMaxLength(6).IsRequired();
+
+            // Base currency default (IDR). HasData butuh nilai statik.
+            e.HasData(new
+            {
+                Id = 1,
+                Code = "IDR",
+                Name = "Rupiah",
+                Symbol = "Rp",
+                DecimalPlaces = 0,
+                IsBase = true,
+                IsActive = true,
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                CreatedBy = (string?)"system"
+            });
         });
 
         modelBuilder.Entity<Warehouse>(e =>
@@ -546,6 +570,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             [nameof(AttributeValue)] = "M_",
             [nameof(Unit)] = "M_",
             [nameof(Brand)] = "M_",
+            [nameof(Currency)] = "M_",
             [nameof(Warehouse)] = "M_",
             [nameof(Tax)] = "M_",
             [nameof(PaymentMethod)] = "M_",
