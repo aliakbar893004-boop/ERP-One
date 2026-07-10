@@ -22,6 +22,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<Brand> Brands => Set<Brand>();
     public DbSet<Currency> Currencies => Set<Currency>();
+    public DbSet<NumberSequence> NumberSequences => Set<NumberSequence>();
+    public DbSet<NumberSequenceCounter> NumberSequenceCounters => Set<NumberSequenceCounter>();
     public DbSet<Warehouse> Warehouses => Set<Warehouse>();
     public DbSet<Tax> Taxes => Set<Tax>();
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
@@ -200,6 +202,36 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
                 CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 CreatedBy = (string?)"system"
             });
+        });
+
+        modelBuilder.Entity<NumberSequence>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(40).IsRequired();
+            e.HasIndex(x => x.Code).IsUnique();
+            e.Property(x => x.Prefix).HasMaxLength(10).IsRequired();
+            e.Property(x => x.DateFormat).HasMaxLength(12);
+            e.Property(x => x.Separator).HasMaxLength(3);
+            e.Property(x => x.ResetPeriod).HasConversion<string>().HasMaxLength(10).IsRequired();
+
+            var seedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            e.HasData(
+                new { Id = 1, Code = "PurchaseOrder", Prefix = "PO",    DateFormat = "yyyyMM",   Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
+                new { Id = 2, Code = "SalesOrder",    Prefix = "SO",    DateFormat = "yyyyMM",   Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
+                new { Id = 3, Code = "GoodsReceipt",  Prefix = "GRN",   DateFormat = "yyyyMM",   Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
+                new { Id = 4, Code = "DeliveryOrder", Prefix = "DO",    DateFormat = "yyyyMM",   Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
+                new { Id = 5, Code = "PosSale",       Prefix = "POS",   DateFormat = "yyyyMMdd", Padding = 4, ResetPeriod = ResetPeriod.Daily,   Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
+                new { Id = 6, Code = "CashierShift",  Prefix = "SHIFT", DateFormat = "yyyyMMdd", Padding = 4, ResetPeriod = ResetPeriod.Daily,   Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" }
+            );
+        });
+
+        modelBuilder.Entity<NumberSequenceCounter>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.SequenceCode).HasMaxLength(40).IsRequired();
+            e.Property(x => x.PeriodKey).HasMaxLength(12).IsRequired();
+            e.HasIndex(x => new { x.SequenceCode, x.PeriodKey }).IsUnique();
+            e.Property(x => x.Version).IsConcurrencyToken();
         });
 
         modelBuilder.Entity<Warehouse>(e =>
@@ -571,6 +603,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             [nameof(Unit)] = "M_",
             [nameof(Brand)] = "M_",
             [nameof(Currency)] = "M_",
+            [nameof(NumberSequence)] = "M_",
+            [nameof(NumberSequenceCounter)] = "M_",
             [nameof(Warehouse)] = "M_",
             [nameof(Tax)] = "M_",
             [nameof(PaymentMethod)] = "M_",
