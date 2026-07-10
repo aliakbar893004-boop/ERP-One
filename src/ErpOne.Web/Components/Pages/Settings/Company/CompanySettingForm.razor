@@ -1,0 +1,144 @@
+@page "/settings/company"
+@attribute [Authorize(Policy = "settings.company.index")]
+@rendermode InteractiveServer
+@inject ICompanySettingService CompanyService
+@inject IFileStorage FileStorage
+@inject IAuthorizationService Auth
+@inject SwalService Swal
+
+<PageTitle>Company Profile</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs">
+            <span>Settings</span><i class="bi bi-chevron-right"></i><span class="here">Company Profile</span>
+        </div>
+        <h1>Company Profile</h1>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+        }
+
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-building-fill"></i></span>
+                    <div class="hd-tx">
+                        <h2>Company information</h2>
+                        <p>Shown on the POS receipt and printed documents.</p>
+                    </div>
+                </div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c8">
+                            <label class="fl">Company name</label>
+                            <input class="ctl" maxlength="200" @bind="_companyName" />
+                        </div>
+                        <div class="f c4">
+                            <label class="fl">Tax ID (NPWP)</label>
+                            <input class="ctl" maxlength="40" @bind="_taxId" />
+                        </div>
+                        <div class="f c12">
+                            <label class="fl">Address</label>
+                            <textarea class="ctl" rows="2" maxlength="400" @bind="_address"></textarea>
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Phone</label>
+                            <input class="ctl" maxlength="40" @bind="_phone" />
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Email</label>
+                            <input class="ctl" maxlength="120" @bind="_email" />
+                        </div>
+                        <div class="f c12">
+                            <label class="fl">Logo</label>
+                            @if (!string.IsNullOrEmpty(_logoUrl))
+                            {
+                                <div class="mb-2"><img src="@_logoUrl" alt="Logo" style="max-height:64px" /></div>
+                            }
+                            <InputFile OnChange="OnLogoSelected" accept="image/*" disabled="@(!_canEdit)" />
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Receipt header</label>
+                            <textarea class="ctl" rows="2" maxlength="500" @bind="_receiptHeader" placeholder="Text above the receipt items"></textarea>
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Receipt footer</label>
+                            <textarea class="ctl" rows="2" maxlength="500" @bind="_receiptFooter" placeholder="e.g. Thank you for your visit"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="pf-footer">
+                <div class="in">
+                    <a class="btn btn-ghost" href="/"><i class="bi bi-x-lg"></i> Close</a>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@(_saving || !_canEdit)">
+                        @if (_saving) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> }
+                        else { <i class="bi bi-check2"></i> }
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string? _companyName, _address, _phone, _email, _taxId, _logoUrl, _receiptHeader, _receiptFooter;
+    private bool _loading = true, _saving, _canEdit;
+    private string? _error;
+
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateTask;
+        _canEdit = (await Auth.AuthorizeAsync(state.User, AppMenus.Perm("settings.company", "edit"))).Succeeded;
+
+        var s = await CompanyService.GetAsync();
+        _companyName = s.CompanyName; _address = s.Address; _phone = s.Phone; _email = s.Email;
+        _taxId = s.TaxId; _logoUrl = s.LogoUrl; _receiptHeader = s.ReceiptHeader; _receiptFooter = s.ReceiptFooter;
+        _loading = false;
+    }
+
+    private async Task OnLogoSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+            await using var stream = file.OpenReadStream(maxAllowedSize: 4 * 1024 * 1024); // 4 MB
+            var stored = await FileStorage.SaveAsync(stream, file.Name, "uploads/company");
+            _logoUrl = "/" + stored.RelativePath;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Logo upload failed: {ex.Message}";
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null;
+        _saving = true;
+        try
+        {
+            await CompanyService.UpdateAsync(new UpdateCompanySettingRequest(
+                _companyName, _address, _phone, _email, _taxId, _logoUrl, _receiptHeader, _receiptFooter));
+            await Swal.ToastAsync("success", "Company profile saved");
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally { _saving = false; }
+    }
+}

@@ -71,6 +71,7 @@ public static class AppMenus
         [
             new("settings.users",    "User",      "bi-person-fill",               CRUD),
             new("settings.roles",           "Role",           "bi-shield-fill",               CRUD),
+            new("settings.company",         "Company Profile", "bi-building-fill-gear",       [ActIndex, ActEdit]),
             new("settings.approval-chains", "Approval Chain", "bi-diagram-3-fill",            CRUD),
             new("settings.document-numbering", "Document Numbering", "bi-123",                [ActIndex, ActEdit]),
             new("settings.errorlog",        "Error Log",      "bi-exclamation-triangle-fill", ViewOnly),
