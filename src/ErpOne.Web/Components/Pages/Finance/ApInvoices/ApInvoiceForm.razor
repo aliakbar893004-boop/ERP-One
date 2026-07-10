@@ -87,24 +87,71 @@
                             <div class="table-responsive">
                                 <table class="table align-middle">
                                     <thead class="table-light">
-                                        <tr><th style="width:44px"></th><th>GRN</th><th>PO</th><th style="width:120px">Received</th><th class="text-end" style="width:160px">Amount</th></tr>
+                                        <tr>
+                                            <th style="width:34px"></th>
+                                            <th style="width:34px"><input type="checkbox" checked="@AllSelected()" @onchange="@(e => ToggleAll((bool)e.Value!))" title="Select all" /></th>
+                                            <th>GRN</th>
+                                            <th>PO</th>
+                                            <th style="width:110px">Received</th>
+                                            <th style="width:130px">Items</th>
+                                            <th class="text-end" style="width:150px">Amount</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
                                         @foreach (var g in _grns)
                                         {
-                                            <tr>
+                                            <tr class="@(_selected.Contains(g.GoodsReceiptId) ? "table-active" : "")">
+                                                <td><button type="button" class="btn btn-sm btn-link p-0" @onclick="@(() => ToggleExpand(g.GoodsReceiptId))" title="Show items"><i class="bi @(_expanded.Contains(g.GoodsReceiptId) ? "bi-chevron-down" : "bi-chevron-right")"></i></button></td>
                                                 <td><input type="checkbox" checked="@_selected.Contains(g.GoodsReceiptId)" @onchange="@(e => ToggleGrn(g.GoodsReceiptId, (bool)e.Value!))" /></td>
                                                 <td class="mono">@g.GrnNumber</td>
                                                 <td class="mono">@g.PoNumber</td>
-                                                <td>@g.ReceiptDate.ToString("d MMM yyyy")</td>
+                                                <td class="text-nowrap">@g.ReceiptDate.ToString("d MMM yyyy")</td>
+                                                <td class="text-muted small">@g.Lines.Count item · @g.Lines.Sum(l => l.Quantity) pcs</td>
                                                 <td class="text-end mono">@g.GrandTotal.ToString("N2")</td>
                                             </tr>
+                                            @if (_expanded.Contains(g.GoodsReceiptId))
+                                            {
+                                                <tr class="grn-detail">
+                                                    <td></td>
+                                                    <td colspan="6">
+                                                        <table class="table table-sm mb-2">
+                                                            <thead>
+                                                                <tr><th>Product</th><th class="text-end">Qty</th><th class="text-end">Unit price</th><th class="text-end">Disc %</th><th class="text-end">Tax %</th><th class="text-end">Line total</th></tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach (var l in g.Lines)
+                                                                {
+                                                                    <tr>
+                                                                        <td>@l.ProductName <span class="text-muted small mono">· @l.Sku</span></td>
+                                                                        <td class="text-end">@l.Quantity</td>
+                                                                        <td class="text-end mono">@l.UnitPrice.ToString("N2")</td>
+                                                                        <td class="text-end">@l.DiscountPercent.ToString("0.##")</td>
+                                                                        <td class="text-end">@l.TaxRateSnapshot.ToString("0.##")</td>
+                                                                        <td class="text-end mono">@l.LineTotal.ToString("N2")</td>
+                                                                    </tr>
+                                                                }
+                                                            </tbody>
+                                                            <tfoot class="text-muted">
+                                                                <tr><td colspan="5" class="text-end">Subtotal</td><td class="text-end mono">@g.Lines.Sum(l => l.LineSubtotal).ToString("N2")</td></tr>
+                                                                <tr><td colspan="5" class="text-end">Discount</td><td class="text-end mono">@g.Lines.Sum(l => l.LineDiscount).ToString("N2")</td></tr>
+                                                                <tr><td colspan="5" class="text-end">Tax</td><td class="text-end mono">@g.Lines.Sum(l => l.LineTax).ToString("N2")</td></tr>
+                                                            </tfoot>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            }
                                         }
                                     </tbody>
-                                    <tfoot>
-                                        <tr><td colspan="4" class="text-end fw-semibold">Selected total</td><td class="text-end mono fw-semibold">@SelectedTotal().ToString("N2")</td></tr>
-                                    </tfoot>
                                 </table>
+                            </div>
+
+                            <div class="d-flex justify-content-end mt-2">
+                                <div class="sel-summary">
+                                    <div><span class="k">@_selected.Count GRN selected</span></div>
+                                    <div><span>Subtotal</span><span class="mono">@SelectedSubtotal().ToString("N2")</span></div>
+                                    <div><span>Tax</span><span class="mono">@SelectedTax().ToString("N2")</span></div>
+                                    <div class="grand"><span>Total</span><span class="mono">@SelectedTotal().ToString("N2")</span></div>
+                                </div>
                             </div>
                         }
                     </div>
@@ -136,6 +183,7 @@
     private IReadOnlyList<SupplierDto> _suppliers = [];
     private List<UninvoicedGrnDto> _grns = [];
     private readonly HashSet<int> _selected = [];
+    private readonly HashSet<int> _expanded = [];
     private bool _loading = true, _saving;
     private string? _error;
 
@@ -166,12 +214,24 @@
     private async Task OnSupplierChangedAsync()
     {
         _selected.Clear();
+        _expanded.Clear();
         _grns = _supplierId == 0 ? [] : (await InvoiceService.GetUninvoicedGrnsAsync(_supplierId)).ToList();
     }
 
     private void ToggleGrn(int grnId, bool on) { if (on) _selected.Add(grnId); else _selected.Remove(grnId); }
+    private void ToggleExpand(int grnId) { if (!_expanded.Add(grnId)) _expanded.Remove(grnId); }
 
-    private decimal SelectedTotal() => _grns.Where(g => _selected.Contains(g.GoodsReceiptId)).Sum(g => g.GrandTotal);
+    private bool AllSelected() => _grns.Count > 0 && _grns.All(g => _selected.Contains(g.GoodsReceiptId));
+    private void ToggleAll(bool on)
+    {
+        _selected.Clear();
+        if (on) foreach (var g in _grns) _selected.Add(g.GoodsReceiptId);
+    }
+
+    private IEnumerable<UninvoicedGrnDto> Chosen() => _grns.Where(g => _selected.Contains(g.GoodsReceiptId));
+    private decimal SelectedSubtotal() => Chosen().SelectMany(g => g.Lines).Sum(l => l.LineSubtotal);
+    private decimal SelectedTax() => Chosen().SelectMany(g => g.Lines).Sum(l => l.LineTax);
+    private decimal SelectedTotal() => Chosen().Sum(g => g.GrandTotal);
 
     private async Task SaveAsync()
     {

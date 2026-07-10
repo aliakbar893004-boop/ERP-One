@@ -1,0 +1,17 @@
+/* Nested GRN line preview */
+.grn-detail > td { background: var(--field, #FBFCFD); }
+
+/* Selected-GRN summary box */
+.sel-summary {
+    min-width: 260px;
+    background: var(--field, #FBFCFD);
+    border: 1px solid var(--line, #E9EDF2);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 0.875rem;
+}
+.sel-summary > div { display: flex; justify-content: space-between; gap: 24px; padding: 2px 0; }
+.sel-summary .k { font-weight: 700; color: var(--muted, #64748B); font-size: 0.75rem; text-transform: uppercase; letter-spacing: .04em; }
+.sel-summary .mono { font-variant-numeric: tabular-nums; }
+.sel-summary .grand { border-top: 1.5px solid var(--line, #E9EDF2); margin-top: 4px; padding-top: 6px; font-weight: 800; }
+.sel-summary .grand .mono { color: var(--accent-deep, #077E57); font-size: 1.0625rem; }
