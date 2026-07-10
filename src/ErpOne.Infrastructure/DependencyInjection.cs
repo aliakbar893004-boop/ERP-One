@@ -26,6 +26,7 @@ using ErpOne.Application.PurchaseOrders;
 using ErpOne.Application.SalesOrders;
 using ErpOne.Application.CustomerInvoices;
 using ErpOne.Application.CustomerReceipts;
+using ErpOne.Application.Expenses;
 using ErpOne.Application.SupplierInvoices;
 using ErpOne.Application.SupplierPayments;
 using ErpOne.Application.DeliveryOrders;
@@ -64,6 +65,8 @@ public static class DependencyInjection
         services.AddScoped<ISupplierPaymentService, SupplierPaymentService>();
         services.AddScoped<ICustomerInvoiceService, CustomerInvoiceService>();
         services.AddScoped<ICustomerReceiptService, CustomerReceiptService>();
+        services.AddScoped<IExpenseCategoryService, ExpenseCategoryService>();
+        services.AddScoped<IExpenseService, ExpenseService>();
         services.AddScoped<IWarehouseService, WarehouseService>();
         services.AddScoped<ITaxService, TaxService>();
         services.AddScoped<IPaymentMethodService, PaymentMethodService>();
