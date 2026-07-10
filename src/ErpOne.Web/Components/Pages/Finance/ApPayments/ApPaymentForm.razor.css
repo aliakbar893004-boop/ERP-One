@@ -1,0 +1,15 @@
+/* Allocation summary box */
+.pay-summary {
+    min-width: 300px;
+    background: var(--field, #FBFCFD);
+    border: 1px solid var(--line, #E9EDF2);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 0.875rem;
+}
+.pay-summary > div { display: flex; justify-content: space-between; gap: 24px; padding: 2px 0; }
+.pay-summary .k { font-weight: 700; color: var(--muted, #64748B); font-size: 0.75rem; text-transform: uppercase; letter-spacing: .04em; }
+.pay-summary .mono { font-variant-numeric: tabular-nums; }
+.pay-summary .mono.neg { color: var(--danger, #E1453B); }
+.pay-summary .grand { border-top: 1.5px solid var(--line, #E9EDF2); margin-top: 4px; padding-top: 6px; font-weight: 800; }
+.pay-summary .grand .mono { color: var(--accent-deep, #077E57); font-size: 1.0625rem; }
