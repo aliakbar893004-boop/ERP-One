@@ -1,0 +1,86 @@
+@page "/finance/expenses"
+@attribute [Authorize(Policy = "finance.expenses.index")]
+@rendermode InteractiveServer
+@inject IExpenseService ExpenseService
+@inject NavigationManager Nav
+
+<PageTitle>Expenses</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Finance</span><span class="sep">·</span><span class="here">Expenses</span></nav>
+            <h1>Expenses</h1>
+            <p>Operational expenses paid from cash/bank accounts.</p>
+        </div>
+        <AuthorizeView Policy="finance.expenses.create">
+            <Authorized>
+                <div class="pi-actions"><a class="btn btn-primary" href="/finance/expenses/new"><i class="bi bi-plus-lg"></i> New expense</a></div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    @if (_dash is not null)
+    {
+        <div class="cr-kpis mb-3">
+            <div class="cr-kpi"><div class="tx"><div class="v">@_dash.Total</div><div class="l">Total</div></div></div>
+            <div class="cr-kpi"><div class="tx"><div class="v">@_dash.Posted</div><div class="l">Posted</div></div></div>
+            <div class="cr-kpi"><div class="tx"><div class="v">@_dash.Voided</div><div class="l">Voided</div></div></div>
+            <div class="cr-kpi accent"><div class="tx"><div class="v">Rp @_dash.PostedThisMonth.ToString("N0")</div><div class="l">Expense total</div></div></div>
+        </div>
+    }
+
+    <div class="toolbar">
+        <div class="search">
+            <i class="bi bi-search"></i>
+            <input placeholder="Search no, payee, description…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-wallet2"></i></div><p>No expenses yet.</p></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th style="width:150px">No.</th><th style="width:110px">Date</th><th>Category</th><th>Description</th><th>Account</th><th class="text-end" style="width:140px">Amount</th><th class="text-center" style="width:100px">Status</th></tr></thead>
+                    <tbody>
+                        @foreach (var x in _page.Items)
+                        {
+                            <tr style="cursor:pointer" @onclick="@(() => Nav.NavigateTo($"/finance/expenses/{x.Id}"))">
+                                <td class="code mono">@x.ExpenseNumber</td>
+                                <td class="code">@x.ExpenseDate.ToString("d MMM yyyy")</td>
+                                <td>@x.CategoryName</td>
+                                <td class="nm">@x.Description</td>
+                                <td>@x.CashBankAccountName</td>
+                                <td class="text-end mono">@x.Amount.ToString("N2")</td>
+                                <td class="text-center"><span class="badge @(x.Status == "Voided" ? "bg-danger-subtle text-danger-emphasis" : "bg-success-subtle text-success-emphasis")">@x.Status</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (_page.TotalPages > 1) { <div class="card-foot"><Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" /></div> }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<ExpenseListItemDto>? _page;
+    private ExpenseDashboardDto? _dash;
+    private int _currentPage = 1;
+    private string? _search;
+
+    protected override async Task OnInitializedAsync() { _dash = await ExpenseService.GetDashboardAsync(); await LoadAsync(); }
+    private async Task LoadAsync() => _page = await ExpenseService.GetPagedAsync(_currentPage, PageSize, _search);
+    private async Task OnSearchKeyUp(KeyboardEventArgs e) { _currentPage = 1; await LoadAsync(); }
+    private async Task GoToPageAsync(int page) { _currentPage = page; await LoadAsync(); }
+}

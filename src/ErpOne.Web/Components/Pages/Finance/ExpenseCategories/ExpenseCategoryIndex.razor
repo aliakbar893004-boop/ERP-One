@@ -1,0 +1,87 @@
+@page "/finance/expense-categories"
+@attribute [Authorize(Policy = "finance.expense-categories.index")]
+@rendermode InteractiveServer
+@inject IExpenseCategoryService CategoryService
+@inject SwalService Swal
+
+<PageTitle>Expense Categories</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Finance</span><span class="sep">·</span><span class="here">Expense Categories</span></nav>
+            <h1>Expense Categories</h1>
+            <p>Categories for operational expenses.</p>
+        </div>
+        <AuthorizeView Policy="finance.expense-categories.create">
+            <Authorized>
+                <div class="pi-actions"><a class="btn btn-primary" href="/finance/expense-categories/new"><i class="bi bi-plus-lg"></i> Add category</a></div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <div class="toolbar">
+        <div class="search">
+            <i class="bi bi-search"></i>
+            <input placeholder="Search code or name…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-tags"></i></div><p>No categories yet.</p></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th style="width:160px">Code</th><th>Name</th><th style="width:90px" class="text-center">Active</th><th class="text-end pe-3" style="width:120px"></th></tr></thead>
+                    <tbody>
+                        @foreach (var item in _page.Items)
+                        {
+                            <tr>
+                                <td class="code mono">@item.Code</td>
+                                <td class="nm">@item.Name</td>
+                                <td class="text-center">@(item.IsActive ? "✔" : "—")</td>
+                                <td class="text-end pe-3 text-nowrap">
+                                    <AuthorizeView Policy="finance.expense-categories.edit"><Authorized>
+                                        <a class="btn btn-sm btn-outline-primary me-1" href="@($"/finance/expense-categories/{item.Id}/edit")" title="Edit"><i class="bi bi-pencil"></i></a>
+                                    </Authorized></AuthorizeView>
+                                    <AuthorizeView Policy="finance.expense-categories.delete"><Authorized>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(item.Id, item.Name)" title="Delete"><i class="bi bi-trash3"></i></button>
+                                    </Authorized></AuthorizeView>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (_page.TotalPages > 1) { <div class="card-foot"><Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" /></div> }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<ExpenseCategoryDto>? _page;
+    private int _currentPage = 1;
+    private string? _search;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+    private async Task LoadAsync() => _page = await CategoryService.GetPagedAsync(_currentPage, PageSize, _search);
+    private async Task OnSearchKeyUp(KeyboardEventArgs e) { _currentPage = 1; await LoadAsync(); }
+    private async Task GoToPageAsync(int page) { _currentPage = page; await LoadAsync(); }
+
+    private async Task DeleteAsync(int id, string name)
+    {
+        if (!await Swal.ConfirmAsync("Delete category?", $"\"{name}\" will be permanently removed.")) return;
+        await CategoryService.DeleteAsync(id);
+        await LoadAsync();
+        await Swal.ToastAsync("success", "Category deleted");
+    }
+}

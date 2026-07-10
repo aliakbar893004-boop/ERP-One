@@ -76,6 +76,8 @@ public static class AppMenus
             new("finance.ap-payments", "Supplier Payments", "bi-cash-coin", SupplierPaymentActions),
             new("finance.ar-invoices", "Customer Invoices", "bi-receipt-cutoff", CRUD),
             new("finance.ar-receipts", "Customer Receipts", "bi-cash-stack", [ActIndex, ActCreate, ActVoid]),
+            new("finance.expense-categories", "Expense Categories", "bi-tags", CRUD),
+            new("finance.expenses", "Expenses", "bi-wallet2", [ActIndex, ActCreate, ActVoid]),
         ]),
         new("Settings",
         [

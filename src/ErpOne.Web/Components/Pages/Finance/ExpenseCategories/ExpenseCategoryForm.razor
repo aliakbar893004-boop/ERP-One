@@ -1,0 +1,106 @@
+@page "/finance/expense-categories/new"
+@page "/finance/expense-categories/{Id:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using FluentValidation
+@inject IExpenseCategoryService CategoryService
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+
+<PageTitle>@Title</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/finance/expense-categories">Finance</a><i class="bi bi-chevron-right"></i>
+            <a href="/finance/expense-categories">Expense Categories</a><i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+        <h1>@Title</h1>
+    </div>
+
+    @if (_loading) { <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div> }
+    else if (_notFound) { <div class="cf-alert warn"><i class="bi bi-exclamation-triangle"></i> Category not found.</div> }
+    else
+    {
+        @if (_error is not null) { <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h"><span class="hd-ic"><i class="bi bi-tags"></i></span><div class="hd-tx"><h2>Category information</h2><p>An operational expense category.</p></div></div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c4">
+                            <label class="fl">Code <span class="req">*</span></label>
+                            <input class="ctl mono up @(_codeError is not null ? "bad" : "")" placeholder="RENT" maxlength="20" @bind="_code" @bind:event="oninput" />
+                            @if (_codeError is not null) { <div class="err-txt">@_codeError</div> }
+                        </div>
+                        <div class="f c8">
+                            <label class="fl">Name <span class="req">*</span></label>
+                            <input class="ctl @(_nameError is not null ? "bad" : "")" placeholder="Office Rent" maxlength="100" @bind="_name" @bind:event="oninput" />
+                            @if (_nameError is not null) { <div class="err-txt">@_nameError</div> }
+                        </div>
+                        <div class="f c12 d-flex align-items-end">
+                            <label class="fl-check"><input type="checkbox" @bind="_isActive" /> Active</label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <div class="pf-footer">
+                <div class="in">
+                    <span class="note"><span class="req">*</span> required fields</span>
+                    <a class="btn btn-ghost" href="/finance/expense-categories"><i class="bi bi-x-lg"></i> Cancel</a>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                        @if (_saving) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> } else { <i class="bi bi-check2"></i> }
+                        Save category
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private string _code = "", _name = "";
+    private bool _isActive = true, _loading = true, _saving, _notFound;
+    private string? _error, _codeError, _nameError;
+
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+    private string Title => Id is null ? "Add Category" : "Edit Category";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateTask;
+        var perm = Id is null ? AppMenus.Perm("finance.expense-categories", "create") : AppMenus.Perm("finance.expense-categories", "edit");
+        if (!(await Auth.AuthorizeAsync(state.User, perm)).Succeeded) { Nav.NavigateTo("/finance/expense-categories"); return; }
+
+        if (Id is int id)
+        {
+            var c = await CategoryService.GetByIdAsync(id);
+            if (c is null) _notFound = true;
+            else { _code = c.Code; _name = c.Name; _isActive = c.IsActive; }
+        }
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = _codeError = _nameError = null; _saving = true;
+        try
+        {
+            if (Id is int id) await CategoryService.UpdateAsync(id, new UpdateExpenseCategoryRequest(_code, _name, _isActive));
+            else await CategoryService.CreateAsync(new CreateExpenseCategoryRequest(_code, _name, _isActive));
+            Nav.NavigateTo("/finance/expense-categories");
+        }
+        catch (ValidationException ex)
+        {
+            foreach (var e in ex.Errors)
+            {
+                if (e.PropertyName == nameof(CreateExpenseCategoryRequest.Code)) _codeError = e.ErrorMessage;
+                else if (e.PropertyName == nameof(CreateExpenseCategoryRequest.Name)) _nameError = e.ErrorMessage;
+                else _error = e.ErrorMessage;
+            }
+        }
+        finally { _saving = false; }
+    }
+}

@@ -1,0 +1,118 @@
+@page "/finance/expenses/new"
+@attribute [Authorize(Policy = "finance.expenses.create")]
+@rendermode InteractiveServer
+@using FluentValidation
+@inject IExpenseService ExpenseService
+@inject IExpenseCategoryService CategoryService
+@inject ICashBankAccountService AccountService
+@inject NavigationManager Nav
+
+<PageTitle>New Expense</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/finance/expenses">Finance</a><i class="bi bi-chevron-right"></i>
+            <a href="/finance/expenses">Expenses</a><i class="bi bi-chevron-right"></i>
+            <span class="here">New</span>
+        </div>
+        <h1>New Expense</h1>
+    </div>
+
+    @if (_loading) { <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div> }
+    else
+    {
+        @if (_error is not null) { <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h"><span class="hd-ic"><i class="bi bi-wallet2"></i></span><div class="hd-tx"><h2>Expense</h2><p>Record an operational expense paid from a cash/bank account.</p></div></div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c6">
+                            <label class="fl">Category <span class="req">*</span></label>
+                            <select class="ctl" @bind="_categoryId">
+                                <option value="0">— Select category —</option>
+                                @foreach (var c in _categories) { <option value="@c.Id">@c.Code — @c.Name</option> }
+                            </select>
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Paid from (cash/bank) <span class="req">*</span></label>
+                            <select class="ctl" @bind="_accountId">
+                                <option value="0">— Select account —</option>
+                                @foreach (var a in _accounts) { <option value="@a.Id">@a.Code — @a.Name (@a.Currency)</option> }
+                            </select>
+                        </div>
+                        <div class="f c4">
+                            <label class="fl">Date <span class="req">*</span></label>
+                            <input type="date" class="ctl" @bind="_date" />
+                        </div>
+                        <div class="f c4">
+                            <label class="fl">Amount <span class="req">*</span></label>
+                            <input type="number" step="0.01" min="0" class="ctl mono" @bind="_amount" />
+                        </div>
+                        <div class="f c4">
+                            <label class="fl">Payee</label>
+                            <input class="ctl" maxlength="150" @bind="_payee" placeholder="Optional" />
+                        </div>
+                        <div class="f c12">
+                            <label class="fl">Description <span class="req">*</span></label>
+                            <input class="ctl" maxlength="300" @bind="_description" placeholder="What is this expense for?" />
+                        </div>
+                        <div class="f c12">
+                            <label class="fl">Notes</label>
+                            <input class="ctl" maxlength="500" @bind="_notes" placeholder="Optional" />
+                        </div>
+                    </div>
+                    @if (SelectedAccount() is { } acc)
+                    {
+                        <div class="text-muted small mt-2">@acc.Name balance: <span class="mono">@acc.CurrentBalance.ToString("N2")</span> → after: <span class="mono">@((acc.CurrentBalance - _amount).ToString("N2"))</span></div>
+                    }
+                </div>
+            </section>
+            <div class="pf-footer">
+                <div class="in">
+                    <span class="note"><span class="req">*</span> required fields</span>
+                    <a class="btn btn-ghost" href="/finance/expenses"><i class="bi bi-x-lg"></i> Cancel</a>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@(_saving || _categoryId == 0 || _accountId == 0 || _amount <= 0)">
+                        @if (_saving) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> } else { <i class="bi bi-check2"></i> }
+                        Post expense
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private int _categoryId, _accountId;
+    private DateTime _date = DateTime.Today;
+    private decimal _amount;
+    private string? _payee, _notes;
+    private string _description = "";
+    private IReadOnlyList<ExpenseCategoryDto> _categories = [];
+    private IReadOnlyList<CashBankAccountDto> _accounts = [];
+    private bool _loading = true, _saving;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories = await CategoryService.GetActiveAsync();
+        _accounts = await AccountService.GetActiveAsync();
+        _loading = false;
+    }
+
+    private CashBankAccountDto? SelectedAccount() => _accounts.FirstOrDefault(a => a.Id == _accountId);
+
+    private async Task SaveAsync()
+    {
+        _error = null; _saving = true;
+        try
+        {
+            await ExpenseService.CreateAsync(new CreateExpenseRequest(_date, _accountId, _categoryId, _amount, _payee, _description, _notes));
+            Nav.NavigateTo("/finance/expenses");
+        }
+        catch (ValidationException ex) { _error = ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Validation failed."; }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+}
