@@ -16,6 +16,6 @@ public interface ISupplierPaymentService
     Task SubmitAsync(int id, CancellationToken ct = default);
     Task ApproveAsync(int id, string actingUserName, Func<string, bool> isInRole, CancellationToken ct = default);
     Task RejectAsync(int id, string actingUserName, Func<string, bool> isInRole, string reason, CancellationToken ct = default);
-    Task VoidAsync(int id, CancellationToken ct = default);
+    Task VoidAsync(int id, string authorizedBy, CancellationToken ct = default);
     Task<IReadOnlyList<ApprovalStepDto>> GetApprovalStepsAsync(int id, CancellationToken ct = default);
 }

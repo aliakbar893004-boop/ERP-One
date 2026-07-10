@@ -165,15 +165,18 @@ public class SupplierPaymentService(
         await tx.CommitAsync(ct);
     }
 
-    public async Task VoidAsync(int id, CancellationToken ct = default)
+    public async Task VoidAsync(int id, string authorizedBy, CancellationToken ct = default)
     {
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var payment = await db.SupplierPayments.Include(p => p.Allocations).FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw Fail("Payment not found.");
         payment.Void();
 
+        var note = string.IsNullOrWhiteSpace(authorizedBy)
+            ? $"Void {payment.PaymentNumber}"
+            : $"Void {payment.PaymentNumber} authorized by {authorizedBy}";
         db.CashBankMovements.Add(new CashBankMovement(payment.CashBankAccountId, DateTime.UtcNow.Date,
-            CashBankMovementDirection.In, payment.Amount, "SupplierPaymentVoid", payment.Id, $"Void {payment.PaymentNumber}"));
+            CashBankMovementDirection.In, payment.Amount, "SupplierPaymentVoid", payment.Id, note));
 
         foreach (var a in payment.Allocations)
         {

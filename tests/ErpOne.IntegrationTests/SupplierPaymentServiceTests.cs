@@ -112,7 +112,7 @@ public class SupplierPaymentServiceTests : IClassFixture<CustomWebApplicationFac
         var draft = await pay.CreateDraftAsync(new CreateSupplierPaymentRequest(
             supplierId, accountId, new DateTime(2026, 7, 5), null, [new PaymentAllocationInput(invoiceId, grand)]));
         await pay.SubmitAsync(draft.Id);
-        await pay.VoidAsync(draft.Id);
+        await pay.VoidAsync(draft.Id, "tester");
 
         var voided = await pay.GetByIdAsync(draft.Id);
         Assert.Equal("Voided", voided!.Status);

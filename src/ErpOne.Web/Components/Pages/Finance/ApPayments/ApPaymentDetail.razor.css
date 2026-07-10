@@ -88,3 +88,11 @@
 .tl .ti { font-weight:700; font-size:0.84375rem; }
 .tl .meta { font-size:0.75rem; color:var(--muted); margin-top:1px; }
 .tl .note { font-size:0.75rem; color:var(--danger); margin-top:2px; }
+
+/* Void authorization modal */
+.auth-overlay { position:fixed; inset:0; background:rgba(15,27,45,.45); display:grid; place-items:center; z-index:1050; padding:16px; }
+.auth-modal { width:100%; max-width:400px; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:22px 24px; box-shadow:0 24px 60px -20px rgba(15,27,45,.5); }
+.auth-modal h3 { font-size:1.0625rem; font-weight:800; margin:0 0 4px; display:flex; align-items:center; gap:8px; }
+.auth-modal h3 i { color:var(--danger); }
+.auth-modal p { font-size:0.84375rem; color:var(--muted); margin:0 0 14px; }
+.auth-modal .fl { display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-bottom:4px; }
