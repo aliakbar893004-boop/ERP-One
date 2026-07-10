@@ -67,6 +67,10 @@ public static class AppMenus
             new("cashier.shifts", "Sesi Kasir", "bi-cash-stack", CashierShiftActions),
             new("cashier.pos", "Kasir (POS)", "bi-bag-check-fill", PosActions),
         ]),
+        new("Finance",
+        [
+            new("finance.cash-bank", "Cash & Bank", "bi-bank", CRUD),
+        ]),
         new("Settings",
         [
             new("settings.users",    "User",      "bi-person-fill",               CRUD),

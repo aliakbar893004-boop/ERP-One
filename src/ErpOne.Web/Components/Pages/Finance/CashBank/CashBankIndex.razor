@@ -1,0 +1,143 @@
+@page "/finance/cash-bank"
+@attribute [Authorize(Policy = "finance.cash-bank.index")]
+@rendermode InteractiveServer
+@inject ICashBankAccountService AccountService
+@inject NavigationManager Nav
+@inject SwalService Swal
+
+<PageTitle>Cash & Bank</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Finance</span><span class="sep">·</span><span class="here">Cash &amp; Bank</span></nav>
+            <h1>Cash &amp; Bank</h1>
+            <p>Accounts that money is paid from and received into.</p>
+        </div>
+        <AuthorizeView Policy="finance.cash-bank.create">
+            <Authorized>
+                <div class="pi-actions">
+                    <a class="btn btn-primary" href="/finance/cash-bank/new"><i class="bi bi-plus-lg"></i> Add account</a>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <div class="toolbar">
+        <div class="search">
+            <i class="bi bi-search"></i>
+            <input placeholder="Search code or name…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty">
+            <div class="empty-ic"><i class="bi bi-bank"></i></div>
+            <p>
+                @if (string.IsNullOrEmpty(_search))
+                {
+                    <span>No accounts yet. <a href="/finance/cash-bank/new">Add the first one.</a></span>
+                }
+                else
+                {
+                    <span>No accounts match your search.</span>
+                }
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-top">
+                <span class="n">Showing <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> of <b>@_page.Total.ToString("N0")</b></span>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:120px">Code</th>
+                            <th>Name</th>
+                            <th style="width:90px">Type</th>
+                            <th>Bank / Account</th>
+                            <th style="width:90px">Currency</th>
+                            <th class="text-end" style="width:150px">Opening</th>
+                            <th style="width:80px" class="text-center">Active</th>
+                            <th class="text-end pe-3" style="width:120px"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in _page.Items)
+                        {
+                            <tr>
+                                <td class="code mono">@item.Code</td>
+                                <td class="nm">@item.Name</td>
+                                <td>@item.Type</td>
+                                <td>@(item.Type == "Bank" ? $"{item.BankName} · {item.AccountNumber}" : "—")</td>
+                                <td class="mono">@item.Currency</td>
+                                <td class="text-end mono">@item.OpeningBalance.ToString("N2")</td>
+                                <td class="text-center">@(item.IsActive ? "✔" : "—")</td>
+                                <td class="text-end pe-3 text-nowrap">
+                                    <AuthorizeView Policy="finance.cash-bank.edit">
+                                        <Authorized>
+                                            <a class="btn btn-sm btn-outline-primary me-1" href="@($"/finance/cash-bank/{item.Id}/edit")" title="Edit"><i class="bi bi-pencil"></i></a>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                    <AuthorizeView Policy="finance.cash-bank.delete">
+                                        <Authorized>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(item.Id, item.Name)" title="Delete"><i class="bi bi-trash3"></i></button>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (_page.TotalPages > 1)
+            {
+                <div class="card-foot">
+                    <Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<CashBankAccountDto>? _page;
+    private int _currentPage = 1;
+    private string? _search;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() =>
+        _page = await AccountService.GetPagedAsync(_currentPage, PageSize, _search);
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        _currentPage = 1;
+        await LoadAsync();
+    }
+
+    private async Task GoToPageAsync(int page)
+    {
+        _currentPage = page;
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(int id, string name)
+    {
+        if (!await Swal.ConfirmAsync("Delete account?", $"\"{name}\" will be permanently removed."))
+            return;
+        await AccountService.DeleteAsync(id);
+        await LoadAsync();
+        await Swal.ToastAsync("success", "Account deleted");
+    }
+}
