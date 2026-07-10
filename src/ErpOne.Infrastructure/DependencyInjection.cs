@@ -8,6 +8,7 @@ using ErpOne.Application.Logs;
 using ErpOne.Application.ProductCategories;
 using ErpOne.Application.Products;
 using ErpOne.Application.Brands;
+using ErpOne.Application.Currencies;
 using ErpOne.Application.Units;
 using ErpOne.Application.Warehouses;
 using ErpOne.Application.Taxes;
@@ -47,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IProductCategoryService, ProductCategoryService>();
         services.AddScoped<IUnitService, UnitService>();
         services.AddScoped<IBrandService, BrandService>();
+        services.AddScoped<ICurrencyService, CurrencyService>();
         services.AddScoped<IWarehouseService, WarehouseService>();
         services.AddScoped<ITaxService, TaxService>();
         services.AddScoped<IPaymentMethodService, PaymentMethodService>();
