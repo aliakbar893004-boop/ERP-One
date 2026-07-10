@@ -1,0 +1,76 @@
+@page "/finance/ar-receipts"
+@attribute [Authorize(Policy = "finance.ar-receipts.index")]
+@rendermode InteractiveServer
+@inject ICustomerReceiptService ReceiptService
+@inject NavigationManager Nav
+
+<PageTitle>Customer Receipts</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Finance</span><span class="sep">·</span><span class="here">Customer Receipts</span></nav>
+            <h1>Customer Receipts</h1>
+            <p>Payments received from customers against invoices.</p>
+        </div>
+        <AuthorizeView Policy="finance.ar-receipts.create">
+            <Authorized>
+                <div class="pi-actions"><a class="btn btn-primary" href="/finance/ar-receipts/new"><i class="bi bi-plus-lg"></i> New receipt</a></div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    @if (_dash is not null)
+    {
+        <div class="cr-kpis mb-3">
+            <div class="cr-kpi"><div class="tx"><div class="v">@_dash.Total</div><div class="l">Total</div></div></div>
+            <div class="cr-kpi"><div class="tx"><div class="v">@_dash.Posted</div><div class="l">Posted</div></div></div>
+            <div class="cr-kpi"><div class="tx"><div class="v">@_dash.Voided</div><div class="l">Voided</div></div></div>
+            <div class="cr-kpi accent"><div class="tx"><div class="v">Rp @_dash.PostedThisMonth.ToString("N0")</div><div class="l">Received total</div></div></div>
+        </div>
+    }
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-cash-stack"></i></div><p>No receipts yet.</p></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th style="width:150px">Receipt</th><th>Customer</th><th style="width:110px">Date</th><th>Account</th><th class="text-end" style="width:140px">Amount</th><th class="text-center" style="width:110px">Status</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in _page.Items)
+                        {
+                            <tr style="cursor:pointer" @onclick="@(() => Nav.NavigateTo($"/finance/ar-receipts/{r.Id}"))">
+                                <td class="code mono">@r.ReceiptNumber</td>
+                                <td class="nm">@r.CustomerName</td>
+                                <td class="code">@r.ReceiptDate.ToString("d MMM yyyy")</td>
+                                <td>@r.CashBankAccountName</td>
+                                <td class="text-end mono">@r.Amount.ToString("N2")</td>
+                                <td class="text-center"><span class="badge @(r.Status == "Voided" ? "bg-danger-subtle text-danger-emphasis" : "bg-success-subtle text-success-emphasis")">@r.Status</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (_page.TotalPages > 1) { <div class="card-foot"><Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" /></div> }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<CustomerReceiptListItemDto>? _page;
+    private CustomerReceiptDashboardDto? _dash;
+    private int _currentPage = 1;
+
+    protected override async Task OnInitializedAsync() { _dash = await ReceiptService.GetDashboardAsync(); await LoadAsync(); }
+    private async Task LoadAsync() => _page = await ReceiptService.GetPagedAsync(_currentPage, PageSize);
+    private async Task GoToPageAsync(int page) { _currentPage = page; await LoadAsync(); }
+}

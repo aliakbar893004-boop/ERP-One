@@ -1,0 +1,166 @@
+@page "/finance/ar-receipts/{Id:int}"
+@attribute [Authorize(Policy = "finance.ar-receipts.index")]
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Identity
+@using ErpOne.Application.Approvals
+@inject ICustomerReceiptService ReceiptService
+@inject IApprovalChainService ApprovalChains
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<ApplicationRole> RoleManager
+@inject SwalService Swal
+
+<PageTitle>@(_r?.ReceiptNumber ?? "Receipt")</PageTitle>
+
+@if (_loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+}
+else if (_r is null)
+{
+    <div class="pf"><div class="pf-alert err"><i class="bi bi-exclamation-octagon"></i> Receipt not found.</div></div>
+}
+else
+{
+    <div class="pf">
+        <div class="pf-top">
+            <div class="crumbs"><a href="/finance/ar-receipts">Customer Receipts</a><i class="bi bi-chevron-right"></i><span class="here">@_r.ReceiptNumber</span></div>
+        </div>
+        <div class="pd-head">
+            <h1>@_r.ReceiptNumber</h1>
+            <span class="badge @(_r.Status == "Voided" ? "b-danger" : "b-done")">@_r.Status</span>
+            <div class="actions">
+                @if (_r.Status == "Posted")
+                {
+                    <AuthorizeView Policy="finance.ar-receipts.void"><Authorized>
+                        <button class="btn btn-danger btn-sm" @onclick="OpenVoid" disabled="@_busy"><i class="bi bi-x-octagon"></i> Void</button>
+                    </Authorized></AuthorizeView>
+                }
+            </div>
+        </div>
+
+        @if (_showVoid)
+        {
+            <div class="auth-overlay" @onclick="@(() => _showVoid = false)">
+                <div class="auth-modal" @onclick:stopPropagation="true">
+                    <h3><i class="bi bi-shield-lock"></i> Void authorization</h3>
+                    <p>Enter the credentials of an authorized user to void this receipt.</p>
+                    @if (_voidError is not null) { <div class="pf-alert err">@_voidError</div> }
+                    <label class="fl">Username</label>
+                    <input class="ctl" @bind="_voidUser" autocomplete="off" />
+                    <label class="fl" style="margin-top:10px">Password</label>
+                    <input class="ctl" type="password" @bind="_voidPass" autocomplete="off" />
+                    <div class="row-end" style="margin-top:14px">
+                        <button class="btn btn-ghost btn-sm" @onclick="@(() => _showVoid = false)" disabled="@_busy">Cancel</button>
+                        <button class="btn btn-danger btn-sm" @onclick="ConfirmVoidAsync" disabled="@_busy">
+                            @if (_busy) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> }
+                            Authorize &amp; void
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <section class="card">
+            <div class="card-h"><span class="hd-ic"><i class="bi bi-cash-stack"></i></span><h2>Receipt</h2></div>
+            <div class="card-b">
+                <div class="info-grid">
+                    <div class="info-cell"><span class="k"><i class="bi bi-person-vcard"></i> Customer</span><span class="v">@_r.CustomerName</span></div>
+                    <div class="info-cell"><span class="k"><i class="bi bi-bank"></i> Received into</span><span class="v">@_r.CashBankAccountName</span></div>
+                    <div class="info-cell"><span class="k"><i class="bi bi-calendar3"></i> Date</span><span class="v">@_r.ReceiptDate.ToString("d MMM yyyy")</span></div>
+                    <div class="info-cell"><span class="k"><i class="bi bi-cash-stack"></i> Amount</span><span class="v">@_r.Currency @_r.Amount.ToString("N2")</span></div>
+                    @if (!string.IsNullOrWhiteSpace(_r.Notes)) { <div class="info-cell wide"><span class="k"><i class="bi bi-sticky"></i> Notes</span><span class="v">@_r.Notes</span></div> }
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-h"><span class="hd-ic"><i class="bi bi-list-ul"></i></span><h2>Allocations</h2></div>
+            <div class="card-b">
+                <table class="items">
+                    <thead><tr><th>Invoice</th><th>Due</th><th class="c">Status</th><th class="r">Grand total</th><th class="r">Outstanding</th><th class="r">Received</th></tr></thead>
+                    <tbody>
+                        @foreach (var a in _r.Allocations)
+                        {
+                            <tr>
+                                <td class="mono"><a href="@($"/finance/ar-invoices/{a.CustomerInvoiceId}")">@a.InvoiceNumber</a></td>
+                                <td class="text-nowrap">@a.DueDate.ToString("d MMM yyyy")</td>
+                                <td class="c"><span class="badge @InvStatusClass(a.InvoiceStatus)">@a.InvoiceStatus</span></td>
+                                <td class="r mono">@a.InvoiceGrandTotal.ToString("N2")</td>
+                                <td class="r mono">@a.InvoiceOutstanding.ToString("N2")</td>
+                                <td class="r mono total">@a.Amount.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot><tr><td colspan="5" class="r gt-l">Total received</td><td class="r grand">@_r.Amount.ToString("N2")</td></tr></tfoot>
+                </table>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private CustomerReceiptDto? _r;
+    private bool _loading = true, _busy, _showVoid;
+    private string _voidUser = "", _voidPass = "";
+    private string? _voidError;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() { _loading = true; _r = await ReceiptService.GetByIdAsync(Id); _loading = false; }
+
+    private void OpenVoid() { _voidError = null; _voidUser = ""; _voidPass = ""; _showVoid = true; }
+
+    private async Task ConfirmVoidAsync()
+    {
+        _voidError = null; _busy = true;
+        try
+        {
+            var authName = await VerifyVoidAuthorizerAsync(_voidUser, _voidPass);
+            if (authName is null) { _voidError = "Invalid credentials or user not authorized to void."; return; }
+            await ReceiptService.VoidAsync(Id, authName);
+            _showVoid = false; _voidUser = ""; _voidPass = "";
+            await LoadAsync();
+            await Swal.ToastAsync("success", "Receipt voided");
+        }
+        catch (Exception ex) { _voidError = ex.Message; }
+        finally { _busy = false; }
+    }
+
+    private async Task<string?> VerifyVoidAuthorizerAsync(string username, string password)
+    {
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password)) return null;
+        var user = await UserManager.FindByNameAsync(username.Trim());
+        if (user is null || !user.IsActive) return null;
+        if (!await UserManager.CheckPasswordAsync(user, password)) return null;
+
+        var userRoles = await UserManager.GetRolesAsync(user);
+        var voidRoles = (await ApprovalChains.GetByDocumentTypeAsync(ApprovalDocumentType.CustomerReceiptVoid))
+            .Select(s => s.RoleName).ToHashSet();
+
+        var authorized = voidRoles.Count > 0
+            ? userRoles.Any(voidRoles.Contains)
+            : await UserHasVoidPermissionAsync(userRoles);
+
+        return authorized ? (user.UserName ?? username) : null;
+    }
+
+    private async Task<bool> UserHasVoidPermissionAsync(IEnumerable<string> userRoles)
+    {
+        var perm = AppMenus.Perm("finance.ar-receipts", "void");
+        foreach (var roleName in userRoles)
+        {
+            var role = await RoleManager.FindByNameAsync(roleName);
+            if (role is null) continue;
+            var claims = await RoleManager.GetClaimsAsync(role);
+            if (claims.Any(c => c.Type == AppMenus.ClaimType && c.Value == perm)) return true;
+        }
+        return false;
+    }
+
+    private static string InvStatusClass(string s) => s switch
+    {
+        "Open" => "b-info", "PartiallyPaid" => "b-warn", "Paid" => "b-done", "Cancelled" => "b-cancel", _ => "b-draft"
+    };
+}
