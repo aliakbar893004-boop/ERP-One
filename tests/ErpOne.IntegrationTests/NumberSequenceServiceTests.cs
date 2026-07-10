@@ -14,15 +14,17 @@ public class NumberSequenceServiceTests : IClassFixture<CustomWebApplicationFact
     }
 
     [Fact]
-    public async Task GetAll_returns_six_seeded_sequences_with_samples()
+    public async Task GetAll_returns_seeded_sequences_with_samples()
     {
         using var scope = _factory.Services.CreateScope();
         var svc = scope.ServiceProvider.GetRequiredService<INumberSequenceService>();
 
         var all = await svc.GetAllAsync();
-        Assert.Equal(6, all.Count);
+        Assert.Equal(7, all.Count);   // 6 core documents + SupplierInvoice (APV)
         var po = all.Single(x => x.Code == DocumentTypes.PurchaseOrder);
         Assert.StartsWith("PO-", po.Sample);
+        var apv = all.Single(x => x.Code == DocumentTypes.SupplierInvoice);
+        Assert.StartsWith("APV-", apv.Sample);
     }
 
     [Fact]

@@ -70,6 +70,7 @@ public static class AppMenus
         new("Finance",
         [
             new("finance.cash-bank", "Cash & Bank", "bi-bank", CRUD),
+            new("finance.ap-invoices", "Supplier Invoices", "bi-receipt", CRUD),
         ]),
         new("Settings",
         [

@@ -1,0 +1,191 @@
+@page "/finance/ap-invoices/new"
+@page "/finance/ap-invoices/{Id:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using FluentValidation
+@inject ISupplierInvoiceService InvoiceService
+@inject ISupplierService SupplierService
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+
+<PageTitle>@Title</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/finance/ap-invoices">Finance</a><i class="bi bi-chevron-right"></i>
+            <a href="/finance/ap-invoices">Supplier Invoices</a><i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+        <h1>@Title</h1>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+    }
+    else
+    {
+        @if (_error is not null) { <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-receipt"></i></span>
+                    <div class="hd-tx"><h2>Invoice information</h2><p>Bill received against posted goods receipts.</p></div>
+                </div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c6">
+                            <label class="fl">Supplier <span class="req">*</span></label>
+                            <select class="ctl" @bind="_supplierId" @bind:after="OnSupplierChangedAsync" disabled="@(Id is not null)">
+                                <option value="0">— Select supplier —</option>
+                                @foreach (var s in _suppliers)
+                                {
+                                    <option value="@s.Id">@s.Code — @s.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="f c3">
+                            <label class="fl">Invoice date <span class="req">*</span></label>
+                            <input type="date" class="ctl" @bind="_invoiceDate" />
+                        </div>
+                        <div class="f c3">
+                            <label class="fl">Due date</label>
+                            <input type="date" class="ctl" @bind="_dueDate" />
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Supplier invoice no.</label>
+                            <input class="ctl" maxlength="60" @bind="_supplierInvoiceNo" placeholder="Supplier's physical invoice number" />
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Notes</label>
+                            <input class="ctl" maxlength="500" @bind="_notes" placeholder="Optional" />
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            @if (Id is null)
+            {
+                <section class="card">
+                    <div class="card-h">
+                        <span class="hd-ic"><i class="bi bi-box-seam"></i></span>
+                        <div class="hd-tx"><h2>Goods receipts to bill</h2><p>Select one or more uninvoiced, posted receipts.</p></div>
+                    </div>
+                    <div class="card-b">
+                        @if (_supplierId == 0)
+                        {
+                            <div class="text-muted small">Select a supplier to list uninvoiced receipts.</div>
+                        }
+                        else if (_grns.Count == 0)
+                        {
+                            <div class="text-muted small">No uninvoiced posted receipts for this supplier.</div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead class="table-light">
+                                        <tr><th style="width:44px"></th><th>GRN</th><th>PO</th><th style="width:120px">Received</th><th class="text-end" style="width:160px">Amount</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var g in _grns)
+                                        {
+                                            <tr>
+                                                <td><input type="checkbox" checked="@_selected.Contains(g.GoodsReceiptId)" @onchange="@(e => ToggleGrn(g.GoodsReceiptId, (bool)e.Value!))" /></td>
+                                                <td class="mono">@g.GrnNumber</td>
+                                                <td class="mono">@g.PoNumber</td>
+                                                <td>@g.ReceiptDate.ToString("d MMM yyyy")</td>
+                                                <td class="text-end mono">@g.GrandTotal.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tfoot>
+                                        <tr><td colspan="4" class="text-end fw-semibold">Selected total</td><td class="text-end mono fw-semibold">@SelectedTotal().ToString("N2")</td></tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+
+            <div class="pf-footer">
+                <div class="in">
+                    <span class="note"><span class="req">*</span> required fields</span>
+                    <a class="btn btn-ghost" href="/finance/ap-invoices"><i class="bi bi-x-lg"></i> Cancel</a>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@(_saving || (Id is null && _selected.Count == 0))">
+                        @if (_saving) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> }
+                        else { <i class="bi bi-check2"></i> }
+                        Save invoice
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private int _supplierId;
+    private DateTime _invoiceDate = DateTime.Today;
+    private DateTime? _dueDate;
+    private string? _supplierInvoiceNo, _notes;
+    private IReadOnlyList<SupplierDto> _suppliers = [];
+    private List<UninvoicedGrnDto> _grns = [];
+    private readonly HashSet<int> _selected = [];
+    private bool _loading = true, _saving;
+    private string? _error;
+
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private string Title => Id is null ? "New Supplier Invoice" : "Edit Supplier Invoice";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateTask;
+        var perm = Id is null ? AppMenus.Perm("finance.ap-invoices", "create") : AppMenus.Perm("finance.ap-invoices", "edit");
+        if (!(await Auth.AuthorizeAsync(state.User, perm)).Succeeded) { Nav.NavigateTo("/finance/ap-invoices"); return; }
+
+        _suppliers = await SupplierService.GetAllAsync();
+
+        if (Id is int id)
+        {
+            var inv = await InvoiceService.GetByIdAsync(id);
+            if (inv is not null)
+            {
+                _supplierId = inv.SupplierId; _invoiceDate = inv.InvoiceDate; _dueDate = inv.DueDate;
+                _supplierInvoiceNo = inv.SupplierInvoiceNo; _notes = inv.Notes;
+            }
+        }
+        _loading = false;
+    }
+
+    private async Task OnSupplierChangedAsync()
+    {
+        _selected.Clear();
+        _grns = _supplierId == 0 ? [] : (await InvoiceService.GetUninvoicedGrnsAsync(_supplierId)).ToList();
+    }
+
+    private void ToggleGrn(int grnId, bool on) { if (on) _selected.Add(grnId); else _selected.Remove(grnId); }
+
+    private decimal SelectedTotal() => _grns.Where(g => _selected.Contains(g.GoodsReceiptId)).Sum(g => g.GrandTotal);
+
+    private async Task SaveAsync()
+    {
+        _error = null; _saving = true;
+        try
+        {
+            if (Id is int id)
+                await InvoiceService.UpdateHeaderAsync(id, new UpdateSupplierInvoiceHeaderRequest(_invoiceDate, _dueDate ?? _invoiceDate, _supplierInvoiceNo, _notes));
+            else
+                await InvoiceService.CreateAsync(new CreateSupplierInvoiceRequest(_supplierId, _invoiceDate, _dueDate, _supplierInvoiceNo, _notes, _selected.ToList()));
+            Nav.NavigateTo("/finance/ap-invoices");
+        }
+        catch (ValidationException ex) { _error = ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Validation failed."; }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+}

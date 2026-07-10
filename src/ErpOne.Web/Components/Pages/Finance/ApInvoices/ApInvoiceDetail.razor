@@ -1,0 +1,129 @@
+@page "/finance/ap-invoices/{Id:int}"
+@attribute [Authorize(Policy = "finance.ap-invoices.index")]
+@rendermode InteractiveServer
+@inject ISupplierInvoiceService InvoiceService
+@inject NavigationManager Nav
+@inject SwalService Swal
+
+<PageTitle>@(_inv?.InvoiceNumber ?? "Invoice")</PageTitle>
+
+@if (_inv is null)
+{
+    <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+}
+else
+{
+    <div class="pf">
+        <div class="pf-top">
+            <div class="crumbs">
+                <a href="/finance/ap-invoices">Supplier Invoices</a><i class="bi bi-chevron-right"></i>
+                <span class="here">@_inv.InvoiceNumber</span>
+            </div>
+        </div>
+
+        <div class="pd-head">
+            <h1>@_inv.InvoiceNumber</h1>
+            <span class="badge @StatusClass(_inv.Status)">@_inv.Status</span>
+            <div class="actions">
+                @if (_inv.Status == "Open" && _inv.PaidAmount == 0)
+                {
+                    <AuthorizeView Policy="finance.ap-invoices.edit">
+                        <Authorized>
+                            <a class="btn btn-line btn-sm" href="@($"/finance/ap-invoices/{_inv.Id}/edit")"><i class="bi bi-pencil"></i> Edit header</a>
+                        </Authorized>
+                    </AuthorizeView>
+                }
+                @if (_inv.Status != "Cancelled" && _inv.PaidAmount == 0)
+                {
+                    <AuthorizeView Policy="finance.ap-invoices.delete">
+                        <Authorized>
+                            <button class="btn btn-danger btn-sm" @onclick="CancelAsync"><i class="bi bi-x-circle"></i> Cancel invoice</button>
+                        </Authorized>
+                    </AuthorizeView>
+                }
+            </div>
+        </div>
+
+        <section class="card">
+            <div class="card-h"><span class="hd-ic"><i class="bi bi-receipt"></i></span><h2>Invoice</h2></div>
+            <div class="card-b">
+                <div class="info-grid">
+                    <div class="info-cell"><span class="k"><i class="bi bi-truck"></i> Supplier</span><span class="v">@_inv.SupplierName</span></div>
+                    <div class="info-cell"><span class="k"><i class="bi bi-hash"></i> Supplier invoice no.</span><span class="v @(_inv.SupplierInvoiceNo is null ? "muted-v" : "")">@(_inv.SupplierInvoiceNo ?? "—")</span></div>
+                    <div class="info-cell"><span class="k"><i class="bi bi-calendar3"></i> Invoice date</span><span class="v">@_inv.InvoiceDate.ToString("d MMM yyyy")</span></div>
+                    <div class="info-cell"><span class="k"><i class="bi bi-calendar-check"></i> Due date</span><span class="v">@_inv.DueDate.ToString("d MMM yyyy")</span></div>
+                    <div class="info-cell"><span class="k"><i class="bi bi-currency-exchange"></i> Currency</span><span class="v">@_inv.Currency</span></div>
+                    <div class="info-cell"><span class="k"><i class="bi bi-cash-stack"></i> Outstanding</span><span class="v">@_inv.Outstanding.ToString("N2")</span></div>
+                    @if (!string.IsNullOrWhiteSpace(_inv.Notes))
+                    {
+                        <div class="info-cell wide"><span class="k"><i class="bi bi-sticky"></i> Notes</span><span class="v">@_inv.Notes</span></div>
+                    }
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-h"><span class="hd-ic"><i class="bi bi-list-ul"></i></span><h2>Lines</h2></div>
+            <div class="card-b">
+                <table class="items">
+                    <thead>
+                        <tr>
+                            <th>GRN</th><th>Product</th><th class="r">Qty</th><th class="r">Unit price</th>
+                            <th class="r">Disc %</th><th class="r">Tax %</th><th class="r">Line total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var l in _inv.Lines)
+                        {
+                            <tr>
+                                <td class="mono">@l.GrnNumber</td>
+                                <td><div class="prod"><span class="pn">@l.ProductName</span><span class="sku">@l.Sku</span></div></td>
+                                <td class="r">@l.Quantity</td>
+                                <td class="r mono">@l.UnitPrice.ToString("N2")</td>
+                                <td class="r">@l.DiscountPercent.ToString("0.##")</td>
+                                <td class="r">@l.TaxRateSnapshot.ToString("0.##")</td>
+                                <td class="r mono total">@l.LineTotal.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr><td colspan="6" class="r gt-l">Subtotal</td><td class="r mono">@_inv.Subtotal.ToString("N2")</td></tr>
+                        <tr><td colspan="6" class="r gt-l">Discount</td><td class="r mono">@_inv.DiscountTotal.ToString("N2")</td></tr>
+                        <tr><td colspan="6" class="r gt-l">Tax</td><td class="r mono">@_inv.TaxTotal.ToString("N2")</td></tr>
+                        <tr><td colspan="6" class="r gt-l">Grand total</td><td class="r grand">@_inv.GrandTotal.ToString("N2")</td></tr>
+                        <tr><td colspan="6" class="r gt-l">Paid</td><td class="r mono">@_inv.PaidAmount.ToString("N2")</td></tr>
+                        <tr><td colspan="6" class="r gt-l">Outstanding</td><td class="r grand">@_inv.Outstanding.ToString("N2")</td></tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private SupplierInvoiceDto? _inv;
+
+    protected override async Task OnInitializedAsync() => _inv = await InvoiceService.GetByIdAsync(Id);
+
+    private async Task CancelAsync()
+    {
+        if (!await Swal.ConfirmAsync("Cancel invoice?", "This releases its goods receipts to be invoiced again.")) return;
+        try
+        {
+            await InvoiceService.CancelAsync(Id);
+            await Swal.ToastAsync("success", "Invoice cancelled");
+            _inv = await InvoiceService.GetByIdAsync(Id);
+        }
+        catch (Exception ex) { await Swal.ToastAsync("error", ex.Message); }
+    }
+
+    private static string StatusClass(string s) => s switch
+    {
+        "Open" => "b-info",
+        "PartiallyPaid" => "b-warn",
+        "Paid" => "b-done",
+        "Cancelled" => "b-cancel",
+        _ => "b-draft"
+    };
+}
