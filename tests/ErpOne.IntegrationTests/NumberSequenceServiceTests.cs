@@ -20,11 +20,13 @@ public class NumberSequenceServiceTests : IClassFixture<CustomWebApplicationFact
         var svc = scope.ServiceProvider.GetRequiredService<INumberSequenceService>();
 
         var all = await svc.GetAllAsync();
-        Assert.Equal(7, all.Count);   // 6 core documents + SupplierInvoice (APV)
+        Assert.Equal(8, all.Count);   // 6 core + SupplierInvoice (APV) + SupplierPayment (APP)
         var po = all.Single(x => x.Code == DocumentTypes.PurchaseOrder);
         Assert.StartsWith("PO-", po.Sample);
         var apv = all.Single(x => x.Code == DocumentTypes.SupplierInvoice);
         Assert.StartsWith("APV-", apv.Sample);
+        var app = all.Single(x => x.Code == DocumentTypes.SupplierPayment);
+        Assert.StartsWith("APP-", app.Sample);
     }
 
     [Fact]

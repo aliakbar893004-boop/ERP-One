@@ -59,6 +59,13 @@ public static class BootstrapSeeder
             await db.SaveChangesAsync();
         }
 
+        // Seed rantai approval default untuk Supplier Payment (idempotent), mengikuti pola PO/SO.
+        if (!await db.ApprovalChainSteps.AnyAsync(c => c.DocumentType == ApprovalDocumentType.SupplierPayment))
+        {
+            db.ApprovalChainSteps.Add(new ApprovalChainStep(ApprovalDocumentType.SupplierPayment, 1, roleName));
+            await db.SaveChangesAsync();
+        }
+
         // Buat user admin jika belum ada
         var user = await userManager.FindByNameAsync(userName);
         if (user is null)

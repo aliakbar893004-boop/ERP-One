@@ -11,4 +11,5 @@ public interface ICashBankAccountService
     Task<CashBankAccountDto> CreateAsync(CreateCashBankAccountRequest request, CancellationToken ct = default);
     Task<bool> UpdateAsync(int id, UpdateCashBankAccountRequest request, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
+    Task<decimal> GetBalanceAsync(int id, CancellationToken ct = default);
 }

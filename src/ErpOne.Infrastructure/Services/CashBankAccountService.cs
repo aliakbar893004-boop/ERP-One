@@ -12,11 +12,19 @@ public class CashBankAccountService(
     IValidator<CreateCashBankAccountRequest> createValidator,
     IValidator<UpdateCashBankAccountRequest> updateValidator) : ICashBankAccountService
 {
-    public async Task<IReadOnlyList<CashBankAccountDto>> GetAllAsync(CancellationToken ct = default) =>
-        await db.CashBankAccounts.AsNoTracking().OrderBy(x => x.Code).Select(x => ToDto(x)).ToListAsync(ct);
+    public async Task<IReadOnlyList<CashBankAccountDto>> GetAllAsync(CancellationToken ct = default)
+    {
+        var list = await db.CashBankAccounts.AsNoTracking().OrderBy(x => x.Code).ToListAsync(ct);
+        var bal = await BalanceMapAsync(list.Select(x => x.Id).ToList(), ct);
+        return list.Select(x => ToDto(x, x.OpeningBalance + bal.GetValueOrDefault(x.Id, 0m))).ToList();
+    }
 
-    public async Task<IReadOnlyList<CashBankAccountDto>> GetActiveAsync(CancellationToken ct = default) =>
-        await db.CashBankAccounts.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Code).Select(x => ToDto(x)).ToListAsync(ct);
+    public async Task<IReadOnlyList<CashBankAccountDto>> GetActiveAsync(CancellationToken ct = default)
+    {
+        var list = await db.CashBankAccounts.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Code).ToListAsync(ct);
+        var bal = await BalanceMapAsync(list.Select(x => x.Id).ToList(), ct);
+        return list.Select(x => ToDto(x, x.OpeningBalance + bal.GetValueOrDefault(x.Id, 0m))).ToList();
+    }
 
     public async Task<PagedResult<CashBankAccountDto>> GetPagedAsync(int page, int pageSize, string? search = null, CancellationToken ct = default)
     {
@@ -28,9 +36,10 @@ public class CashBankAccountService(
             query = query.Where(x => x.Code.Contains(search) || x.Name.Contains(search));
 
         var total = await query.CountAsync(ct);
-        var items = await query.OrderBy(x => x.Code)
-            .Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(x => ToDto(x)).ToListAsync(ct);
+        var list = await query.OrderBy(x => x.Code)
+            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
+        var bal = await BalanceMapAsync(list.Select(x => x.Id).ToList(), ct);
+        var items = list.Select(x => ToDto(x, x.OpeningBalance + bal.GetValueOrDefault(x.Id, 0m))).ToList();
 
         return new PagedResult<CashBankAccountDto>(items, total, page, pageSize);
     }
@@ -38,7 +47,15 @@ public class CashBankAccountService(
     public async Task<CashBankAccountDto?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         var x = await db.CashBankAccounts.AsNoTracking().FirstOrDefaultAsync(e => e.Id == id, ct);
-        return x is null ? null : ToDto(x);
+        return x is null ? null : ToDto(x, await GetBalanceAsync(id, ct));
+    }
+
+    public async Task<decimal> GetBalanceAsync(int id, CancellationToken ct = default)
+    {
+        var opening = await db.CashBankAccounts.AsNoTracking().Where(a => a.Id == id).Select(a => a.OpeningBalance).FirstOrDefaultAsync(ct);
+        var inSum = await db.CashBankMovements.AsNoTracking().Where(m => m.CashBankAccountId == id && m.Direction == CashBankMovementDirection.In).SumAsync(m => (decimal?)m.Amount, ct) ?? 0m;
+        var outSum = await db.CashBankMovements.AsNoTracking().Where(m => m.CashBankAccountId == id && m.Direction == CashBankMovementDirection.Out).SumAsync(m => (decimal?)m.Amount, ct) ?? 0m;
+        return opening + inSum - outSum;
     }
 
     public async Task<CashBankAccountDto> CreateAsync(CreateCashBankAccountRequest request, CancellationToken ct = default)
@@ -51,7 +68,7 @@ public class CashBankAccountService(
             request.OpeningBalance, request.BankName, request.AccountNumber, request.AccountHolder, request.IsActive);
         db.CashBankAccounts.Add(entity);
         await db.SaveChangesAsync(ct);
-        return ToDto(entity);
+        return ToDto(entity, entity.OpeningBalance);
     }
 
     public async Task<bool> UpdateAsync(int id, UpdateCashBankAccountRequest request, CancellationToken ct = default)
@@ -78,6 +95,21 @@ public class CashBankAccountService(
         return true;
     }
 
+    private async Task<Dictionary<int, decimal>> BalanceMapAsync(List<int> ids, CancellationToken ct)
+    {
+        if (ids.Count == 0) return [];
+        var moves = await db.CashBankMovements.AsNoTracking().Where(m => ids.Contains(m.CashBankAccountId))
+            .GroupBy(m => m.CashBankAccountId)
+            .Select(g => new
+            {
+                Id = g.Key,
+                In = g.Where(x => x.Direction == CashBankMovementDirection.In).Sum(x => x.Amount),
+                Out = g.Where(x => x.Direction == CashBankMovementDirection.Out).Sum(x => x.Amount)
+            })
+            .ToListAsync(ct);
+        return moves.ToDictionary(m => m.Id, m => m.In - m.Out);
+    }
+
     private static CashBankType ParseType(string type) =>
         Enum.TryParse<CashBankType>(type, out var t) ? t : CashBankType.Cash;
 
@@ -93,7 +125,7 @@ public class CashBankAccountService(
             ]);
     }
 
-    private static CashBankAccountDto ToDto(CashBankAccount x) =>
+    private static CashBankAccountDto ToDto(CashBankAccount x, decimal currentBalance) =>
         new(x.Id, x.Code, x.Name, x.Type.ToString(), x.Currency, x.OpeningBalance,
-            x.BankName, x.AccountNumber, x.AccountHolder, x.IsActive, x.CreatedAt, x.CreatedBy);
+            x.BankName, x.AccountNumber, x.AccountHolder, x.IsActive, x.CreatedAt, x.CreatedBy, currentBalance);
 }
