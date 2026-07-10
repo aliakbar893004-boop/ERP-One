@@ -1,0 +1,238 @@
+@page "/finance/ar-invoices/new"
+@page "/finance/ar-invoices/{Id:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using FluentValidation
+@inject ICustomerInvoiceService InvoiceService
+@inject ICustomerService CustomerService
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+
+<PageTitle>@Title</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/finance/ar-invoices">Finance</a><i class="bi bi-chevron-right"></i>
+            <a href="/finance/ar-invoices">Customer Invoices</a><i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+        <h1>@Title</h1>
+    </div>
+
+    @if (_loading) { <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div> }
+    else
+    {
+        @if (_error is not null) { <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-receipt-cutoff"></i></span>
+                    <div class="hd-tx"><h2>Invoice information</h2><p>Bill issued against confirmed sales orders.</p></div>
+                </div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c6">
+                            <label class="fl">Customer <span class="req">*</span></label>
+                            <select class="ctl" @bind="_customerId" @bind:after="OnCustomerChangedAsync" disabled="@(Id is not null)">
+                                <option value="0">— Select customer —</option>
+                                @foreach (var c in _customers) { <option value="@c.Id">@c.Code — @c.Name</option> }
+                            </select>
+                        </div>
+                        <div class="f c3">
+                            <label class="fl">Invoice date <span class="req">*</span></label>
+                            <input type="date" class="ctl" @bind="_invoiceDate" />
+                        </div>
+                        <div class="f c3">
+                            <label class="fl">Due date</label>
+                            <input type="date" class="ctl" @bind="_dueDate" />
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Customer ref. (their PO no.)</label>
+                            <input class="ctl" maxlength="60" @bind="_customerRef" placeholder="Optional" />
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Notes</label>
+                            <input class="ctl" maxlength="500" @bind="_notes" placeholder="Optional" />
+                        </div>
+                    </div>
+
+                    @if (_credit is not null)
+                    {
+                        <div class="credit-panel @(SelectedTotal() > _credit.Available ? "over" : "")">
+                            <div><span class="k">Credit limit</span><span class="mono">@_credit.CreditLimit.ToString("N2")</span></div>
+                            <div><span class="k">Outstanding</span><span class="mono">@_credit.Outstanding.ToString("N2")</span></div>
+                            <div><span class="k">Available</span><span class="mono">@_credit.Available.ToString("N2")</span></div>
+                            @if (SelectedTotal() > _credit.Available)
+                            {
+                                <div class="warn"><i class="bi bi-exclamation-triangle"></i> This invoice (@SelectedTotal().ToString("N2")) exceeds available credit.</div>
+                            }
+                        </div>
+                    }
+                </div>
+            </section>
+
+            @if (Id is null)
+            {
+                <section class="card">
+                    <div class="card-h">
+                        <span class="hd-ic"><i class="bi bi-bag-check"></i></span>
+                        <div class="hd-tx"><h2>Sales orders to bill</h2><p>Select one or more confirmed, uninvoiced sales orders.</p></div>
+                    </div>
+                    <div class="card-b">
+                        @if (_customerId == 0) { <div class="text-muted small">Select a customer to list uninvoiced sales orders.</div> }
+                        else if (_sos.Count == 0) { <div class="text-muted small">No uninvoiced confirmed sales orders for this customer.</div> }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width:34px"></th>
+                                            <th style="width:34px"><input type="checkbox" checked="@AllSelected()" @onchange="@(e => ToggleAll((bool)e.Value!))" /></th>
+                                            <th>SO</th><th style="width:110px">Order date</th><th style="width:130px">Items</th><th class="text-end" style="width:150px">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var so in _sos)
+                                        {
+                                            <tr class="@(_selected.Contains(so.SalesOrderId) ? "table-active" : "")">
+                                                <td><button type="button" class="btn btn-sm btn-link p-0" @onclick="@(() => ToggleExpand(so.SalesOrderId))"><i class="bi @(_expanded.Contains(so.SalesOrderId) ? "bi-chevron-down" : "bi-chevron-right")"></i></button></td>
+                                                <td><input type="checkbox" checked="@_selected.Contains(so.SalesOrderId)" @onchange="@(e => ToggleSo(so.SalesOrderId, (bool)e.Value!))" /></td>
+                                                <td class="mono">@so.SoNumber</td>
+                                                <td class="text-nowrap">@so.OrderDate.ToString("d MMM yyyy")</td>
+                                                <td class="text-muted small">@so.Lines.Count item · @so.Lines.Sum(l => l.Quantity) pcs</td>
+                                                <td class="text-end mono">@so.GrandTotal.ToString("N2")</td>
+                                            </tr>
+                                            @if (_expanded.Contains(so.SalesOrderId))
+                                            {
+                                                <tr class="so-detail">
+                                                    <td></td>
+                                                    <td colspan="5">
+                                                        <table class="table table-sm mb-2">
+                                                            <thead><tr><th>Product</th><th class="text-end">Qty</th><th class="text-end">Unit price</th><th class="text-end">Disc %</th><th class="text-end">Tax %</th><th class="text-end">Line total</th></tr></thead>
+                                                            <tbody>
+                                                                @foreach (var l in so.Lines)
+                                                                {
+                                                                    <tr>
+                                                                        <td>@l.ProductName <span class="text-muted small mono">· @l.Sku</span></td>
+                                                                        <td class="text-end">@l.Quantity</td>
+                                                                        <td class="text-end mono">@l.UnitPrice.ToString("N2")</td>
+                                                                        <td class="text-end">@l.DiscountPercent.ToString("0.##")</td>
+                                                                        <td class="text-end">@l.TaxRateSnapshot.ToString("0.##")</td>
+                                                                        <td class="text-end mono">@l.LineTotal.ToString("N2")</td>
+                                                                    </tr>
+                                                                }
+                                                            </tbody>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="d-flex justify-content-end mt-2">
+                                <div class="sel-summary">
+                                    <div><span class="k">@_selected.Count SO selected</span></div>
+                                    <div><span>Subtotal</span><span class="mono">@SelectedSubtotal().ToString("N2")</span></div>
+                                    <div><span>Tax</span><span class="mono">@SelectedTax().ToString("N2")</span></div>
+                                    <div class="grand"><span>Total</span><span class="mono">@SelectedTotal().ToString("N2")</span></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+
+            <div class="pf-footer">
+                <div class="in">
+                    <span class="note"><span class="req">*</span> required fields</span>
+                    <a class="btn btn-ghost" href="/finance/ar-invoices"><i class="bi bi-x-lg"></i> Cancel</a>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@(_saving || (Id is null && _selected.Count == 0))">
+                        @if (_saving) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> }
+                        else { <i class="bi bi-check2"></i> }
+                        Save invoice
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private int _customerId;
+    private DateTime _invoiceDate = DateTime.Today;
+    private DateTime? _dueDate;
+    private string? _customerRef, _notes;
+    private IReadOnlyList<CustomerDto> _customers = [];
+    private List<UninvoicedSalesOrderDto> _sos = [];
+    private readonly HashSet<int> _selected = [];
+    private readonly HashSet<int> _expanded = [];
+    private CustomerCreditDto? _credit;
+    private bool _loading = true, _saving;
+    private string? _error;
+
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+    private string Title => Id is null ? "New Customer Invoice" : "Edit Customer Invoice";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateTask;
+        var perm = Id is null ? AppMenus.Perm("finance.ar-invoices", "create") : AppMenus.Perm("finance.ar-invoices", "edit");
+        if (!(await Auth.AuthorizeAsync(state.User, perm)).Succeeded) { Nav.NavigateTo("/finance/ar-invoices"); return; }
+
+        _customers = await CustomerService.GetAllAsync();
+
+        if (Id is int id)
+        {
+            var inv = await InvoiceService.GetByIdAsync(id);
+            if (inv is not null)
+            {
+                _customerId = inv.CustomerId; _invoiceDate = inv.InvoiceDate; _dueDate = inv.DueDate;
+                _customerRef = inv.CustomerRef; _notes = inv.Notes;
+                _credit = await InvoiceService.GetCustomerCreditAsync(inv.CustomerId);
+            }
+        }
+        _loading = false;
+    }
+
+    private async Task OnCustomerChangedAsync()
+    {
+        _selected.Clear();
+        _expanded.Clear();
+        if (_customerId == 0) { _sos = []; _credit = null; return; }
+        _sos = (await InvoiceService.GetUninvoicedSalesOrdersAsync(_customerId)).ToList();
+        _credit = await InvoiceService.GetCustomerCreditAsync(_customerId);
+    }
+
+    private void ToggleSo(int soId, bool on) { if (on) _selected.Add(soId); else _selected.Remove(soId); }
+    private void ToggleExpand(int soId) { if (!_expanded.Add(soId)) _expanded.Remove(soId); }
+    private bool AllSelected() => _sos.Count > 0 && _sos.All(s => _selected.Contains(s.SalesOrderId));
+    private void ToggleAll(bool on) { _selected.Clear(); if (on) foreach (var s in _sos) _selected.Add(s.SalesOrderId); }
+
+    private IEnumerable<UninvoicedSalesOrderDto> Chosen() => _sos.Where(s => _selected.Contains(s.SalesOrderId));
+    private decimal SelectedSubtotal() => Chosen().SelectMany(s => s.Lines).Sum(l => l.LineSubtotal);
+    private decimal SelectedTax() => Chosen().SelectMany(s => s.Lines).Sum(l => l.LineTax);
+    private decimal SelectedTotal() => Chosen().Sum(s => s.GrandTotal);
+
+    private async Task SaveAsync()
+    {
+        _error = null; _saving = true;
+        try
+        {
+            if (Id is int id)
+                await InvoiceService.UpdateHeaderAsync(id, new UpdateCustomerInvoiceHeaderRequest(_invoiceDate, _dueDate ?? _invoiceDate, _customerRef, _notes));
+            else
+                await InvoiceService.CreateAsync(new CreateCustomerInvoiceRequest(_customerId, _invoiceDate, _dueDate, _customerRef, _notes, _selected.ToList()));
+            Nav.NavigateTo("/finance/ar-invoices");
+        }
+        catch (ValidationException ex) { _error = ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Validation failed."; }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+}

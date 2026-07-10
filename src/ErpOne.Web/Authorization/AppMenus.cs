@@ -74,6 +74,7 @@ public static class AppMenus
             new("finance.cash-bank", "Cash & Bank", "bi-bank", CRUD),
             new("finance.ap-invoices", "Supplier Invoices", "bi-receipt", CRUD),
             new("finance.ap-payments", "Supplier Payments", "bi-cash-coin", SupplierPaymentActions),
+            new("finance.ar-invoices", "Customer Invoices", "bi-receipt-cutoff", CRUD),
         ]),
         new("Settings",
         [

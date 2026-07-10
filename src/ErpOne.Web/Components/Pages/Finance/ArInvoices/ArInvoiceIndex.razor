@@ -1,0 +1,125 @@
+@page "/finance/ar-invoices"
+@attribute [Authorize(Policy = "finance.ar-invoices.index")]
+@rendermode InteractiveServer
+@inject ICustomerInvoiceService InvoiceService
+@inject NavigationManager Nav
+
+<PageTitle>Customer Invoices</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Finance</span><span class="sep">·</span><span class="here">Customer Invoices</span></nav>
+            <h1>Customer Invoices</h1>
+            <p>Accounts receivable — bills issued to customers.</p>
+        </div>
+        <AuthorizeView Policy="finance.ar-invoices.create">
+            <Authorized>
+                <div class="pi-actions">
+                    <a class="btn btn-primary" href="/finance/ar-invoices/new"><i class="bi bi-plus-lg"></i> New invoice</a>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    @if (_dash is not null)
+    {
+        <div class="cr-kpis mb-3">
+            <div class="cr-kpi"><div class="tx"><div class="v">@_dash.Total</div><div class="l">Total invoices</div></div></div>
+            <div class="cr-kpi"><div class="tx"><div class="v">@_dash.Open</div><div class="l">Open</div></div></div>
+            <div class="cr-kpi"><div class="tx"><div class="v">@_dash.PartiallyPaid</div><div class="l">Partially paid</div></div></div>
+            <div class="cr-kpi accent"><div class="tx"><div class="v">Rp @_dash.TotalOutstanding.ToString("N0")</div><div class="l">Receivable</div></div></div>
+        </div>
+    }
+
+    <div class="toolbar">
+        <div class="search">
+            <i class="bi bi-search"></i>
+            <input placeholder="Search invoice no…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+        </div>
+        <div class="chips">
+            <button class="chip @(_status is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">All</button>
+            @foreach (var s in Enum.GetValues<CustomerInvoiceStatus>())
+            {
+                <button class="chip @(_status == s ? "on" : "")" @onclick="() => SetStatusAsync(s)">@s</button>
+            }
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-receipt-cutoff"></i></div><p>No customer invoices yet.</p></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:150px">Invoice</th>
+                            <th>Customer</th>
+                            <th style="width:110px">Date</th>
+                            <th style="width:110px">Due</th>
+                            <th class="text-end" style="width:140px">Grand total</th>
+                            <th class="text-end" style="width:140px">Outstanding</th>
+                            <th style="width:120px" class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var i in _page.Items)
+                        {
+                            <tr style="cursor:pointer" @onclick="@(() => Nav.NavigateTo($"/finance/ar-invoices/{i.Id}"))">
+                                <td class="code mono">@i.InvoiceNumber</td>
+                                <td class="nm">@i.CustomerName</td>
+                                <td class="code">@i.InvoiceDate.ToString("d MMM yyyy")</td>
+                                <td class="code">@i.DueDate.ToString("d MMM yyyy")</td>
+                                <td class="text-end mono">@i.GrandTotal.ToString("N2")</td>
+                                <td class="text-end mono">@i.Outstanding.ToString("N2")</td>
+                                <td class="text-center"><span class="badge @StatusClass(i.Status)">@i.Status</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (_page.TotalPages > 1)
+            {
+                <div class="card-foot"><Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" /></div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<CustomerInvoiceListItemDto>? _page;
+    private CustomerInvoiceDashboardDto? _dash;
+    private int _currentPage = 1;
+    private string? _search;
+    private CustomerInvoiceStatus? _status;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _dash = await InvoiceService.GetDashboardAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync() => _page = await InvoiceService.GetPagedAsync(_currentPage, PageSize, _search, _status);
+
+    private async Task SetStatusAsync(CustomerInvoiceStatus? status) { _status = status; _currentPage = 1; await LoadAsync(); }
+    private async Task OnSearchKeyUp(KeyboardEventArgs e) { _currentPage = 1; await LoadAsync(); }
+    private async Task GoToPageAsync(int page) { _currentPage = page; await LoadAsync(); }
+
+    private static string StatusClass(string s) => s switch
+    {
+        "Open" => "bg-primary-subtle text-primary-emphasis",
+        "PartiallyPaid" => "bg-warning-subtle text-warning-emphasis",
+        "Paid" => "bg-success-subtle text-success-emphasis",
+        "Cancelled" => "bg-secondary-subtle text-secondary-emphasis",
+        _ => "bg-light text-muted"
+    };
+}

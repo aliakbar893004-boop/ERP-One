@@ -1,0 +1,15 @@
+/* KPI tiles (Atlas), token-based & theme-aware */
+.cr-kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; }
+.cr-kpi {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--field); border: 1px solid var(--line);
+    border-radius: 14px; padding: 14px 16px;
+}
+.cr-kpi .tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cr-kpi .tx .v { font-size: 1.15rem; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums; }
+.cr-kpi .tx .l { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.cr-kpi.accent { background: var(--accent-soft); border-color: transparent; }
+.cr-kpi.accent .tx .v, .cr-kpi.accent .tx .l { color: var(--accent-deep); }
+
+@media (max-width: 900px) { .cr-kpis { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 520px) { .cr-kpis { grid-template-columns: 1fr; } }
