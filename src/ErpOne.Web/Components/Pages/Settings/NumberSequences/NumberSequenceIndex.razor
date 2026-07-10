@@ -1,0 +1,119 @@
+@page "/settings/document-numbering"
+@attribute [Authorize(Policy = "settings.document-numbering.index")]
+@rendermode InteractiveServer
+@inject INumberSequenceService SeqService
+@inject IAuthorizationService Auth
+@inject SwalService Swal
+
+<PageTitle>Document Numbering</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Settings</span><span class="sep">·</span><span class="here">Document Numbering</span></nav>
+            <h1>Document Numbering</h1>
+            <p>Configure the number format and reset cycle for each document type.</p>
+        </div>
+    </div>
+
+    @if (_rows is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Document</th>
+                            <th style="width:110px">Prefix</th>
+                            <th style="width:150px">Date format</th>
+                            <th style="width:110px">Padding</th>
+                            <th style="width:150px">Reset</th>
+                            <th style="width:220px">Sample</th>
+                            <th class="text-end pe-3" style="width:90px"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in _rows)
+                        {
+                            <tr>
+                                <td class="nm">@r.Code</td>
+                                <td><input class="ctl mono up" maxlength="10" @bind="r.Prefix" disabled="@(!_canEdit)" /></td>
+                                <td>
+                                    <select class="ctl" @bind="r.DateFormat" disabled="@(!_canEdit)">
+                                        <option value="">(none)</option>
+                                        <option value="yyyyMM">yyyyMM</option>
+                                        <option value="yyyyMMdd">yyyyMMdd</option>
+                                        <option value="yyyy">yyyy</option>
+                                    </select>
+                                </td>
+                                <td><input type="number" min="1" max="10" class="ctl" @bind="r.Padding" disabled="@(!_canEdit)" /></td>
+                                <td>
+                                    <select class="ctl" @bind="r.ResetPeriod" disabled="@(!_canEdit)">
+                                        <option value="Never">Never</option>
+                                        <option value="Daily">Daily</option>
+                                        <option value="Monthly">Monthly</option>
+                                        <option value="Yearly">Yearly</option>
+                                    </select>
+                                </td>
+                                <td class="code mono">@r.Sample</td>
+                                <td class="text-end pe-3">
+                                    @if (_canEdit)
+                                    {
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => SaveAsync(r)" title="Save"><i class="bi bi-check2"></i></button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Row>? _rows;
+    private bool _canEdit;
+
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private sealed class Row
+    {
+        public int Id { get; set; }
+        public string Code { get; set; } = "";
+        public string Prefix { get; set; } = "";
+        public string DateFormat { get; set; } = "";
+        public int Padding { get; set; }
+        public string ResetPeriod { get; set; } = "Monthly";
+        public string Separator { get; set; } = "-";
+        public string Sample { get; set; } = "";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateTask;
+        _canEdit = (await Auth.AuthorizeAsync(state.User, AppMenus.Perm("settings.document-numbering", "edit"))).Succeeded;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        var all = await SeqService.GetAllAsync();
+        _rows = all.Select(x => new Row
+        {
+            Id = x.Id, Code = x.Code, Prefix = x.Prefix, DateFormat = x.DateFormat,
+            Padding = x.Padding, ResetPeriod = x.ResetPeriod, Separator = x.Separator, Sample = x.Sample
+        }).ToList();
+    }
+
+    private async Task SaveAsync(Row r)
+    {
+        await SeqService.UpdateAsync(r.Id, new UpdateNumberSequenceRequest(r.Prefix, r.DateFormat, r.Padding, r.ResetPeriod, r.Separator));
+        await LoadAsync();
+        await Swal.ToastAsync("success", $"{r.Code} numbering updated");
+    }
+}

@@ -52,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped<IBrandService, BrandService>();
         services.AddScoped<ICurrencyService, CurrencyService>();
         services.AddScoped<IDocumentNumberService, DocumentNumberService>();
+        services.AddScoped<INumberSequenceService, NumberSequenceService>();
         services.AddScoped<ICompanySettingService, CompanySettingService>();
         services.AddScoped<IWarehouseService, WarehouseService>();
         services.AddScoped<ITaxService, TaxService>();

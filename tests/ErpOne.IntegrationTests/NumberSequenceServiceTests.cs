@@ -1,0 +1,41 @@
+using Microsoft.Extensions.DependencyInjection;
+using ErpOne.Application.Numbering;
+using Xunit;
+
+namespace ErpOne.IntegrationTests;
+
+public class NumberSequenceServiceTests : IClassFixture<CustomWebApplicationFactory>
+{
+    private readonly CustomWebApplicationFactory _factory;
+    public NumberSequenceServiceTests(CustomWebApplicationFactory factory)
+    {
+        _factory = factory;
+        _factory.InitializeDatabase();
+    }
+
+    [Fact]
+    public async Task GetAll_returns_six_seeded_sequences_with_samples()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var svc = scope.ServiceProvider.GetRequiredService<INumberSequenceService>();
+
+        var all = await svc.GetAllAsync();
+        Assert.Equal(6, all.Count);
+        var po = all.Single(x => x.Code == DocumentTypes.PurchaseOrder);
+        Assert.StartsWith("PO-", po.Sample);
+    }
+
+    [Fact]
+    public async Task Update_changes_padding()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var svc = scope.ServiceProvider.GetRequiredService<INumberSequenceService>();
+
+        var po = (await svc.GetAllAsync()).Single(x => x.Code == DocumentTypes.PurchaseOrder);
+        var ok = await svc.UpdateAsync(po.Id, new UpdateNumberSequenceRequest("PO", "yyyyMM", 6, "Monthly", "-"));
+        Assert.True(ok);
+
+        var updated = await svc.GetByIdAsync(po.Id);
+        Assert.Equal(6, updated!.Padding);
+    }
+}
