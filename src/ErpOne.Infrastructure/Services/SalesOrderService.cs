@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using ErpOne.Application.Approvals;
 using ErpOne.Application.Common;
+using ErpOne.Application.Numbering;
 using ErpOne.Application.SalesOrders;
 using ErpOne.Domain.Entities;
 using ErpOne.Infrastructure.Persistence;
@@ -12,7 +13,8 @@ public class SalesOrderService(
     AppDbContext db,
     IApprovalService approval,
     IValidator<CreateSalesOrderRequest> createValidator,
-    IValidator<UpdateSalesOrderRequest> updateValidator) : ISalesOrderService
+    IValidator<UpdateSalesOrderRequest> updateValidator,
+    IDocumentNumberService docNumbers) : ISalesOrderService
 {
     private const ApprovalDocumentType DocType = ApprovalDocumentType.SalesOrder;
 
@@ -135,7 +137,7 @@ public class SalesOrderService(
 
         var currency = await db.Customers.Where(c => c.Id == request.CustomerId)
             .Select(c => c.DefaultCurrency).FirstOrDefaultAsync(ct) ?? "IDR";
-        var soNumber = await GenerateNumberAsync(request.OrderDate, ct);
+        var soNumber = await docNumbers.NextAsync(DocumentTypes.SalesOrder, request.OrderDate, ct);
 
         var so = new SalesOrder(soNumber, request.CustomerId, request.WarehouseId,
             request.OrderDate, request.ExpectedDate, currency, request.Notes);
@@ -246,19 +248,6 @@ public class SalesOrderService(
         return true;
     }
 
-    private async Task<string> GenerateNumberAsync(DateTime orderDate, CancellationToken ct)
-    {
-        var prefix = $"SO-{orderDate:yyyyMM}-";
-        var last = await db.SalesOrders.AsNoTracking()
-            .Where(p => p.SoNumber.StartsWith(prefix))
-            .OrderByDescending(p => p.SoNumber)
-            .Select(p => p.SoNumber)
-            .FirstOrDefaultAsync(ct);
-
-        var seq = 1;
-        if (last is not null && int.TryParse(last[prefix.Length..], out var n)) seq = n + 1;
-        return $"{prefix}{seq:D4}";
-    }
 
     private async Task<List<SalesOrderLine>> BuildLinesAsync(
         IReadOnlyList<SalesOrderLineRequest> requests, CancellationToken ct)

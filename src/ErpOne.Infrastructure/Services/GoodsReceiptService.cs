@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using ErpOne.Application.Common;
 using ErpOne.Application.GoodsReceipts;
+using ErpOne.Application.Numbering;
 using ErpOne.Domain.Entities;
 using ErpOne.Infrastructure.Persistence;
 
@@ -12,7 +13,8 @@ public class GoodsReceiptService(
     AppDbContext db,
     IValidator<CreateGoodsReceiptRequest> createValidator,
     IValidator<UpdateGoodsReceiptRequest> updateValidator,
-    IOptions<GoodsReceiptOptions> options) : IGoodsReceiptService
+    IOptions<GoodsReceiptOptions> options,
+    IDocumentNumberService docNumbers) : IGoodsReceiptService
 {
     private int Tolerance => Math.Max(0, options.Value.OverReceiptTolerancePercent);
 
@@ -161,7 +163,7 @@ public class GoodsReceiptService(
         if (!po.CanReceive) throw Fail("Only a confirmed or partially-received purchase order can be received.");
 
         var grnLines = BuildLines(po, request.Lines);
-        var grn = new GoodsReceipt(await GenerateNumberAsync(request.ReceiptDate, ct),
+        var grn = new GoodsReceipt(await docNumbers.NextAsync(DocumentTypes.GoodsReceipt, request.ReceiptDate, ct),
             po.Id, request.ReceiptDate, request.Notes);
         grn.SetLines(grnLines);
 
@@ -275,17 +277,6 @@ public class GoodsReceiptService(
         return lines;
     }
 
-    private async Task<string> GenerateNumberAsync(DateTime receiptDate, CancellationToken ct)
-    {
-        var prefix = $"GRN-{receiptDate:yyyyMM}-";
-        var last = await db.GoodsReceipts.AsNoTracking()
-            .Where(g => g.GrnNumber.StartsWith(prefix))
-            .OrderByDescending(g => g.GrnNumber)
-            .Select(g => g.GrnNumber).FirstOrDefaultAsync(ct);
-        var seq = 1;
-        if (last is not null && int.TryParse(last[prefix.Length..], out var n)) seq = n + 1;
-        return $"{prefix}{seq:D4}";
-    }
 
     private static ValidationException Fail(string message) =>
         new([new FluentValidation.Results.ValidationFailure("GoodsReceipt", message)]);

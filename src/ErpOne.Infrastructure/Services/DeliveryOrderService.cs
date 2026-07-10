@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using ErpOne.Application.Common;
 using ErpOne.Application.DeliveryOrders;
+using ErpOne.Application.Numbering;
 using ErpOne.Domain.Entities;
 using ErpOne.Infrastructure.Persistence;
 
@@ -10,7 +11,8 @@ namespace ErpOne.Infrastructure.Services;
 public class DeliveryOrderService(
     AppDbContext db,
     IValidator<CreateDeliveryOrderRequest> createValidator,
-    IValidator<UpdateDeliveryOrderRequest> updateValidator) : IDeliveryOrderService
+    IValidator<UpdateDeliveryOrderRequest> updateValidator,
+    IDocumentNumberService docNumbers) : IDeliveryOrderService
 {
     public async Task<PagedResult<DeliveryOrderListItemDto>> GetPagedAsync(
         int page, int pageSize, string? search = null, DeliveryOrderStatus? status = null, CancellationToken ct = default)
@@ -157,7 +159,7 @@ public class DeliveryOrderService(
         if (!so.CanDeliver) throw Fail("Only a confirmed or partially-delivered sales order can be delivered.");
 
         var doLines = BuildLines(so, request.Lines);
-        var doc = new DeliveryOrder(await GenerateNumberAsync(request.DeliveryDate, ct),
+        var doc = new DeliveryOrder(await docNumbers.NextAsync(DocumentTypes.DeliveryOrder, request.DeliveryDate, ct),
             so.Id, request.DeliveryDate, request.Notes);
         doc.SetLines(doLines);
 
@@ -281,17 +283,6 @@ public class DeliveryOrderService(
         return lines;
     }
 
-    private async Task<string> GenerateNumberAsync(DateTime deliveryDate, CancellationToken ct)
-    {
-        var prefix = $"DO-{deliveryDate:yyyyMM}-";
-        var last = await db.DeliveryOrders.AsNoTracking()
-            .Where(d => d.DoNumber.StartsWith(prefix))
-            .OrderByDescending(d => d.DoNumber)
-            .Select(d => d.DoNumber).FirstOrDefaultAsync(ct);
-        var seq = 1;
-        if (last is not null && int.TryParse(last[prefix.Length..], out var n)) seq = n + 1;
-        return $"{prefix}{seq:D4}";
-    }
 
     private static ValidationException Fail(string message) =>
         new([new FluentValidation.Results.ValidationFailure("DeliveryOrder", message)]);

@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using ErpOne.Application.Common;
+using ErpOne.Application.Numbering;
 using ErpOne.Application.PosSales;
 using ErpOne.Domain.Entities;
 using ErpOne.Infrastructure.Persistence;
@@ -9,7 +10,8 @@ namespace ErpOne.Infrastructure.Services;
 
 public class PosSaleService(
     AppDbContext db,
-    IValidator<CreatePosSaleRequest> validator) : IPosSaleService
+    IValidator<CreatePosSaleRequest> validator,
+    IDocumentNumberService docNumbers) : IPosSaleService
 {
     public async Task<IReadOnlyList<PosProductOptionDto>> SearchProductsAsync(int warehouseId, string? term, CancellationToken ct = default)
     {
@@ -80,7 +82,7 @@ public class PosSaleService(
             takenPerVariant[line.ProductVariantId] = already + line.Quantity;
         }
 
-        var sale = new PosSale(await GenerateNumberAsync(now, ct), shift.Id, whId, now,
+        var sale = new PosSale(await docNumbers.NextAsync(DocumentTypes.PosSale, now, ct), shift.Id, whId, now,
             request.PaymentMethodId, isCash, request.TaxId, taxRate, userId, userName);
 
         foreach (var line in request.Lines)
@@ -156,17 +158,6 @@ public class PosSaleService(
         return new PagedResult<PosSaleListItemDto>(items, total, page, pageSize);
     }
 
-    private async Task<string> GenerateNumberAsync(DateTime saleDate, CancellationToken ct)
-    {
-        var prefix = $"POS-{saleDate:yyyyMMdd}-";
-        var last = await db.PosSales.AsNoTracking()
-            .Where(s => s.SaleNumber.StartsWith(prefix))
-            .OrderByDescending(s => s.SaleNumber)
-            .Select(s => s.SaleNumber).FirstOrDefaultAsync(ct);
-        var seq = 1;
-        if (last is not null && int.TryParse(last[prefix.Length..], out var n)) seq = n + 1;
-        return $"{prefix}{seq:D4}";
-    }
 
     private static ValidationException Fail(string message) =>
         new([new FluentValidation.Results.ValidationFailure("PosSale", message)]);

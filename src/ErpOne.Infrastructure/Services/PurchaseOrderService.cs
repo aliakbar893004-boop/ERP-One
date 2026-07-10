@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using ErpOne.Application.Approvals;
 using ErpOne.Application.Common;
+using ErpOne.Application.Numbering;
 using ErpOne.Application.PurchaseOrders;
 using ErpOne.Domain.Entities;
 using ErpOne.Infrastructure.Persistence;
@@ -12,7 +13,8 @@ public class PurchaseOrderService(
     AppDbContext db,
     IApprovalService approval,
     IValidator<CreatePurchaseOrderRequest> createValidator,
-    IValidator<UpdatePurchaseOrderRequest> updateValidator) : IPurchaseOrderService
+    IValidator<UpdatePurchaseOrderRequest> updateValidator,
+    IDocumentNumberService docNumbers) : IPurchaseOrderService
 {
     private const ApprovalDocumentType DocType = ApprovalDocumentType.PurchaseOrder;
 
@@ -114,7 +116,7 @@ public class PurchaseOrderService(
 
         var currency = await db.Suppliers.Where(s => s.Id == request.SupplierId)
             .Select(s => s.DefaultCurrency).FirstOrDefaultAsync(ct) ?? "IDR";
-        var poNumber = await GenerateNumberAsync(request.OrderDate, ct);
+        var poNumber = await docNumbers.NextAsync(DocumentTypes.PurchaseOrder, request.OrderDate, ct);
 
         var po = new PurchaseOrder(poNumber, request.SupplierId, request.WarehouseId,
             request.OrderDate, request.ExpectedDate, currency, request.Notes);
@@ -225,19 +227,6 @@ public class PurchaseOrderService(
         return true;
     }
 
-    private async Task<string> GenerateNumberAsync(DateTime orderDate, CancellationToken ct)
-    {
-        var prefix = $"PO-{orderDate:yyyyMM}-";
-        var last = await db.PurchaseOrders.AsNoTracking()
-            .Where(p => p.PoNumber.StartsWith(prefix))
-            .OrderByDescending(p => p.PoNumber)
-            .Select(p => p.PoNumber)
-            .FirstOrDefaultAsync(ct);
-
-        var seq = 1;
-        if (last is not null && int.TryParse(last[prefix.Length..], out var n)) seq = n + 1;
-        return $"{prefix}{seq:D4}";
-    }
 
     private async Task<List<PurchaseOrderLine>> BuildLinesAsync(
         IReadOnlyList<PurchaseOrderLineRequest> requests, CancellationToken ct)

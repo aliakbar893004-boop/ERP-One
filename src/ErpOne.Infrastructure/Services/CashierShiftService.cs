@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using ErpOne.Application.CashierShifts;
 using ErpOne.Application.Common;
+using ErpOne.Application.Numbering;
 using ErpOne.Domain.Entities;
 using ErpOne.Infrastructure.Persistence;
 
@@ -10,7 +11,8 @@ namespace ErpOne.Infrastructure.Services;
 public class CashierShiftService(
     AppDbContext db,
     IValidator<OpenShiftRequest> openValidator,
-    IValidator<CloseShiftRequest> closeValidator) : ICashierShiftService
+    IValidator<CloseShiftRequest> closeValidator,
+    IDocumentNumberService docNumbers) : ICashierShiftService
 {
     public async Task<IReadOnlyList<CashierShiftDto>> GetOpenShiftsAsync(CancellationToken ct = default)
     {
@@ -51,7 +53,7 @@ public class CashierShiftService(
             throw Fail("Gudang tidak ditemukan atau tidak aktif.");
 
         var now = DateTime.Now;
-        var shift = new CashierShift(await GenerateNumberAsync(now, ct),
+        var shift = new CashierShift(await docNumbers.NextAsync(DocumentTypes.CashierShift, now, ct),
             request.WarehouseId, userId, userName, request.OpeningFloat, now);
 
         db.CashierShifts.Add(shift);
@@ -137,17 +139,6 @@ public class CashierShiftService(
         return new PagedResult<CashierShiftListItemDto>(items, total, page, pageSize);
     }
 
-    private async Task<string> GenerateNumberAsync(DateTime openedAt, CancellationToken ct)
-    {
-        var prefix = $"SHIFT-{openedAt:yyyyMMdd}-";
-        var last = await db.CashierShifts.AsNoTracking()
-            .Where(s => s.ShiftNumber.StartsWith(prefix))
-            .OrderByDescending(s => s.ShiftNumber)
-            .Select(s => s.ShiftNumber).FirstOrDefaultAsync(ct);
-        var seq = 1;
-        if (last is not null && int.TryParse(last[prefix.Length..], out var n)) seq = n + 1;
-        return $"{prefix}{seq:D4}";
-    }
 
     private static ValidationException Fail(string message) =>
         new([new FluentValidation.Results.ValidationFailure("CashierShift", message)]);
