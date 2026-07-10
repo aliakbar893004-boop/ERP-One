@@ -27,6 +27,8 @@
 .b-done  { background:#DCFCE7; color:#15803D; }
 .b-danger{ background:#FDECEA; color:#B23A30; }
 .b-dark  { background:#E5E7EB; color:#374151; }
+.b-info  { background:#E8F0FE; color:#1A56DB; }
+.b-cancel{ background:#F1F5F9; color:#64748B; }
 
 .btn { border:0; border-radius:10px; padding:9px 16px; font:inherit; font-weight:700; font-size:0.8125rem; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:.15s; text-decoration:none; line-height:1; }
 .btn:disabled { opacity:.6; cursor:default; }

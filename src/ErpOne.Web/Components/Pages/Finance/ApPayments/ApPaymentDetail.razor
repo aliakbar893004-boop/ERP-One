@@ -81,14 +81,22 @@ else
             <div class="card-h"><span class="hd-ic"><i class="bi bi-list-ul"></i></span><h2>Allocations</h2></div>
             <div class="card-b">
                 <table class="items">
-                    <thead><tr><th>Invoice</th><th class="r">Grand total</th><th class="r">Outstanding</th><th class="r">Paid</th></tr></thead>
+                    <thead><tr><th>Invoice</th><th>Supplier inv. no.</th><th>Due</th><th class="c">Status</th><th class="r">Grand total</th><th class="r">Outstanding</th><th class="r">Paid</th></tr></thead>
                     <tbody>
                         @foreach (var a in _p.Allocations)
                         {
-                            <tr><td class="mono">@a.InvoiceNumber</td><td class="r mono">@a.InvoiceGrandTotal.ToString("N2")</td><td class="r mono">@a.InvoiceOutstanding.ToString("N2")</td><td class="r mono total">@a.Amount.ToString("N2")</td></tr>
+                            <tr>
+                                <td class="mono"><a href="@($"/finance/ap-invoices/{a.SupplierInvoiceId}")">@a.InvoiceNumber</a></td>
+                                <td>@(string.IsNullOrWhiteSpace(a.SupplierInvoiceNo) ? "—" : a.SupplierInvoiceNo)</td>
+                                <td class="text-nowrap">@a.DueDate.ToString("d MMM yyyy")</td>
+                                <td class="c"><span class="badge @InvStatusClass(a.InvoiceStatus)">@a.InvoiceStatus</span></td>
+                                <td class="r mono">@a.InvoiceGrandTotal.ToString("N2")</td>
+                                <td class="r mono">@a.InvoiceOutstanding.ToString("N2")</td>
+                                <td class="r mono total">@a.Amount.ToString("N2")</td>
+                            </tr>
                         }
                     </tbody>
-                    <tfoot><tr><td colspan="3" class="r gt-l">Total</td><td class="r grand">@_p.Amount.ToString("N2")</td></tr></tfoot>
+                    <tfoot><tr><td colspan="6" class="r gt-l">Total paid</td><td class="r grand">@_p.Amount.ToString("N2")</td></tr></tfoot>
                 </table>
             </div>
         </section>
@@ -188,6 +196,10 @@ else
     private static string StatusClass(string s) => s switch
     {
         "Draft" => "b-draft", "PendingApproval" => "b-warn", "Posted" => "b-done", "Voided" => "b-danger", _ => "b-dark"
+    };
+    private static string InvStatusClass(string s) => s switch
+    {
+        "Open" => "b-info", "PartiallyPaid" => "b-warn", "Paid" => "b-done", "Cancelled" => "b-cancel", _ => "b-draft"
     };
     private static string StepIcon(string s) => s switch { "Approved" => "bi-check-lg", "Rejected" => "bi-x-lg", _ => "bi-clock" };
     private static string StepDot(string s) => s switch { "Approved" => "ok", "Rejected" => "no", _ => "wait" };

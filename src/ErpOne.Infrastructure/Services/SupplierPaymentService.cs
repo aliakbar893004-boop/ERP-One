@@ -58,11 +58,12 @@ public class SupplierPaymentService(
 
         var invIds = p.Allocations.Select(a => a.SupplierInvoiceId).Distinct().ToList();
         var invs = await db.SupplierInvoices.AsNoTracking().Where(i => invIds.Contains(i.Id))
-            .Select(i => new { i.Id, i.InvoiceNumber, i.GrandTotal, i.PaidAmount }).ToListAsync(ct);
+            .Select(i => new { i.Id, i.InvoiceNumber, i.SupplierInvoiceNo, i.DueDate, i.Status, i.GrandTotal, i.PaidAmount }).ToListAsync(ct);
         var allocs = p.Allocations.Select(a =>
         {
             var i = invs.FirstOrDefault(x => x.Id == a.SupplierInvoiceId);
             return new SupplierPaymentAllocationDto(a.Id, a.SupplierInvoiceId, i?.InvoiceNumber ?? "—",
+                i?.SupplierInvoiceNo, i?.DueDate ?? default, i?.Status.ToString() ?? "—",
                 i?.GrandTotal ?? 0m, (i?.GrandTotal ?? 0m) - (i?.PaidAmount ?? 0m), a.Amount);
         }).ToList();
 
