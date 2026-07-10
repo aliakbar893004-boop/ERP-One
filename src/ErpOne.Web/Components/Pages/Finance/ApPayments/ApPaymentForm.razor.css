@@ -1,3 +1,14 @@
+/* Pay-amount cell: input + Full button, aligned cleanly */
+.pay-input { display: flex; align-items: center; gap: 6px; }
+.pay-input .ctl { flex: 1; min-width: 0; text-align: right; padding: 7px 11px; font-size: 0.8125rem; }
+.pay-input .btn-full {
+    flex: none; white-space: nowrap; cursor: pointer;
+    border: 1.5px solid var(--line, #E9EDF2); background: var(--field, #FBFCFD);
+    color: var(--accent-deep, #077E57); border-radius: 9px; padding: 7px 12px;
+    font-size: 0.75rem; font-weight: 700; line-height: 1; transition: .15s;
+}
+.pay-input .btn-full:hover { background: var(--accent-soft, #E7F8F1); border-color: transparent; }
+
 /* Allocation summary box */
 .pay-summary {
     min-width: 300px;
