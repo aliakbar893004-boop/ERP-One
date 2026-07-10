@@ -112,22 +112,44 @@
     transition: opacity 0.15s;
 }
 
-/* Bottom "hover to expand" hint */
+/* Bottom pin / collapse toggle */
 .rail-hint {
     margin-top: auto;
-    padding: 10px 22px;
+    padding: 12px 20px;
+    border: 0;
     border-top: 1px solid #E9EDF2;
+    background: transparent;
+    font: inherit;
     font-size: 11px;
     color: #94A3B8;
     white-space: nowrap;
     display: flex;
     align-items: center;
     gap: 9px;
+    width: 100%;
+    cursor: pointer;
+    transition: background 0.13s, color 0.13s;
+}
+
+.rail-hint:hover {
+    background: #F5F7F9;
+    color: #0F1B2D;
 }
 
 .rail-hint i {
     font-size: 16px;
 }
+
+.rail-state {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+/* Show the correct label/icon for the current state (default = rail). */
+.rail-pinned { display: none; }
+html[data-sidebar="pinned"] .rail-rail { display: none; }
+html[data-sidebar="pinned"] .rail-pinned { display: flex; }
 
 /* Mobile hamburger (inline in brand, desktop hidden) */
 .navbar-toggler-inline {
@@ -198,6 +220,11 @@
 
 [data-bs-theme="dark"] .rail-hint {
     border-top-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .rail-hint:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
 }
 
 [data-bs-theme="dark"] .navbar-toggler-inline {

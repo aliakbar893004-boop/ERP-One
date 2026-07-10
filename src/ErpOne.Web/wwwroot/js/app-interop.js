@@ -65,7 +65,33 @@ window.pfScrollTo = (id) => {
 
 window.appPrint = () => window.print();
 
-// The sidebar is a CSS-only hover-to-expand icon rail — no JS state needed.
+// Sidebar mode: 'pinned' (stays expanded, default) or 'rail' (icon rail that
+// expands on hover). Persisted to localStorage, applied as data-sidebar on
+// <html>; CSS (MainLayout/NavMenu) reacts. Same static-SSR pattern as the theme
+// toggle so it survives enhanced navigation.
+(function () {
+    const KEY = 'myapp.sidebar';
+    function apply() {
+        var mode = localStorage.getItem(KEY) || 'pinned';
+        document.documentElement.setAttribute('data-sidebar', mode);
+    }
+    document.addEventListener('click', function (e) {
+        if (e.target.closest('#sidebar-toggle')) {
+            var pinned = (localStorage.getItem(KEY) || 'pinned') === 'pinned';
+            localStorage.setItem(KEY, pinned ? 'rail' : 'pinned');
+            apply();
+        }
+    });
+    document.addEventListener('DOMContentLoaded', apply);
+    (function registerEnhanced(attempts) {
+        if (window.Blazor && typeof window.Blazor.addEventListener === 'function') {
+            window.Blazor.addEventListener('enhancedload', apply);
+        } else if (attempts < 200) {
+            setTimeout(function () { registerEnhanced(attempts + 1); }, 50);
+        }
+    })(0);
+    apply();
+})();
 
 // Theme toggle (light default). State persisted to localStorage and applied as
 // `data-bs-theme` on <html>; Bootstrap 5.3 themes its components off that, and

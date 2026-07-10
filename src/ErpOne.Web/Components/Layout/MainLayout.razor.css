@@ -72,23 +72,10 @@ main {
         z-index: 20;
     }
 
-    .sidebar:hover {
-        width: 248px;
-        box-shadow: 14px 0 40px -20px rgba(15, 27, 45, 0.25);
-    }
-
-    /* Reveal labels / section headers / brand name while the rail is expanded.
-       ::deep crosses into <NavMenu/>'s scope; these win over the base opacity:0
-       set in NavMenu.razor.css. */
-    .sidebar:hover ::deep .brand-name,
-    .sidebar:hover ::deep .nav-label,
-    .sidebar:hover ::deep .nav-section-label {
-        opacity: 1;
-    }
-
-    .sidebar:hover ::deep .nav-section {
-        height: auto;
-    }
+    /* Sidebar is now an explicit toggle (pin ↔ collapse), driven by the
+       #sidebar-toggle button + data-sidebar on <html> — NOT hover. Hover-expand
+       was removed because the toggle lives inside the rail, so hovering it kept
+       re-expanding the bar and masked the collapse action. */
 
     .top-row {
         position: sticky;
@@ -105,6 +92,21 @@ main {
     .top-row, article {
         padding-left: 2rem !important;
         padding-right: 1.5rem !important;
+    }
+
+    /* Pinned: sidebar stays expanded (no hover needed). */
+    html[data-sidebar="pinned"] .sidebar {
+        width: 248px;
+    }
+
+    html[data-sidebar="pinned"] .sidebar ::deep .brand-name,
+    html[data-sidebar="pinned"] .sidebar ::deep .nav-label,
+    html[data-sidebar="pinned"] .sidebar ::deep .nav-section-label {
+        opacity: 1;
+    }
+
+    html[data-sidebar="pinned"] .sidebar ::deep .nav-section {
+        height: auto;
     }
 }
 

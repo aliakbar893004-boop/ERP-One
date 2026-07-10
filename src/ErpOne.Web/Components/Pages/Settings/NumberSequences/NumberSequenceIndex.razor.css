@@ -1,0 +1,22 @@
+/* Document-name cell — align with the input row height */
+.doc-name {
+    font-weight: 600;
+    color: var(--ink);
+    padding-top: 9px;
+    white-space: nowrap;
+}
+
+/* Live sample rendered as a subtle accent pill */
+.sample {
+    display: inline-block;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    font-variant-numeric: tabular-nums;
+    padding: 6px 11px;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    margin-top: 2px;
+}
