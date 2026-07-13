@@ -85,6 +85,9 @@ public static class AppMenus
         [
             new("reports.stock-ledger", "Stock Ledger", "bi-journal-text", ReportActions),
             new("reports.inventory-valuation", "Inventory Valuation", "bi-cash-stack", ReportActions),
+            new("reports.sales", "Sales Report", "bi-graph-up-arrow", ReportActions),
+            new("reports.purchases", "Purchase Report", "bi-cart-check", ReportActions),
+            new("reports.gross-profit", "Gross Profit", "bi-coin", ReportActions),
         ]),
         new("Settings",
         [

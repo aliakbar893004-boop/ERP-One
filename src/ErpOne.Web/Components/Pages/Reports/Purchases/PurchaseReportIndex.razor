@@ -1,0 +1,161 @@
+@page "/reports/purchases"
+@attribute [Authorize(Policy = "reports.purchases.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Common
+@using ErpOne.Application.Reports
+@using ErpOne.Application.Warehouses
+@using ErpOne.Application.Suppliers
+@using Microsoft.JSInterop
+@inject IPurchaseReportService Purchases
+@inject IWarehouseService WarehouseService
+@inject ISupplierService SupplierService
+@inject IReportExporter Exporter
+@inject IJSRuntime JS
+
+<PageTitle>Purchase Report</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Reports</span><span class="sep">·</span><span class="here">Purchases</span></nav>
+            <h1>Purchase Report</h1>
+            <p>Goods received (posted GRN) by supplier and product.</p>
+        </div>
+        <AuthorizeView Policy="reports.purchases.export">
+            <Authorized>
+                <div class="pi-actions">
+                    <button class="btn btn-outline-secondary" @onclick="ExportExcel"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                    <button class="btn btn-outline-secondary" @onclick="ExportPdf"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    @if (_summary is not null)
+    {
+        <div class="kpis">
+            <div class="kpi accent"><div class="ic ic-grn"><i class="bi bi-cash-stack"></i></div><div class="kpi-tx"><div class="v">Rp @_summary.TotalCost.ToString("N0")</div><div class="l">Total purchases</div></div></div>
+            <div class="kpi"><div class="ic ic-blu"><i class="bi bi-stack"></i></div><div class="kpi-tx"><div class="v">@_summary.Qty.ToString("N0")</div><div class="l">Total qty</div></div></div>
+            <div class="kpi"><div class="ic ic-amb"><i class="bi bi-receipt"></i></div><div class="kpi-tx"><div class="v">@_summary.Receipts.ToString("N0")</div><div class="l">Receipts</div></div></div>
+        </div>
+    }
+
+    <div class="toolbar">
+        <input type="date" @bind="_from" @bind:after="ReloadAsync" />
+        <input type="date" @bind="_to" @bind:after="ReloadAsync" />
+        <select @bind="_supplierId" @bind:after="ReloadAsync">
+            <option value="0">All suppliers</option>
+            @foreach (var s in _suppliers) { <option value="@s.Id">@s.Name</option> }
+        </select>
+        <select @bind="_warehouseId" @bind:after="ReloadAsync">
+            <option value="0">All warehouses</option>
+            @foreach (var w in _warehouses) { <option value="@w.Id">@w.Name</option> }
+        </select>
+        <div class="search">
+            <i class="bi bi-search"></i>
+            <input placeholder="Search SKU or product…" @bind="_search" @bind:event="oninput" @onkeyup="ReloadAsync" />
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-cart-check"></i></div><p>No purchases match your filters.</p></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-top"><span class="n">Showing <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> of <b>@_page.Total.ToString("N0")</b></span></div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:100px">Date</th>
+                            <th style="width:140px">GRN</th>
+                            <th>Supplier</th>
+                            <th>Product</th>
+                            <th>Warehouse</th>
+                            <th class="r" style="width:80px">Qty</th>
+                            <th class="r" style="width:120px">Unit Cost</th>
+                            <th class="r" style="width:130px">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in _page.Items)
+                        {
+                            <tr>
+                                <td class="mono">@r.Date.ToString("yyyy-MM-dd")</td>
+                                <td class="code">@r.GrnNumber</td>
+                                <td>@r.SupplierName</td>
+                                <td class="nm">@r.Sku — @r.ProductName</td>
+                                <td class="code">@r.WarehouseName</td>
+                                <td class="r mono">@r.Quantity.ToString("N0")</td>
+                                <td class="r mono">@r.UnitCost.ToString("N2")</td>
+                                <td class="r mono">@r.Value.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (_page.TotalPages > 1)
+            {
+                <div class="card-foot"><Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" /></div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 20;
+    private PagedResult<PurchaseRowDto>? _page;
+    private PurchaseSummaryDto? _summary;
+    private IReadOnlyList<WarehouseDto> _warehouses = [];
+    private IReadOnlyList<SupplierDto> _suppliers = [];
+    private int _currentPage = 1;
+    private DateTime? _from = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime? _to = DateTime.Today;
+    private int _supplierId;
+    private int _warehouseId;
+    private string? _search;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _warehouses = await WarehouseService.GetAllAsync();
+        _suppliers = await SupplierService.GetAllAsync();
+        await LoadAsync();
+    }
+
+    private PurchaseFilter Filter() => new(
+        _from, _to,
+        _supplierId == 0 ? null : _supplierId,
+        _warehouseId == 0 ? null : _warehouseId,
+        _search);
+
+    private async Task LoadAsync()
+    {
+        var f = Filter();
+        _summary = await Purchases.GetPurchaseSummaryAsync(f);
+        _page = await Purchases.GetPurchasesPagedAsync(f, _currentPage, PageSize);
+    }
+
+    private async Task ReloadAsync() { _currentPage = 1; await LoadAsync(); }
+    private async Task GoToPageAsync(int page) { _currentPage = page; await LoadAsync(); }
+
+    private async Task ExportExcel()
+    {
+        var doc = await Purchases.BuildPurchaseReportAsync(Filter());
+        await DownloadAsync(Exporter.ToExcel(doc), "purchase-report.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+
+    private async Task ExportPdf()
+    {
+        var doc = await Purchases.BuildPurchaseReportAsync(Filter());
+        await DownloadAsync(await Exporter.ToPdfAsync(doc), "purchase-report.pdf", "application/pdf");
+    }
+
+    private async Task DownloadAsync(byte[] bytes, string fileName, string mime) =>
+        await JS.InvokeVoidAsync("saveAsFile", fileName, Convert.ToBase64String(bytes), mime);
+}

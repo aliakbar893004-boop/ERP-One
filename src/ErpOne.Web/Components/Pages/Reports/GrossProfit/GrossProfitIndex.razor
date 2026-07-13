@@ -1,0 +1,143 @@
+@page "/reports/gross-profit"
+@attribute [Authorize(Policy = "reports.gross-profit.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Reports
+@using Microsoft.JSInterop
+@inject IGrossProfitReportService GrossProfit
+@inject IReportExporter Exporter
+@inject IJSRuntime JS
+
+<PageTitle>Gross Profit</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Reports</span><span class="sep">·</span><span class="here">Gross Profit</span></nav>
+            <h1>Gross Profit</h1>
+            <p>Revenue − COGS with margin, grouped by product, category, or month.</p>
+        </div>
+        <AuthorizeView Policy="reports.gross-profit.export">
+            <Authorized>
+                <div class="pi-actions">
+                    <button class="btn btn-outline-secondary" @onclick="ExportExcel"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                    <button class="btn btn-outline-secondary" @onclick="ExportPdf"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    @if (_result is not null)
+    {
+        <div class="kpis">
+            <div class="kpi accent"><div class="ic ic-grn"><i class="bi bi-cash-stack"></i></div><div class="kpi-tx"><div class="v">Rp @_result.TotalRevenue.ToString("N0")</div><div class="l">Revenue</div></div></div>
+            <div class="kpi"><div class="ic ic-amb"><i class="bi bi-box-seam"></i></div><div class="kpi-tx"><div class="v">Rp @_result.TotalCogs.ToString("N0")</div><div class="l">COGS</div></div></div>
+            <div class="kpi"><div class="ic ic-blu"><i class="bi bi-coin"></i></div><div class="kpi-tx"><div class="v">Rp @_result.TotalGrossProfit.ToString("N0")</div><div class="l">Gross profit</div></div></div>
+            <div class="kpi"><div class="ic ic-grn"><i class="bi bi-percent"></i></div><div class="kpi-tx"><div class="v">@_result.TotalMarginPercent.ToString("N1")%</div><div class="l">Margin</div></div></div>
+        </div>
+    }
+
+    <div class="toolbar">
+        <input type="date" @bind="_from" @bind:after="ReloadAsync" />
+        <input type="date" @bind="_to" @bind:after="ReloadAsync" />
+        <select @bind="_channel" @bind:after="ReloadAsync">
+            <option value="">All channels</option>
+            <option value="POS">POS</option>
+            <option value="B2B">B2B</option>
+        </select>
+        <select @bind="_groupBy" @bind:after="ReloadAsync">
+            <option value="@GrossProfitGroupBy.Product">Group by Product</option>
+            <option value="@GrossProfitGroupBy.Category">Group by Category</option>
+            <option value="@GrossProfitGroupBy.Month">Group by Month</option>
+        </select>
+    </div>
+
+    @if (_result is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_result.Groups.Count == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-coin"></i></div><p>No sales to analyze for these filters.</p></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>@GroupHeader</th>
+                            <th class="r" style="width:90px">Qty</th>
+                            <th class="r" style="width:140px">Revenue</th>
+                            <th class="r" style="width:140px">COGS</th>
+                            <th class="r" style="width:140px">Gross Profit</th>
+                            <th class="r" style="width:100px">Margin %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var g in _result.Groups)
+                        {
+                            <tr>
+                                <td class="nm">@g.GroupName</td>
+                                <td class="r mono">@g.Qty.ToString("N0")</td>
+                                <td class="r mono">@g.Revenue.ToString("N2")</td>
+                                <td class="r mono">@g.Cogs.ToString("N2")</td>
+                                <td class="r mono">@g.GrossProfit.ToString("N2")</td>
+                                <td class="r mono">@g.MarginPercent.ToString("N1")%</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold">
+                            <td>Total</td>
+                            <td class="r mono">@_result.TotalQty.ToString("N0")</td>
+                            <td class="r mono">@_result.TotalRevenue.ToString("N2")</td>
+                            <td class="r mono">@_result.TotalCogs.ToString("N2")</td>
+                            <td class="r mono">@_result.TotalGrossProfit.ToString("N2")</td>
+                            <td class="r mono">@_result.TotalMarginPercent.ToString("N1")%</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private GrossProfitResultDto? _result;
+    private DateTime? _from = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime? _to = DateTime.Today;
+    private string? _channel;
+    private GrossProfitGroupBy _groupBy = GrossProfitGroupBy.Product;
+
+    private string GroupHeader => _groupBy switch
+    {
+        GrossProfitGroupBy.Product => "Product",
+        GrossProfitGroupBy.Category => "Category",
+        GrossProfitGroupBy.Month => "Month",
+        _ => "Group",
+    };
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() =>
+        _result = await GrossProfit.GetGrossProfitAsync(new GrossProfitFilter(
+            _from, _to, string.IsNullOrEmpty(_channel) ? null : _channel, _groupBy));
+
+    private async Task ReloadAsync() => await LoadAsync();
+
+    private async Task ExportExcel()
+    {
+        var doc = await GrossProfit.BuildGrossProfitReportAsync(new GrossProfitFilter(_from, _to, string.IsNullOrEmpty(_channel) ? null : _channel, _groupBy));
+        await DownloadAsync(Exporter.ToExcel(doc), "gross-profit.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+
+    private async Task ExportPdf()
+    {
+        var doc = await GrossProfit.BuildGrossProfitReportAsync(new GrossProfitFilter(_from, _to, string.IsNullOrEmpty(_channel) ? null : _channel, _groupBy));
+        await DownloadAsync(await Exporter.ToPdfAsync(doc), "gross-profit.pdf", "application/pdf");
+    }
+
+    private async Task DownloadAsync(byte[] bytes, string fileName, string mime) =>
+        await JS.InvokeVoidAsync("saveAsFile", fileName, Convert.ToBase64String(bytes), mime);
+}

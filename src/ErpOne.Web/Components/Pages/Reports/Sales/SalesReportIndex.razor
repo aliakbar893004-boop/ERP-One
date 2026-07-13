@@ -1,0 +1,171 @@
+@page "/reports/sales"
+@attribute [Authorize(Policy = "reports.sales.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Common
+@using ErpOne.Application.Reports
+@using ErpOne.Application.Warehouses
+@using ErpOne.Application.Customers
+@using Microsoft.JSInterop
+@inject ISalesReportService Sales
+@inject IWarehouseService WarehouseService
+@inject ICustomerService CustomerService
+@inject IReportExporter Exporter
+@inject IJSRuntime JS
+
+<PageTitle>Sales Report</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Reports</span><span class="sep">·</span><span class="here">Sales</span></nav>
+            <h1>Sales Report</h1>
+            <p>Combined POS &amp; B2B sales with cost and gross profit.</p>
+        </div>
+        <AuthorizeView Policy="reports.sales.export">
+            <Authorized>
+                <div class="pi-actions">
+                    <button class="btn btn-outline-secondary" @onclick="ExportExcel"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                    <button class="btn btn-outline-secondary" @onclick="ExportPdf"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    @if (_summary is not null)
+    {
+        <div class="kpis">
+            <div class="kpi accent"><div class="ic ic-grn"><i class="bi bi-cash-stack"></i></div><div class="kpi-tx"><div class="v">Rp @_summary.Revenue.ToString("N0")</div><div class="l">Revenue</div></div></div>
+            <div class="kpi"><div class="ic ic-amb"><i class="bi bi-box-seam"></i></div><div class="kpi-tx"><div class="v">Rp @_summary.Cogs.ToString("N0")</div><div class="l">COGS</div></div></div>
+            <div class="kpi"><div class="ic ic-blu"><i class="bi bi-graph-up-arrow"></i></div><div class="kpi-tx"><div class="v">Rp @_summary.GrossProfit.ToString("N0")</div><div class="l">Gross profit</div></div></div>
+            <div class="kpi"><div class="ic ic-grn"><i class="bi bi-percent"></i></div><div class="kpi-tx"><div class="v">@_summary.MarginPercent.ToString("N1")%</div><div class="l">Margin</div></div></div>
+        </div>
+    }
+
+    <div class="toolbar">
+        <input type="date" @bind="_from" @bind:after="ReloadAsync" />
+        <input type="date" @bind="_to" @bind:after="ReloadAsync" />
+        <select @bind="_channel" @bind:after="ReloadAsync">
+            <option value="">All channels</option>
+            <option value="POS">POS</option>
+            <option value="B2B">B2B</option>
+        </select>
+        <select @bind="_warehouseId" @bind:after="ReloadAsync">
+            <option value="0">All warehouses</option>
+            @foreach (var w in _warehouses) { <option value="@w.Id">@w.Name</option> }
+        </select>
+        <select @bind="_customerId" @bind:after="ReloadAsync">
+            <option value="0">All customers</option>
+            @foreach (var c in _customers) { <option value="@c.Id">@c.Name</option> }
+        </select>
+        <div class="search">
+            <i class="bi bi-search"></i>
+            <input placeholder="Search SKU or product…" @bind="_search" @bind:event="oninput" @onkeyup="ReloadAsync" />
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-graph-up-arrow"></i></div><p>No sales match your filters.</p></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-top"><span class="n">Showing <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> of <b>@_page.Total.ToString("N0")</b></span></div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:100px">Date</th>
+                            <th style="width:70px">Channel</th>
+                            <th style="width:130px">Doc</th>
+                            <th>Product</th>
+                            <th>Party</th>
+                            <th class="r" style="width:70px">Qty</th>
+                            <th class="r" style="width:120px">Revenue</th>
+                            <th class="r" style="width:120px">COGS</th>
+                            <th class="r" style="width:120px">Gross Profit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in _page.Items)
+                        {
+                            <tr>
+                                <td class="mono">@r.Date.ToString("yyyy-MM-dd")</td>
+                                <td>@r.Channel</td>
+                                <td class="code">@r.DocNumber</td>
+                                <td class="nm">@r.Sku — @r.ProductName</td>
+                                <td>@r.Party</td>
+                                <td class="r mono">@r.Quantity.ToString("N0")</td>
+                                <td class="r mono">@r.Revenue.ToString("N2")</td>
+                                <td class="r mono">@r.Cogs.ToString("N2")</td>
+                                <td class="r mono">@r.GrossProfit.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (_page.TotalPages > 1)
+            {
+                <div class="card-foot"><Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" /></div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 20;
+    private PagedResult<SalesFactRow>? _page;
+    private SalesSummaryDto? _summary;
+    private IReadOnlyList<WarehouseDto> _warehouses = [];
+    private IReadOnlyList<CustomerDto> _customers = [];
+    private int _currentPage = 1;
+    private DateTime? _from = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime? _to = DateTime.Today;
+    private string? _channel;
+    private int _warehouseId;
+    private int _customerId;
+    private string? _search;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _warehouses = await WarehouseService.GetAllAsync();
+        _customers = await CustomerService.GetAllAsync();
+        await LoadAsync();
+    }
+
+    private SalesFilter Filter() => new(
+        _from, _to,
+        string.IsNullOrEmpty(_channel) ? null : _channel,
+        _warehouseId == 0 ? null : _warehouseId,
+        _customerId == 0 ? null : _customerId,
+        null, _search);
+
+    private async Task LoadAsync()
+    {
+        var f = Filter();
+        _summary = await Sales.GetSalesSummaryAsync(f);
+        _page = await Sales.GetSalesPagedAsync(f, _currentPage, PageSize);
+    }
+
+    private async Task ReloadAsync() { _currentPage = 1; await LoadAsync(); }
+    private async Task GoToPageAsync(int page) { _currentPage = page; await LoadAsync(); }
+
+    private async Task ExportExcel()
+    {
+        var doc = await Sales.BuildSalesReportAsync(Filter());
+        await DownloadAsync(Exporter.ToExcel(doc), "sales-report.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+
+    private async Task ExportPdf()
+    {
+        var doc = await Sales.BuildSalesReportAsync(Filter());
+        await DownloadAsync(await Exporter.ToPdfAsync(doc), "sales-report.pdf", "application/pdf");
+    }
+
+    private async Task DownloadAsync(byte[] bytes, string fileName, string mime) =>
+        await JS.InvokeVoidAsync("saveAsFile", fileName, Convert.ToBase64String(bytes), mime);
+}
