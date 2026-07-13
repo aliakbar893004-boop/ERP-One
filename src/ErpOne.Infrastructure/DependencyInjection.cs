@@ -77,6 +77,7 @@ public static class DependencyInjection
         services.AddScoped<IStockService, StockService>();
         services.AddScoped<IReportExporter, ReportExporter>();
         services.AddScoped<IStockLedgerReportService, StockLedgerReportService>();
+        services.AddScoped<IInventoryValuationReportService, InventoryValuationReportService>();
         services.AddScoped<ILogService, LogService>();
         services.AddScoped<IApprovalChainService, ApprovalChainService>();
         services.AddScoped<IApprovalService, ApprovalService>();
