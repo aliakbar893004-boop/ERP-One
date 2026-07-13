@@ -18,7 +18,6 @@
             <i class="bi bi-chevron-right"></i>
             <span class="here">@(Id is null ? "New" : "Edit")</span>
         </div>
-        <h1>@Title</h1>
     </div>
 
     @if (_loading)
@@ -51,27 +50,42 @@
                             <label class="fl">Code <span class="req">*</span></label>
                             <input class="ctl mono up @(_codeError is not null ? "bad" : "")"
                                    placeholder="IDR" maxlength="3" @bind="_code" @bind:event="oninput" />
-                            @if (_codeError is not null) { <div class="err-txt">@_codeError</div> }
+                            @if (_codeError is not null)
+                            {
+                                <div class="err-txt">@_codeError</div>
+                            }
                         </div>
-                        <div class="f c6">
+                        <div class="f c4">
                             <label class="fl">Name <span class="req">*</span></label>
                             <input class="ctl @(_nameError is not null ? "bad" : "")"
                                    placeholder="Rupiah" maxlength="60" @bind="_name" @bind:event="oninput" />
-                            @if (_nameError is not null) { <div class="err-txt">@_nameError</div> }
+                            @if (_nameError is not null)
+                            {
+                                <div class="err-txt">@_nameError</div>
+                            }
                         </div>
                         <div class="f c3">
                             <label class="fl">Symbol <span class="req">*</span></label>
                             <input class="ctl @(_symbolError is not null ? "bad" : "")"
                                    placeholder="Rp" maxlength="6" @bind="_symbol" @bind:event="oninput" />
-                            @if (_symbolError is not null) { <div class="err-txt">@_symbolError</div> }
+                            @if (_symbolError is not null)
+                            {
+                                <div class="err-txt">@_symbolError</div>
+                            }
                         </div>
                         <div class="f c3">
                             <label class="fl">Decimal places</label>
                             <input type="number" min="0" max="6" class="ctl" @bind="_decimalPlaces" />
                         </div>
-                        <div class="f c9 d-flex align-items-end gap-4">
-                            <label class="fl-check"><input type="checkbox" @bind="_isBase" /> Base currency</label>
-                            <label class="fl-check"><input type="checkbox" @bind="_isActive" /> Active</label>
+                        <div class="f c3 d-flex align-items-end gap-4">
+                            <label class="fl-check">
+                                <input type="checkbox" @bind="_isBase" /> Base currency
+                            </label>
+                        </div>
+                        <div class="f c3 d-flex align-items-end gap-4">
+                            <label class="fl-check">
+                                <input type="checkbox" @bind="_isActive" /> Active
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -79,11 +93,20 @@
 
             <div class="pf-footer">
                 <div class="in">
-                    <span class="note"><span class="req">*</span> required fields</span>
+                    <span class="note">
+                        <span class="req">*</span> required fields
+                    </span>
                     <a class="btn btn-ghost" href="/master/currencies"><i class="bi bi-x-lg"></i> Cancel</a>
                     <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
-                        @if (_saving) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> }
-                        else { <i class="bi bi-check2"></i> }
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        else
+                        {
+
+                            <i class="bi bi-check2"></i>
+                        }
                         Save currency
                     </button>
                 </div>

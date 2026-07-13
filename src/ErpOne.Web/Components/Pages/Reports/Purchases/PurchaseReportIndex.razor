@@ -17,8 +17,14 @@
 <div class="pi">
     <div class="pi-head">
         <div>
-            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Reports</span><span class="sep">·</span><span class="here">Purchases</span></nav>
-            <h1>Purchase Report</h1>
+            <nav class="crumbs">
+                <a href="/">Home</a>
+                <span class="sep">·</span>
+                <span>Reports</span>
+                <span class="sep">·</span>
+
+                <h1>Purchases</h1>
+            </nav>           
             <p>Goods received (posted GRN) by supplier and product.</p>
         </div>
         <AuthorizeView Policy="reports.purchases.export">
@@ -45,11 +51,17 @@
         <input type="date" class="ctl" @bind="_to" @bind:after="ReloadAsync" />
         <select @bind="_supplierId" @bind:after="ReloadAsync">
             <option value="0">All suppliers</option>
-            @foreach (var s in _suppliers) { <option value="@s.Id">@s.Name</option> }
+            @foreach (var s in _suppliers)
+            {
+                <option value="@s.Id">@s.Name</option>
+            }
         </select>
         <select @bind="_warehouseId" @bind:after="ReloadAsync">
             <option value="0">All warehouses</option>
-            @foreach (var w in _warehouses) { <option value="@w.Id">@w.Name</option> }
+            @foreach (var w in _warehouses)
+            {
+                <option value="@w.Id">@w.Name</option>
+            }
         </select>
         <div class="search">
             <i class="bi bi-search"></i>

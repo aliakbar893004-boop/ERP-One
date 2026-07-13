@@ -292,6 +292,10 @@ h1:focus {
                 background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
                 background-repeat:no-repeat; background-position:right 12px center; }
 .pi .toolbar select:focus { border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
+.pi .toolbar input[type=date] { flex:none; border:1.5px solid var(--line); background:#fff; border-radius:11px;
+                padding:10px 13px; font:inherit; font-size:14px; color:var(--ink); outline:none; transition:.15s; cursor:pointer; }
+.pi .toolbar input[type=date]:focus { border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-soft); }
+.pi .toolbar .chk { display:inline-flex; align-items:center; gap:7px; font-size:13.5px; font-weight:600; color:var(--muted); cursor:pointer; }
 .pi .chips { display:flex; gap:8px; flex-wrap:wrap; }
 .pi .chip { border:1.5px solid var(--line); background:#fff; border-radius:99px; padding:8px 15px;
         font:inherit; font-size:13px; font-weight:600; color:#475569; cursor:pointer; transition:.14s; }
@@ -317,6 +321,10 @@ h1:focus {
 .pi .code { color:var(--muted); font-size:12.5px; white-space:nowrap; }
 .pi .nm { font-weight:600; }
 .pi .lowstock { color:var(--danger); font-weight:600; }
+/* Footer total row — match the tbody cell metrics + a separating top border,
+   so <tfoot> grand-total rows (gross profit / inventory valuation) read the same
+   as the bold total rows the stock-card renders inside <tbody>. */
+.pi tfoot td { padding:11px 14px; border-top:1.5px solid var(--line); font-size:13.5px; font-weight:700; vertical-align:middle; }
 
 .pi .thumb { width:40px; height:40px; border-radius:9px; object-fit:cover;
          background:var(--field); border:1px solid var(--line); display:grid; place-items:center; color:#b8c0cc; }
@@ -809,8 +817,10 @@ html[data-bs-theme="dark"] .pf {
 /* .pi — hardcoded light spots the tokens don't cover */
 html[data-bs-theme="dark"] .pi .search input,
 html[data-bs-theme="dark"] .pi .toolbar select,
+html[data-bs-theme="dark"] .pi .toolbar input[type=date],
 html[data-bs-theme="dark"] .pi .chip,
-html[data-bs-theme="dark"] .pi-head .btn-out { background:var(--dk-field); color:var(--dk-ink); }
+html[data-bs-theme="dark"] .pi-head .btn-out { background-color:var(--dk-field); color:var(--dk-ink); }
+html[data-bs-theme="dark"] .pi .toolbar input[type=date]::-webkit-calendar-picker-indicator { filter:invert(.8); }
 html[data-bs-theme="dark"] .pi thead th { background:#101A2E; }
 html[data-bs-theme="dark"] .pi tbody tr:hover { background:rgba(255,255,255,.03); }
 html[data-bs-theme="dark"] .pi .chip.on { background:var(--accent-soft); color:var(--accent-deep); border-color:var(--accent); }
@@ -832,6 +842,7 @@ html[data-bs-theme="dark"] .cf .pf-footer { background:rgba(22,34,60,.88); }
 html[data-bs-theme="dark"] .cf select.ctl,
 html[data-bs-theme="dark"] .pi .toolbar select {
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%239AA7BD' stroke-width='2'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center;
 }
 
 /* .pf detail pages — a few hardcoded light spots live in scoped CSS, so
