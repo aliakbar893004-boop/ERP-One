@@ -31,7 +31,7 @@ shift kasir (4d), dashboard KPI (4e).
 | Topik | Keputusan |
 |-------|-----------|
 | Bentuk Kartu Stok | **List + drill-down**: halaman utama = daftar mutasi filterable; klik baris/produk → kartu stok per varian dengan saldo berjalan. |
-| Nilai Persediaan | **Per tanggal (`as of date`)**, rekonstruksi dari `StockMovement`. |
+| Nilai Persediaan | **Per tanggal (`as of date`)**, rekonstruksi dari `StockMovement`. Pengelompokan **bisa di-toggle: per kategori atau per gudang**. |
 | Format export | **Excel (.xlsx) asli + PDF asli** (bukan CSV, bukan print browser). |
 | Library export | **ClosedXML** (Excel, MIT) + **QuestPDF** (PDF, Community license). |
 | Fondasi bersama | Dibangun sebagai bagian sub-proyek pertama ini (bukan fase scaffold terpisah). |
@@ -102,10 +102,14 @@ Lapisan read-only baru, terisolasi dari service transaksional.
 - `BuildStockCardReportAsync(variantId, warehouseId?, from, to, ct)` → `ReportDocument`.
 
 ### 4.2 `IInventoryValuationReportService`
-- `GetValuationAsync(asOfDate, warehouseId?, categoryId?, includeZeroQty, ct)`
+- `GetValuationAsync(asOfDate, groupBy, warehouseId?, categoryId?, includeZeroQty, ct)`
+  - `groupBy`: enum `ValuationGroupBy { Category, Warehouse }` (default `Category`).
   - Per varian: `qty = Σ Quantity (MovementDate ≤ asOf)`,
     `value = Σ(Quantity × UnitCost) (≤ asOf)`, `avgCost = qty == 0 ? 0 : value/qty`.
-  - Dikelompokkan per kategori: subtotal per kategori + grand total.
+  - Dikelompokkan sesuai `groupBy`: subtotal per grup (kategori **atau** gudang) + grand total.
+    - Catatan: saat `groupBy = Warehouse`, satu varian bisa muncul di >1 grup gudang
+      (nilai per gudang); saat `groupBy = Category`, agregasi lintas gudang per varian
+      (kecuali difilter `warehouseId`).
   - `includeZeroQty = false` → sembunyikan item qty 0 (default).
 - `GetValuationSummaryAsync(...)` — KPI: total nilai, total qty, jumlah item.
 - `BuildValuationReportAsync(...)` → `ReportDocument`.
@@ -137,11 +141,11 @@ jangan bikin sistem desain baru).
 - Tombol Export Excel / PDF (kartu stok satu varian).
 
 ### 5.3 `/reports/inventory-valuation` → `InventoryValuationIndex.razor`
-- Toolbar: "As of date" (default hari ini), dropdown gudang, dropdown kategori,
-  toggle "tampilkan qty 0".
+- Toolbar: "As of date" (default hari ini), **toggle "Group by: Kategori / Gudang"**,
+  dropdown gudang, dropdown kategori, toggle "tampilkan qty 0".
 - KPI (`.cr-kpis`): total nilai persediaan, total qty, jumlah item.
-- Tabel dikelompokkan per kategori: baris varian (varian, qty, HPP rata2, nilai)
-  + subtotal per kategori + grand total.
+- Tabel dikelompokkan sesuai toggle (kategori **atau** gudang): baris varian
+  (varian, qty, HPP rata2, nilai) + subtotal per grup + grand total.
 - Tombol Export Excel / PDF.
 
 ---
@@ -164,6 +168,8 @@ Pola integration test SQLite `EnsureCreated` (seperti `StockServiceTests`):
   tanpa filter tanggal) = `ProductStock.Quantity`.
 - **Valuasi as-of-date**: `asOf = hari ini` → total nilai = `Σ ProductStock.Qty × HPP`;
   `asOf` di masa lalu memotong mutasi setelahnya dengan benar; item qty 0 tersembunyi/tampil sesuai flag.
+- **Group by**: grand total identik untuk `groupBy = Category` maupun `Warehouse`
+  (hanya pengelompokan/subtotal yang berbeda, bukan totalnya).
 - **Filter**: gudang / tipe / rentang tanggal mempersempit hasil sesuai harapan.
 - **Exporter**: `ReportDocument → .xlsx` dibaca ulang via ClosedXML (sel & header sesuai);
   `→ PDF` menghasilkan byte non-kosong.
