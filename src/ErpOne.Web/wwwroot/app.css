@@ -475,6 +475,127 @@ h1:focus {
 .cf .ctl:focus-visible,.cf .btn:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 
 /* ============================================================
+   Atlas — shared two-pane transaction form skeleton (".pf-form").
+   Single source for PurchaseOrder / SalesOrder / GoodsReceipt /
+   DeliveryOrder forms (their scoped .razor.css files are now empty).
+   Used together with ".pf": dark-theme rules live on .pf (below),
+   so these forms keep class="pf pf-form" and dark mode is unchanged.
+   ProductForm also opts in via "pf pf-form" and overrides tokens/
+   card/grid/footer in its own scoped CSS — the component stylesheet
+   loads AFTER app.css, so its overrides win on specificity ties.
+   ============================================================ */
+.pf-form {
+    --ink:#0F1B2D; --muted:#64748B; --line:#E9EDF2;
+    --accent:var(--app-accent, #0E9F6E); --accent-deep:var(--app-accent-deep, #077E57); --accent-soft:var(--app-accent-soft, #E7F8F1);
+    --danger:#E1453B; --panel:#FFFFFF; --field:#FBFCFD;
+    font-family:var(--app-font, 'IBM Plex Sans', system-ui, -apple-system, "Segoe UI", sans-serif);
+    color:var(--ink);
+    padding-bottom:8px;
+}
+
+/* Top bar */
+.pf-form .pf-top { margin-bottom:22px; }
+.pf-form .crumbs { display:flex; align-items:center; gap:8px; font-size:0.78125rem; font-weight:600; color:var(--muted); }
+.pf-form .crumbs a { color:var(--muted); text-decoration:none; }
+.pf-form .crumbs a:hover { color:var(--ink); }
+.pf-form .crumbs i { font-size:0.5625rem; opacity:.7; }
+.pf-form .crumbs .here { color:var(--ink); }
+
+/* Alerts */
+.pf-form .pf-alert { display:flex; align-items:center; gap:9px; border-radius:12px; padding:11px 15px; font-size:0.84375rem; font-weight:500; margin-bottom:16px; }
+.pf-form .pf-alert.err  { background:#FDECEA; border:1px solid #F6C9C4; color:#B23A30; }
+.pf-form .pf-alert.warn { background:#FEF6E7; border:1px solid #F7E2B0; color:#9A6B12; }
+
+/* Layout + section navigator */
+.pf-form .pf-layout { display:grid; grid-template-columns:240px 1fr; gap:26px; align-items:start; }
+.pf-form .pf-main { min-width:0; scroll-behavior:smooth; }
+.pf-form .pf-nav { position:sticky; top:18px; display:flex; flex-direction:column; gap:4px; }
+.pf-form .prog { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:15px 15px 13px; margin-bottom:10px; }
+.pf-form .prog .lbl { display:flex; justify-content:space-between; font-size:0.71875rem; font-weight:700; color:var(--muted); }
+.pf-form .prog .track { height:6px; border-radius:99px; background:#EEF1F4; margin-top:9px; overflow:hidden; }
+.pf-form .prog .fill  { height:100%; background:linear-gradient(90deg, var(--accent), var(--accent-deep)); border-radius:99px; transition:width .25s ease; }
+.pf-form .nlink { display:flex; align-items:center; gap:11px; width:100%; padding:10px 12px; border-radius:11px; color:var(--muted); text-decoration:none; text-align:left; font-family:inherit; font-weight:700; font-size:0.8125rem; background:transparent; appearance:none; cursor:pointer; border:1px solid transparent; transition:.14s; }
+.pf-form .nlink .ic { width:26px; height:26px; border-radius:8px; display:grid; place-items:center; background:#EEF1F4; color:var(--muted); font-size:0.8125rem; flex:none; }
+.pf-form .nlink:hover { background:var(--panel); color:var(--ink); }
+.pf-form .nlink.on { background:var(--panel); color:var(--ink); border-color:var(--line); box-shadow:0 4px 14px -9px rgba(15,27,45,.4); }
+.pf-form .nlink.on .ic { background:var(--accent-soft); color:var(--accent-deep); }
+.pf-form .nlink .ck { margin-left:auto; color:var(--accent); font-size:0.875rem; }
+.pf-form .nlink .badge-n { margin-left:auto; font-size:0.6875rem; font-weight:700; color:var(--muted); background:#EEF1F4; border-radius:99px; padding:1px 8px; }
+
+/* Cards */
+.pf-form .card { background:var(--panel); border:1px solid var(--line); border-radius:18px; box-shadow:0 1px 2px rgba(15,27,45,.04); overflow:hidden; margin-bottom:20px; scroll-margin-top:18px; }
+.pf-form .card-h { display:flex; align-items:center; gap:13px; padding:18px 22px 0; position:relative; }
+.pf-form .hd-ic { width:40px; height:40px; border-radius:12px; flex:none; display:grid; place-items:center; background:var(--accent-soft); color:var(--accent-deep); font-size:1.125rem; }
+.pf-form .hd-tx { min-width:0; }
+.pf-form .card-h h2 { font-size:1.03125rem; font-weight:700; margin:0; }
+.pf-form .card-h p { margin:3px 0 0; color:var(--muted); font-size:0.78125rem; }
+.pf-form .card-h .hd-act { position:absolute; top:16px; right:22px; }
+.pf-form .card-b { padding:18px 22px 22px; }
+
+/* Grid */
+.pf-form .grid { display:grid; grid-template-columns:repeat(12, 1fr); gap:16px 16px; }
+.pf-form .c2 { grid-column:span 2; } .pf-form .c4 { grid-column:span 4; } .pf-form .c6 { grid-column:span 6; } .pf-form .c12 { grid-column:span 12; }
+@media (max-width:560px) { .pf-form .c2, .pf-form .c4, .pf-form .c6 { grid-column:span 12; } }
+
+/* Labels & fields */
+.pf-form label.fl { display:block; font-size:0.78125rem; font-weight:700; color:#334155; margin-bottom:7px; }
+.pf-form label.fl .req, .pf-form .req { color:var(--danger); }
+.pf-form .hint { margin-top:7px; font-size:0.75rem; color:var(--muted); }
+.pf-form .mono { font-variant-numeric:tabular-nums; letter-spacing:.02em; }
+.pf-form .ctl { width:100%; border:1.5px solid var(--line); background:var(--field); border-radius:11px; padding:11px 13px; font:inherit; font-size:0.875rem; color:var(--ink); outline:none; transition:border-color .15s, box-shadow .15s, background .15s; }
+.pf-form .ctl::placeholder { color:#9AA6B2; }
+.pf-form .ctl:hover:not(:disabled):not(:focus) { border-color:#D6DCE4; }
+.pf-form .ctl:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 4px var(--accent-soft); }
+.pf-form .ctl:disabled, .pf-form .ctl[readonly] { background:#F1F4F7; color:#7C8794; }
+.pf-form .ctl:disabled { cursor:not-allowed; }
+.pf-form textarea.ctl { resize:vertical; min-height:62px; line-height:1.5; }
+.pf-form .ctl.is-invalid { border-color:var(--danger); }
+.pf-form .ctl.is-invalid:focus { box-shadow:0 0 0 4px rgba(225,69,59,.14); }
+.pf-form .ctl.sel { appearance:none; -webkit-appearance:none; padding-right:38px; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 13px center; }
+.pf-form .ctl-sm { padding:7px 9px; border-radius:8px; font-size:0.8125rem; }
+.pf-form .ctl-sm.sel { padding-right:30px; background-position:right 9px center; }
+.pf-form .text-end { text-align:right; }
+.pf-form .ig { position:relative; }
+.pf-form .ig .pre { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:0.8125rem; font-weight:600; pointer-events:none; }
+.pf-form .ctl.pad { padding-left:38px; }
+
+/* Buttons */
+.pf-form .btn { border:0; border-radius:11px; padding:11px 20px; font:inherit; font-weight:700; font-size:0.84375rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:.15s; text-decoration:none; line-height:1; }
+.pf-form .btn:disabled { opacity:.65; cursor:default; }
+.pf-form .btn-primary { background:var(--accent); color:#fff; box-shadow:0 8px 18px -9px var(--accent); }
+.pf-form .btn-primary:hover:not(:disabled) { background:var(--accent-deep); }
+.pf-form .btn-ghost { background:#F1F4F7; color:#475569; }
+.pf-form .btn-ghost:hover { background:#E6EAEF; color:var(--ink); }
+.pf-form .btn-soft { background:var(--accent-soft); color:var(--accent-deep); padding:9px 16px; font-size:0.8125rem; }
+.pf-form .btn-soft:hover { background:#D6F2E6; }
+
+/* Footer action bar (static) */
+.pf-form .pf-footer { position:static; margin-top:24px; background:var(--panel); border:1px solid var(--line); border-radius:14px; box-shadow:0 1px 2px rgba(15,27,45,.04); }
+.pf-form .pf-footer .in { padding:12px 16px; display:flex; align-items:center; gap:12px; }
+.pf-form .pf-footer .note { font-size:0.78125rem; color:var(--muted); margin-right:auto; }
+.pf-form .pf-footer .gt { font-size:0.84375rem; font-weight:700; color:var(--ink); margin-right:4px; }
+.pf-form .pf-footer .gt b { color:var(--accent-deep); font-variant-numeric:tabular-nums; }
+
+/* Line-items table */
+.pf-form .items { width:100%; border-collapse:collapse; }
+.pf-form .items th { font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); text-align:left; padding:0 10px 9px; border-bottom:1.5px solid var(--line); }
+.pf-form .items th.r, .pf-form .items td.r { text-align:right; }
+.pf-form .items td { padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:middle; font-size:0.84375rem; }
+.pf-form .items tr:last-child td { border-bottom:0; }
+.pf-form .items .sub { font-variant-numeric:tabular-nums; font-weight:600; white-space:nowrap; }
+.pf-form .items .sku { color:var(--muted); font-size:0.78125rem; }
+.pf-form .vr-del { border:none; background:transparent; color:#94A3B8; border-radius:7px; width:30px; height:30px; transition:.14s; }
+.pf-form .vr-del:hover { background:#FDECEA; color:var(--danger); }
+
+/* Responsive: stack nav on top */
+@media (max-width:820px) {
+    .pf-form .pf-layout { grid-template-columns:1fr; }
+    .pf-form .pf-nav { position:static; flex-direction:row; flex-wrap:wrap; gap:6px; }
+    .pf-form .pf-nav .prog { display:none; }
+    .pf-form .nlink { flex:1 1 auto; }
+}
+
+/* ============================================================
    SweetAlert2 — one general, on-brand dialog style (window.appSwal).
    Buttons styled here (buttonsStyling:false); container forced to
    stay centered so it never drops to the bottom of the page.
