@@ -17,6 +17,9 @@ using Serilog.Sinks.MSSqlServer;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// QuestPDF Community license (free for orgs with < USD 1M annual revenue).
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 // Logging. Console + File dari appsettings; SQL sink hanya di luar "Testing".
 builder.Host.UseSerilog((context, config) =>
 {

@@ -16,6 +16,7 @@ public static class AppMenus
     public static readonly AppAction ActPost  = new("post",  "Post",  "bi-box-arrow-in-down");
     public static readonly AppAction ActClose = new("close", "Close", "bi-lock-fill");
     public static readonly AppAction ActVoid = new("void", "Void", "bi-x-octagon-fill");
+    public static readonly AppAction ActExport = new("export", "Export", "bi-download");
 
     public static readonly IReadOnlyList<AppAction> AllActions =
         [ActIndex, ActCreate, ActEdit, ActDelete];
@@ -30,6 +31,7 @@ public static class AppMenus
     private static AppAction[] CashierShiftActions => [ActIndex, ActCreate, ActClose];
     private static AppAction[] PosActions => [ActIndex, ActCreate];
     private static AppAction[] SupplierPaymentActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActApprove, ActVoid];
+    private static AppAction[] ReportActions => [ActIndex, ActExport];
 
     public static readonly IReadOnlyList<ResourceGroup> Groups =
     [
@@ -78,6 +80,11 @@ public static class AppMenus
             new("finance.ar-receipts", "Customer Receipts", "bi-cash-stack", [ActIndex, ActCreate, ActVoid]),
             new("finance.expense-categories", "Expense Categories", "bi-tags", CRUD),
             new("finance.expenses", "Expenses", "bi-wallet2", [ActIndex, ActCreate, ActVoid]),
+        ]),
+        new("Reports",
+        [
+            new("reports.stock-ledger", "Stock Ledger", "bi-journal-text", ReportActions),
+            new("reports.inventory-valuation", "Inventory Valuation", "bi-cash-stack", ReportActions),
         ]),
         new("Settings",
         [

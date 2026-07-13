@@ -159,3 +159,13 @@ window.appPrint = () => window.print();
     })(0);
     apply();
 })();
+
+// Download a byte[] (passed as base64) as a file. Used by report exports.
+window.saveAsFile = (fileName, base64, mimeType) => {
+    const link = document.createElement('a');
+    link.download = fileName;
+    link.href = `data:${mimeType || 'application/octet-stream'};base64,${base64}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
