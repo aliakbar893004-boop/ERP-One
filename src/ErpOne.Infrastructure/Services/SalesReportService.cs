@@ -47,7 +47,7 @@ public class SalesReportService(SalesFactProvider facts) : ISalesReportService
             GeneratedAt = DateTime.Now,
             Columns =
             [
-                new ReportColumn("Date", ReportAlign.Left, "yyyy-MM-dd"),
+                new ReportColumn("Date", ReportAlign.Left, "d MMM yyyy"),
                 new ReportColumn("Channel"),
                 new ReportColumn("Doc"),
                 new ReportColumn("Warehouse"),
@@ -72,8 +72,8 @@ public class SalesReportService(SalesFactProvider facts) : ISalesReportService
     {
         var parts = new List<string>();
         if (!string.IsNullOrWhiteSpace(f.Channel)) parts.Add($"Channel: {f.Channel}");
-        if (f.From is DateTime from) parts.Add($"From: {from:yyyy-MM-dd}");
-        if (f.To is DateTime to) parts.Add($"To: {to:yyyy-MM-dd}");
+        if (f.From is DateTime from) parts.Add($"From: {from:d MMM yyyy}");
+        if (f.To is DateTime to) parts.Add($"To: {to:d MMM yyyy}");
         if (!string.IsNullOrWhiteSpace(f.Search)) parts.Add($"Search: {f.Search}");
         return parts.Count == 0 ? "All sales" : string.Join("  ·  ", parts);
     }

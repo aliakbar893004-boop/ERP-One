@@ -41,8 +41,8 @@
     }
 
     <div class="toolbar">
-        <input type="date" @bind="_from" @bind:after="ReloadAsync" />
-        <input type="date" @bind="_to" @bind:after="ReloadAsync" />
+        <input type="date" class="ctl" @bind="_from" @bind:after="ReloadAsync" />
+        <input type="date" class="ctl" @bind="_to" @bind:after="ReloadAsync" />
         <select @bind="_supplierId" @bind:after="ReloadAsync">
             <option value="0">All suppliers</option>
             @foreach (var s in _suppliers) { <option value="@s.Id">@s.Name</option> }
@@ -73,7 +73,7 @@
                 <table>
                     <thead>
                         <tr>
-                            <th style="width:100px">Date</th>
+                            <th style="width:120px">Date</th>
                             <th style="width:140px">GRN</th>
                             <th>Supplier</th>
                             <th>Product</th>
@@ -87,7 +87,7 @@
                         @foreach (var r in _page.Items)
                         {
                             <tr>
-                                <td class="mono">@r.Date.ToString("yyyy-MM-dd")</td>
+                                <td class="mono">@r.Date.ToString("d MMM yyyy")</td>
                                 <td class="code">@r.GrnNumber</td>
                                 <td>@r.SupplierName</td>
                                 <td class="nm">@r.Sku — @r.ProductName</td>

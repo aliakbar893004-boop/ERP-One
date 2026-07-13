@@ -74,7 +74,7 @@ public class PurchaseReportService(AppDbContext db) : IPurchaseReportService
             GeneratedAt = DateTime.Now,
             Columns =
             [
-                new ReportColumn("Date", ReportAlign.Left, "yyyy-MM-dd"),
+                new ReportColumn("Date", ReportAlign.Left, "d MMM yyyy"),
                 new ReportColumn("GRN"),
                 new ReportColumn("Supplier"),
                 new ReportColumn("Warehouse"),
@@ -96,8 +96,8 @@ public class PurchaseReportService(AppDbContext db) : IPurchaseReportService
     private static string FilterSummary(PurchaseFilter f)
     {
         var parts = new List<string>();
-        if (f.From is DateTime from) parts.Add($"From: {from:yyyy-MM-dd}");
-        if (f.To is DateTime to) parts.Add($"To: {to:yyyy-MM-dd}");
+        if (f.From is DateTime from) parts.Add($"From: {from:d MMM yyyy}");
+        if (f.To is DateTime to) parts.Add($"To: {to:d MMM yyyy}");
         if (!string.IsNullOrWhiteSpace(f.Search)) parts.Add($"Search: {f.Search}");
         return parts.Count == 0 ? "All purchases (posted GRN)" : string.Join("  ·  ", parts);
     }

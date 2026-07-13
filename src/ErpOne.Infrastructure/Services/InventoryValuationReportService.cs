@@ -86,7 +86,7 @@ public class InventoryValuationReportService(AppDbContext db) : IInventoryValuat
         return new ReportDocument
         {
             Title = "Inventory Valuation",
-            Subtitle = $"As of {result.AsOf:yyyy-MM-dd}  ·  Grouped by {result.GroupBy}",
+            Subtitle = $"As of {result.AsOf:d MMM yyyy}  ·  Grouped by {result.GroupBy}",
             GeneratedAt = DateTime.Now,
             Columns =
             [

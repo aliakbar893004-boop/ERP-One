@@ -19,7 +19,7 @@ public class GrossProfitReportService(SalesFactProvider facts, AppDbContext db) 
         {
             GrossProfitGroupBy.Product => $"{r.Sku} — {r.ProductName}",
             GrossProfitGroupBy.Category => r.CategoryId is int c && categoryNames!.TryGetValue(c, out var n) ? n : "Uncategorized",
-            GrossProfitGroupBy.Month => r.Date.ToString("yyyy-MM"),
+            GrossProfitGroupBy.Month => r.Date.ToString("MMM yyyy"),
             _ => "",
         };
 
@@ -90,8 +90,8 @@ public class GrossProfitReportService(SalesFactProvider facts, AppDbContext db) 
     {
         var parts = new List<string>();
         if (!string.IsNullOrWhiteSpace(f.Channel)) parts.Add($"Channel: {f.Channel}");
-        if (f.From is DateTime from) parts.Add($"From: {from:yyyy-MM-dd}");
-        if (f.To is DateTime to) parts.Add($"To: {to:yyyy-MM-dd}");
+        if (f.From is DateTime from) parts.Add($"From: {from:d MMM yyyy}");
+        if (f.To is DateTime to) parts.Add($"To: {to:d MMM yyyy}");
         return parts.Count == 0 ? "All sales" : string.Join("  ·  ", parts);
     }
 }

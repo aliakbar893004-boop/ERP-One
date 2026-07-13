@@ -124,7 +124,7 @@ public class StockLedgerReportService(AppDbContext db) : IStockLedgerReportServi
             GeneratedAt = DateTime.Now,
             Columns =
             [
-                new ReportColumn("Date", ReportAlign.Left, "yyyy-MM-dd"),
+                new ReportColumn("Date", ReportAlign.Left, "d MMM yyyy"),
                 new ReportColumn("SKU"),
                 new ReportColumn("Product"),
                 new ReportColumn("Warehouse"),
@@ -156,11 +156,11 @@ public class StockLedgerReportService(AppDbContext db) : IStockLedgerReportServi
         {
             Title = "Stock Card",
             Subtitle = $"{card.Sku} — {card.ProductName}  ·  {card.WarehouseName}",
-            FilterSummary = $"Period: {card.From:yyyy-MM-dd} to {card.To:yyyy-MM-dd}",
+            FilterSummary = $"Period: {card.From:d MMM yyyy} to {card.To:d MMM yyyy}",
             GeneratedAt = DateTime.Now,
             Columns =
             [
-                new ReportColumn("Date", ReportAlign.Left, "yyyy-MM-dd"),
+                new ReportColumn("Date", ReportAlign.Left, "d MMM yyyy"),
                 new ReportColumn("Type"),
                 new ReportColumn("Reference"),
                 new ReportColumn("Qty +/-", ReportAlign.Right, "N0"),
@@ -181,8 +181,8 @@ public class StockLedgerReportService(AppDbContext db) : IStockLedgerReportServi
     {
         var parts = new List<string>();
         if (f.Type is MovementType t) parts.Add($"Type: {t}");
-        if (f.From is DateTime from) parts.Add($"From: {from:yyyy-MM-dd}");
-        if (f.To is DateTime to) parts.Add($"To: {to:yyyy-MM-dd}");
+        if (f.From is DateTime from) parts.Add($"From: {from:d MMM yyyy}");
+        if (f.To is DateTime to) parts.Add($"To: {to:d MMM yyyy}");
         if (!string.IsNullOrWhiteSpace(f.Search)) parts.Add($"Search: {f.Search}");
         return parts.Count == 0 ? "All movements" : string.Join("  ·  ", parts);
     }

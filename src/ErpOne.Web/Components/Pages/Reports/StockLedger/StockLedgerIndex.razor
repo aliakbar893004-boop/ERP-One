@@ -50,8 +50,8 @@
             <option value="">All types</option>
             @foreach (var t in Enum.GetValues<MovementType>()) { <option value="@t">@t</option> }
         </select>
-        <input type="date" @bind="_from" @bind:after="ReloadAsync" />
-        <input type="date" @bind="_to" @bind:after="ReloadAsync" />
+        <input type="date" @bind="_from"  class="ctl"  @bind:after="ReloadAsync" />
+        <input type="date" @bind="_to" class="ctl"  @bind:after="ReloadAsync" />
         <div class="search">
             <i class="bi bi-search"></i>
             <input placeholder="Search SKU or product…" @bind="_search" @bind:event="oninput" @onkeyup="ReloadAsync" />
@@ -74,8 +74,8 @@
                 <table>
                     <thead>
                         <tr>
-                            <th style="width:110px">Date</th>
-                            <th style="width:150px">SKU</th>
+                            <th style="width:120px">Date</th>
+                            <th style="width:140px">SKU</th>
                             <th>Product</th>
                             <th>Warehouse</th>
                             <th style="width:110px">Type</th>
@@ -88,7 +88,7 @@
                         @foreach (var m in _page.Items)
                         {
                             <tr style="cursor:pointer" @onclick="() => OpenCard(m)">
-                                <td class="mono">@m.MovementDate.ToString("yyyy-MM-dd")</td>
+                                <td class="mono">@m.MovementDate.ToString("d MMM yyyy")</td>
                                 <td class="code mono">@m.Sku</td>
                                 <td class="nm">@m.ProductName</td>
                                 <td class="code">@m.WarehouseName</td>

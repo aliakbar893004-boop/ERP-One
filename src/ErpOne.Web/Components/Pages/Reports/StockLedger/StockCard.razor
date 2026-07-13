@@ -42,14 +42,14 @@
     else
     {
         <div class="card">
-            <div class="card-top"><span class="n">Period <b>@_card.From.ToString("yyyy-MM-dd")</b> to <b>@_card.To.ToString("yyyy-MM-dd")</b></span></div>
+            <div class="card-top"><span class="n">Period <b>@_card.From.ToString("d MMM yyyy")</b> to <b>@_card.To.ToString("d MMM yyyy")</b></span></div>
             <div class="table-responsive">
                 <table>
                     <thead>
                         <tr>
-                            <th style="width:110px">Date</th>
+                            <th style="width:120px">Date</th>
                             <th style="width:120px">Type</th>
-                            <th style="width:150px">Reference</th>
+                            <th style="width:140px">Reference</th>
                             <th class="r" style="width:90px">Qty +/-</th>
                             <th class="r" style="width:120px">Unit Cost</th>
                             <th class="r" style="width:120px">Balance Qty</th>
@@ -66,7 +66,7 @@
                         @foreach (var l in _card.Lines)
                         {
                             <tr>
-                                <td class="mono">@l.MovementDate.ToString("yyyy-MM-dd")</td>
+                                <td class="mono">@l.MovementDate.ToString("d MMM yyyy")</td>
                                 <td>@l.Type</td>
                                 <td class="code">@RefLabel(l)</td>
                                 <td class="r mono @(l.Quantity < 0 ? "lowstock" : "")">@l.Quantity.ToString("N0")</td>

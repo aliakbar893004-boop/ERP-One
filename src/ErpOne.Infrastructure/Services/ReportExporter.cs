@@ -98,6 +98,7 @@ public class ReportExporter(ICompanySettingService companySettings) : IReportExp
         "N0" => "#,##0",
         "N2" => "#,##0.00",
         "yyyy-MM-dd" => "yyyy-mm-dd",
+        "d MMM yyyy" => "d mmm yyyy",
         _ => null,
     };
 

@@ -338,6 +338,24 @@ h1:focus {
 .pi .empty p { margin:0; font-size:14px; }
 .pi .empty a { color:var(--accent-deep); font-weight:600; }
 
+/* Document/transaction index extras — shared by PO/SO/GRN/DO/POS/Shift
+   index pages (additive; master index pages simply don't use these classes). */
+.pi .ic-gry { background:#EEF1F4; color:#64748B; }
+.pi .po-no { font-variant-numeric:tabular-nums; font-weight:600; font-size:12.5px; background:var(--field);
+             border:1px solid var(--line); border-radius:7px; padding:3px 9px; white-space:nowrap; }
+.pi .b-draft  { background:#EEF1F4; color:#64748B; }
+.pi .b-warn   { background:#FEF6E7; color:#9A6B12; }
+.pi .b-done   { background:#DCFCE7; color:#15803D; }
+.pi .b-closed { background:#E5E7EB; color:#374151; }
+.pi .b-danger { background:#FDECEA; color:#B23A30; }
+.pi .b-cancel { background:#F1F5F9; color:#64748B; }
+.pi .rowact { display:flex; gap:6px; justify-content:flex-end; opacity:.4; transition:opacity .12s; }
+.pi tbody tr:hover .rowact { opacity:1; }
+.pi .ia { width:30px; height:30px; border-radius:8px; border:1.5px solid var(--line); background:#fff; color:#64748b;
+          display:grid; place-items:center; cursor:pointer; text-decoration:none; transition:.12s; }
+.pi .ia:hover { border-color:var(--accent); color:var(--accent-deep); }
+.pi .ia.del:hover { border-color:var(--danger); color:var(--danger); }
+
 /* ============================================================
    Atlas minimal form design (".cf"). Global single source of
    truth for simple/minimal data-entry forms (ProductCategory,
@@ -594,6 +612,144 @@ h1:focus {
     .pf-form .pf-nav .prog { display:none; }
     .pf-form .nlink { flex:1 1 auto; }
 }
+
+/* ============================================================
+   Atlas — shared document detail skeleton (".pf-detail").
+   Single source for the transaction/finance/cashier detail pages
+   (header, status pills, action buttons, 2-pane layout, info-grid,
+   items table, approval timeline). Used with ".pf" so the existing
+   dark-theme rules on .pf keep working. Each detail page keeps only
+   its own extras scoped (loads after app.css → wins ties).
+   ============================================================ */
+.pf-detail {
+    --ink:#0F1B2D; --muted:#64748B; --line:#E9EDF2;
+    --accent:var(--app-accent, #0E9F6E); --accent-deep:var(--app-accent-deep, #077E57); --accent-soft:var(--app-accent-soft, #E7F8F1);
+    --danger:#E1453B; --panel:#FFFFFF; --field:#FBFCFD;
+    font-family:var(--app-font, 'IBM Plex Sans', system-ui, -apple-system, "Segoe UI", sans-serif);
+    color:var(--ink);
+    padding-bottom:8px;
+}
+
+/* Top bar + header */
+.pf-detail .pf-top { margin-bottom:16px; }
+.pf-detail .crumbs { display:flex; align-items:center; gap:8px; font-size:0.78125rem; font-weight:600; color:var(--muted); }
+.pf-detail .crumbs a { color:var(--muted); text-decoration:none; }
+.pf-detail .crumbs a:hover { color:var(--ink); }
+.pf-detail .crumbs i { font-size:0.5625rem; opacity:.7; }
+.pf-detail .crumbs .here { color:var(--ink); }
+.pf-detail .pd-head { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px; }
+.pf-detail .pd-head h1 { font-size:1.5625rem; font-weight:700; letter-spacing:-.02em; margin:0; font-variant-numeric:tabular-nums; }
+.pf-detail .pd-head .actions { margin-left:auto; display:flex; flex-wrap:wrap; gap:8px; }
+
+/* Alerts */
+.pf-detail .pf-alert { display:flex; align-items:center; gap:9px; border-radius:12px; padding:11px 15px; font-size:0.84375rem; font-weight:500; margin-bottom:16px; }
+.pf-detail .pf-alert.err  { background:#FDECEA; border:1px solid #F6C9C4; color:#B23A30; }
+.pf-detail .pf-alert.warn { background:#FEF6E7; border:1px solid #F7E2B0; color:#9A6B12; }
+
+/* Status pills */
+.pf-detail .badge { font-size:0.78125rem; font-weight:700; padding:4px 12px; border-radius:99px; white-space:nowrap; }
+.pf-detail .b-draft  { background:#EEF1F4; color:#64748B; }
+.pf-detail .b-warn   { background:#FEF6E7; color:#9A6B12; }
+.pf-detail .b-ok     { background:var(--accent-soft); color:var(--accent-deep); }
+.pf-detail .b-info   { background:#E8F0FE; color:#1A56DB; }
+.pf-detail .b-done   { background:#DCFCE7; color:#15803D; }
+.pf-detail .b-closed { background:#E5E7EB; color:#374151; }
+.pf-detail .b-danger { background:#FDECEA; color:#B23A30; }
+.pf-detail .b-cancel { background:#F1F5F9; color:#64748B; }
+.pf-detail .b-dark   { background:#E5E7EB; color:#374151; }
+
+/* Buttons */
+.pf-detail .btn { border:0; border-radius:10px; padding:9px 16px; font:inherit; font-weight:700; font-size:0.8125rem; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:.15s; text-decoration:none; line-height:1; }
+.pf-detail .btn:disabled { opacity:.6; cursor:default; }
+.pf-detail .btn i { font-size:0.9375rem; }
+.pf-detail .btn-primary { background:var(--accent); color:#fff; box-shadow:0 8px 18px -9px var(--accent); }
+.pf-detail .btn-primary:hover:not(:disabled) { background:var(--accent-deep); }
+.pf-detail .btn-ok { background:var(--accent-soft); color:var(--accent-deep); }
+.pf-detail .btn-ok:hover:not(:disabled) { background:#D6F2E6; }
+.pf-detail .btn-danger { background:#FDECEA; color:#B23A30; }
+.pf-detail .btn-danger:hover:not(:disabled) { background:#F8D7D2; }
+.pf-detail .btn-line { background:#fff; border:1.5px solid var(--line); color:#475569; }
+.pf-detail .btn-line:hover:not(:disabled) { border-color:#cbd5e1; color:var(--ink); }
+.pf-detail .btn-ghost { background:#F1F4F7; color:#475569; }
+.pf-detail .btn-ghost:hover:not(:disabled) { background:#E6EAEF; color:var(--ink); }
+.pf-detail .btn-sm { padding:7px 13px; font-size:0.78125rem; }
+
+/* Layout */
+.pf-detail .pd-layout { display:grid; grid-template-columns:1fr 320px; gap:22px; align-items:start; }
+
+/* Cards */
+.pf-detail .card { background:var(--panel); border:1px solid var(--line); border-radius:18px; box-shadow:0 1px 2px rgba(15,27,45,.04); overflow:hidden; margin-bottom:20px; }
+.pf-detail .card.danger { border-color:#F6C9C4; }
+.pf-detail .card-h { display:flex; align-items:center; gap:13px; padding:16px 20px 0; }
+.pf-detail .hd-ic { width:36px; height:36px; border-radius:11px; flex:none; display:grid; place-items:center; background:var(--accent-soft); color:var(--accent-deep); font-size:1rem; }
+.pf-detail .hd-ic.dng { background:#FDECEA; color:var(--danger); }
+.pf-detail .card-h h2 { font-size:0.96875rem; font-weight:700; margin:0; }
+.pf-detail .card-b { padding:15px 20px 18px; }
+
+/* Info field grid */
+.pf-detail .info-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; }
+.pf-detail .info-cell { display:flex; flex-direction:column; gap:5px; min-width:0; background:var(--field); border:1px solid var(--line); border-radius:12px; padding:11px 14px; }
+.pf-detail .info-cell.wide { grid-column:1 / -1; }
+.pf-detail .info-cell .k { display:flex; align-items:center; gap:7px; font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+.pf-detail .info-cell .k i { font-size:0.8125rem; color:var(--accent-deep); opacity:.9; }
+.pf-detail .info-cell .v { font-size:0.9375rem; font-weight:600; color:var(--ink); line-height:1.35; word-break:break-word; }
+.pf-detail .info-cell .v.muted-v { color:var(--muted); font-weight:400; }
+.pf-detail .info-cell.reject { background:#FDECEA; border-color:#F6C9C4; }
+.pf-detail .info-cell.reject .k, .pf-detail .info-cell.reject .k i, .pf-detail .info-cell.reject .v { color:var(--danger); }
+@media (max-width:520px) { .pf-detail .info-grid { grid-template-columns:1fr; } }
+
+/* Items table */
+.pf-detail .items { width:100%; border-collapse:separate; border-spacing:0; font-variant-numeric:tabular-nums; }
+.pf-detail .items thead th { font-size:0.6875rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); text-align:left; padding:9px 12px; background:#F7F9FB; border-bottom:1px solid var(--line); }
+.pf-detail .items thead th:first-child { border-radius:10px 0 0 0; }
+.pf-detail .items thead th:last-child  { border-radius:0 10px 0 0; }
+.pf-detail .items th.r, .pf-detail .items td.r { text-align:right; }
+.pf-detail .items th.c, .pf-detail .items td.c { text-align:center; }
+.pf-detail .items td { padding:11px 12px; border-bottom:1px solid var(--line); font-size:0.84375rem; vertical-align:middle; color:var(--ink); transition:background .12s; }
+.pf-detail .items tbody tr:hover td { background:var(--field); }
+.pf-detail .items tbody tr:last-child td { border-bottom:0; }
+.pf-detail .items .mono { font-variant-numeric:tabular-nums; }
+.pf-detail .items td.zero { color:var(--muted); }
+.pf-detail .items td.total { font-weight:700; }
+.pf-detail .items .prod { display:flex; flex-direction:column; gap:2px; }
+.pf-detail .items .prod .pn { font-weight:600; color:var(--ink); font-size:0.875rem; }
+.pf-detail .items .prod .sku { font-size:0.72rem; font-weight:600; color:var(--muted); letter-spacing:.02em; font-variant-numeric:tabular-nums; }
+.pf-detail .recv { display:inline-block; font-size:0.75rem; font-weight:700; padding:3px 9px; border-radius:99px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.pf-detail .recv.none { background:#EEF1F4; color:#64748B; }
+.pf-detail .recv.part { background:#FEF6E7; color:#9A6B12; }
+.pf-detail .recv.full { background:var(--accent-soft); color:var(--accent-deep); }
+.pf-detail .items tfoot td { padding:13px 12px 0; border:0; border-top:1.5px solid var(--line); }
+.pf-detail .items tfoot .gt-l { font-weight:700; color:var(--muted); text-transform:uppercase; font-size:0.72rem; letter-spacing:.05em; }
+.pf-detail .items tfoot .grand { font-weight:800; font-size:1.0625rem; color:var(--accent-deep); font-variant-numeric:tabular-nums; }
+
+/* Reject / note control */
+.pf-detail .ctl { width:100%; border:1.5px solid var(--line); background:var(--field); border-radius:11px; padding:10px 13px; font:inherit; font-size:0.875rem; color:var(--ink); outline:none; transition:border-color .15s, box-shadow .15s, background .15s; resize:vertical; }
+.pf-detail .ctl:focus { border-color:var(--danger); background:#fff; box-shadow:0 0 0 4px rgba(225,69,59,.14); }
+.pf-detail .row-end { display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
+
+/* Approval timeline */
+.pf-detail .tl { list-style:none; margin:0; padding:0; }
+.pf-detail .tl li { display:flex; gap:11px; position:relative; padding-bottom:16px; }
+.pf-detail .tl li:last-child { padding-bottom:0; }
+.pf-detail .tl li:not(:last-child)::before { content:""; position:absolute; left:11px; top:24px; bottom:0; width:2px; background:var(--line); }
+.pf-detail .tl .dot { width:24px; height:24px; border-radius:50%; flex:none; display:grid; place-items:center; font-size:0.75rem; z-index:1; }
+.pf-detail .tl .dot.ok  { background:var(--accent-soft); color:var(--accent-deep); }
+.pf-detail .tl .dot.no  { background:#FDECEA; color:var(--danger); }
+.pf-detail .tl .dot.wait{ background:#FEF6E7; color:#9A6B12; }
+.pf-detail .tl .ti { font-weight:700; font-size:0.84375rem; }
+.pf-detail .tl .meta { font-size:0.75rem; color:var(--muted); margin-top:1px; }
+.pf-detail .tl .note { font-size:0.75rem; color:var(--danger); margin-top:2px; }
+.pf-detail .muted { color:var(--muted); font-size:0.84375rem; margin:0; }
+
+/* Void authorization modal (shared by AP/AR payment/receipt/expense void flows) */
+.pf-detail .auth-overlay { position:fixed; inset:0; background:rgba(15,27,45,.45); display:grid; place-items:center; z-index:1050; padding:16px; }
+.pf-detail .auth-modal { width:100%; max-width:400px; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:22px 24px; box-shadow:0 24px 60px -20px rgba(15,27,45,.5); }
+.pf-detail .auth-modal h3 { font-size:1.0625rem; font-weight:800; margin:0 0 4px; display:flex; align-items:center; gap:8px; }
+.pf-detail .auth-modal h3 i { color:var(--danger); }
+.pf-detail .auth-modal p { font-size:0.84375rem; color:var(--muted); margin:0 0 14px; }
+.pf-detail .auth-modal .fl { display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-bottom:4px; }
+
+@media (max-width:860px) { .pf-detail .pd-layout { grid-template-columns:1fr; } }
 
 /* ============================================================
    SweetAlert2 — one general, on-brand dialog style (window.appSwal).
