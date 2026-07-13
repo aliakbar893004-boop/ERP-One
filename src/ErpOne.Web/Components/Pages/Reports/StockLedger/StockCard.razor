@@ -1,0 +1,125 @@
+@page "/reports/stock-ledger/{VariantId:int}"
+@attribute [Authorize(Policy = "reports.stock-ledger.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Reports
+@using Microsoft.JSInterop
+@inject IStockLedgerReportService Ledger
+@inject IReportExporter Exporter
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>Stock Card</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><a href="/reports/stock-ledger">Stock Ledger</a><span class="sep">·</span><span class="here">Stock Card</span></nav>
+            <h1>Stock Card</h1>
+            @if (_card is not null) { <p>@_card.Sku — @_card.ProductName · @_card.WarehouseName</p> }
+        </div>
+        <div class="pi-actions">
+            <a class="btn btn-outline-secondary" href="/reports/stock-ledger"><i class="bi bi-arrow-left"></i> Back</a>
+            @if (_card is not null)
+            {
+                <AuthorizeView Policy="reports.stock-ledger.export">
+                    <Authorized>
+                        <button class="btn btn-outline-secondary" @onclick="ExportExcel"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                        <button class="btn btn-outline-secondary" @onclick="ExportPdf"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+                    </Authorized>
+                </AuthorizeView>
+            }
+        </div>
+    </div>
+
+    @if (_notFound)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-question-circle"></i></div><p>Variant not found.</p></div>
+    }
+    else if (_card is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-top"><span class="n">Period <b>@_card.From.ToString("yyyy-MM-dd")</b> to <b>@_card.To.ToString("yyyy-MM-dd")</b></span></div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:110px">Date</th>
+                            <th style="width:120px">Type</th>
+                            <th style="width:150px">Reference</th>
+                            <th class="r" style="width:90px">Qty +/-</th>
+                            <th class="r" style="width:120px">Unit Cost</th>
+                            <th class="r" style="width:120px">Balance Qty</th>
+                            <th class="r" style="width:140px">Balance Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="fw-bold">
+                            <td colspan="3">Opening balance</td>
+                            <td></td><td></td>
+                            <td class="r mono">@_card.OpeningQty.ToString("N0")</td>
+                            <td class="r mono">@_card.OpeningValue.ToString("N2")</td>
+                        </tr>
+                        @foreach (var l in _card.Lines)
+                        {
+                            <tr>
+                                <td class="mono">@l.MovementDate.ToString("yyyy-MM-dd")</td>
+                                <td>@l.Type</td>
+                                <td class="code">@RefLabel(l)</td>
+                                <td class="r mono @(l.Quantity < 0 ? "lowstock" : "")">@l.Quantity.ToString("N0")</td>
+                                <td class="r mono">@l.UnitCost.ToString("N2")</td>
+                                <td class="r mono">@l.RunningQty.ToString("N0")</td>
+                                <td class="r mono">@l.RunningValue.ToString("N2")</td>
+                            </tr>
+                        }
+                        <tr class="fw-bold">
+                            <td colspan="3">Closing balance</td>
+                            <td></td><td></td>
+                            <td class="r mono">@_card.ClosingQty.ToString("N0")</td>
+                            <td class="r mono">@_card.ClosingValue.ToString("N2")</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int VariantId { get; set; }
+    [SupplyParameterFromQuery] public int? Warehouse { get; set; }
+    [SupplyParameterFromQuery] public string? From { get; set; }
+    [SupplyParameterFromQuery] public string? To { get; set; }
+
+    private StockCardDto? _card;
+    private bool _notFound;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var from = DateTime.TryParse(From, out var f) ? f : DateTime.Today.AddMonths(-1);
+        var to = DateTime.TryParse(To, out var t) ? t : DateTime.Today;
+        _card = await Ledger.GetStockCardAsync(VariantId, Warehouse, from, to);
+        _notFound = _card is null;
+    }
+
+    private static string RefLabel(StockCardLineDto l) =>
+        l.RefType is null ? "" : l.RefId is null ? l.RefType : $"{l.RefType} #{l.RefId}";
+
+    private async Task ExportExcel()
+    {
+        var doc = await Ledger.BuildStockCardReportAsync(VariantId, _card!.WarehouseId, _card.From, _card.To);
+        if (doc is not null) await DownloadAsync(Exporter.ToExcel(doc), "stock-card.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+
+    private async Task ExportPdf()
+    {
+        var doc = await Ledger.BuildStockCardReportAsync(VariantId, _card!.WarehouseId, _card.From, _card.To);
+        if (doc is not null) await DownloadAsync(await Exporter.ToPdfAsync(doc), "stock-card.pdf", "application/pdf");
+    }
+
+    private async Task DownloadAsync(byte[] bytes, string fileName, string mime) =>
+        await JS.InvokeVoidAsync("saveAsFile", fileName, Convert.ToBase64String(bytes), mime);
+}

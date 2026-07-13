@@ -1,0 +1,171 @@
+@page "/reports/stock-ledger"
+@attribute [Authorize(Policy = "reports.stock-ledger.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Common
+@using ErpOne.Application.Reports
+@using ErpOne.Application.Warehouses
+@using ErpOne.Domain.Entities
+@using Microsoft.JSInterop
+@inject IStockLedgerReportService Ledger
+@inject IWarehouseService WarehouseService
+@inject IReportExporter Exporter
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>Stock Ledger</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Reports</span><span class="sep">·</span><span class="here">Stock Ledger</span></nav>
+            <h1>Stock Ledger</h1>
+            <p>All stock movements across products and warehouses.</p>
+        </div>
+        <AuthorizeView Policy="reports.stock-ledger.export">
+            <Authorized>
+                <div class="pi-actions">
+                    <button class="btn btn-outline-secondary" @onclick="ExportExcel"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                    <button class="btn btn-outline-secondary" @onclick="ExportPdf"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    @if (_summary is not null)
+    {
+        <div class="kpis">
+            <div class="kpi"><div class="ic ic-grn"><i class="bi bi-box-arrow-in-down"></i></div><div class="kpi-tx"><div class="v">@_summary.TotalIn.ToString("N0")</div><div class="l">Total in</div></div></div>
+            <div class="kpi"><div class="ic ic-red"><i class="bi bi-box-arrow-up"></i></div><div class="kpi-tx"><div class="v">@_summary.TotalOut.ToString("N0")</div><div class="l">Total out</div></div></div>
+            <div class="kpi"><div class="ic ic-blu"><i class="bi bi-arrow-left-right"></i></div><div class="kpi-tx"><div class="v">@_summary.NetChange.ToString("N0")</div><div class="l">Net change</div></div></div>
+            <div class="kpi"><div class="ic ic-amb"><i class="bi bi-list-ol"></i></div><div class="kpi-tx"><div class="v">@_summary.Records.ToString("N0")</div><div class="l">Movements</div></div></div>
+        </div>
+    }
+
+    <div class="toolbar">
+        <select @bind="_warehouseId" @bind:after="ReloadAsync">
+            <option value="0">All warehouses</option>
+            @foreach (var w in _warehouses) { <option value="@w.Id">@w.Name</option> }
+        </select>
+        <select @bind="_type" @bind:after="ReloadAsync">
+            <option value="">All types</option>
+            @foreach (var t in Enum.GetValues<MovementType>()) { <option value="@t">@t</option> }
+        </select>
+        <input type="date" @bind="_from" @bind:after="ReloadAsync" />
+        <input type="date" @bind="_to" @bind:after="ReloadAsync" />
+        <div class="search">
+            <i class="bi bi-search"></i>
+            <input placeholder="Search SKU or product…" @bind="_search" @bind:event="oninput" @onkeyup="ReloadAsync" />
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-journal-text"></i></div><p>No movements match your filters.</p></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-top"><span class="n">Showing <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> of <b>@_page.Total.ToString("N0")</b></span></div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:110px">Date</th>
+                            <th style="width:150px">SKU</th>
+                            <th>Product</th>
+                            <th>Warehouse</th>
+                            <th style="width:110px">Type</th>
+                            <th class="r" style="width:90px">Qty</th>
+                            <th class="r" style="width:120px">Unit Cost</th>
+                            <th style="width:140px">Reference</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var m in _page.Items)
+                        {
+                            <tr style="cursor:pointer" @onclick="() => OpenCard(m)">
+                                <td class="mono">@m.MovementDate.ToString("yyyy-MM-dd")</td>
+                                <td class="code mono">@m.Sku</td>
+                                <td class="nm">@m.ProductName</td>
+                                <td class="code">@m.WarehouseName</td>
+                                <td>@m.Type</td>
+                                <td class="r mono @(m.Quantity < 0 ? "lowstock" : "")">@m.Quantity.ToString("N0")</td>
+                                <td class="r mono">@m.UnitCost.ToString("N2")</td>
+                                <td class="code">@RefLabel(m)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (_page.TotalPages > 1)
+            {
+                <div class="card-foot"><Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" /></div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 20;
+    private PagedResult<StockMovementRowDto>? _page;
+    private StockLedgerSummaryDto? _summary;
+    private IReadOnlyList<WarehouseDto> _warehouses = [];
+    private int _currentPage = 1;
+    private int _warehouseId;
+    private string? _type;
+    private DateTime? _from = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime? _to = DateTime.Today;
+    private string? _search;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _warehouses = await WarehouseService.GetAllAsync();
+        await LoadAsync();
+    }
+
+    private StockLedgerFilter Filter() => new(
+        _search,
+        _warehouseId == 0 ? null : _warehouseId,
+        string.IsNullOrEmpty(_type) ? null : Enum.Parse<MovementType>(_type),
+        _from, _to);
+
+    private async Task LoadAsync()
+    {
+        var f = Filter();
+        _summary = await Ledger.GetSummaryAsync(f);
+        _page = await Ledger.GetMovementsPagedAsync(f, _currentPage, PageSize);
+    }
+
+    private async Task ReloadAsync() { _currentPage = 1; await LoadAsync(); }
+    private async Task GoToPageAsync(int page) { _currentPage = page; await LoadAsync(); }
+
+    private void OpenCard(StockMovementRowDto m)
+    {
+        var from = (_from ?? DateTime.Today.AddMonths(-1)).ToString("yyyy-MM-dd");
+        var to = (_to ?? DateTime.Today).ToString("yyyy-MM-dd");
+        var wh = _warehouseId == 0 ? "" : $"&warehouse={_warehouseId}";
+        Nav.NavigateTo($"/reports/stock-ledger/{m.VariantId}?from={from}&to={to}{wh}");
+    }
+
+    private static string RefLabel(StockMovementRowDto m) =>
+        m.RefType is null ? "" : m.RefId is null ? m.RefType : $"{m.RefType} #{m.RefId}";
+
+    private async Task ExportExcel()
+    {
+        var doc = await Ledger.BuildMovementsReportAsync(Filter());
+        await DownloadAsync(Exporter.ToExcel(doc), "stock-ledger.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+
+    private async Task ExportPdf()
+    {
+        var doc = await Ledger.BuildMovementsReportAsync(Filter());
+        await DownloadAsync(await Exporter.ToPdfAsync(doc), "stock-ledger.pdf", "application/pdf");
+    }
+
+    private async Task DownloadAsync(byte[] bytes, string fileName, string mime) =>
+        await JS.InvokeVoidAsync("saveAsFile", fileName, Convert.ToBase64String(bytes), mime);
+}
