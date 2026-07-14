@@ -12,6 +12,7 @@
 <div class="dash">
     <header class="dash-top">
         <div>
+            <div class="dash-greet">@_greeting</div>
             <h1>Dashboard</h1>
         </div>
         <span class="dash-date">@_dateLabel</span>
@@ -23,48 +24,48 @@
     }
     else
     {
-        @* ── KPI grid: col1 Revenue · col2 Transactions · col3 Dues ── *@
+        @* ── KPI: hero omzet (accent) membentang + 4 tile vibrant (Spektrum) ── *@
         <div class="kpis">
-            <div class="k hot" @onclick="@(() => Nav.NavigateTo("/reports/sales"))">
-                <div class="k-lbl">Today's Revenue</div>
-                <div class="k-v">Rp @_data.Kpis.TodayRevenue.ToString("N0")</div>
-                <div class="k-trend @_revDelta.cls">@_revDelta.txt</div>
-                <svg class="k-spark" viewBox="0 0 64 26" preserveAspectRatio="none" aria-hidden="true">
-                    <polyline points="@Spark(_data.Kpis.RevenueTrend)" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+            <div class="k-hero" @onclick="@(() => Nav.NavigateTo("/reports/sales"))">
+                <i class="bi bi-graph-up-arrow hero-wm" aria-hidden="true"></i>
+                <svg class="hero-spark" viewBox="0 0 84 30" preserveAspectRatio="none" aria-hidden="true">
+                    <polyline points="@Spark(_data.Kpis.RevenueTrend, 84, 30)" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
                 </svg>
-            </div>
-            <div class="k" @onclick="@(() => Nav.NavigateTo("/reports/sales"))">
-                <div class="k-lbl">Transactions Today</div>
-                <div class="k-v">@_data.Kpis.TodayTxnCount.ToString("N0")</div>
-                <div class="k-trend @_txnDelta.cls">@_txnDelta.txt</div>
-                <svg class="k-spark" viewBox="0 0 64 26" preserveAspectRatio="none" aria-hidden="true">
-                    <polyline points="@Spark(_data.Kpis.TxnTrend.Select(x => (decimal)x).ToList())" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
-                </svg>
-            </div>
-            <div class="k" @onclick="@(() => Nav.NavigateTo("/finance/ar-invoices"))">
-                <div class="k-lbl">Receivables Due</div>
-                <div class="k-v @(_data.Kpis.ArDue > 0 ? "amber" : "")">Rp @_data.Kpis.ArDue.ToString("N0")</div>
-                <div class="k-trend flat">overdue &amp; due ≤ 7 days</div>
-                <i class="bi bi-arrow-down-left-circle k-ic" style="color:var(--amber)"></i>
+                <div class="hero-lbl">Today's Revenue</div>
+                <div class="hero-v">Rp @_data.Kpis.TodayRevenue.ToString("N0")</div>
+                <div class="hero-sub">
+                    <span>@_data.Kpis.TodayTxnCount transactions</span>
+                    @if (_data.Kpis.TodayTxnCount > 0)
+                    {
+                        <span>· avg Rp @((_data.Kpis.TodayRevenue / _data.Kpis.TodayTxnCount).ToString("N0"))</span>
+                    }
+                    <span class="hero-delta">· @_revDelta.txt</span>
+                </div>
             </div>
 
-            <div class="k" @onclick="@(() => Nav.NavigateTo("/reports/sales"))">
-                <div class="k-lbl">Revenue This Month</div>
-                <div class="k-v">Rp @_data.Kpis.MonthRevenue.ToString("N0")</div>
-                <div class="k-trend flat">month to date · @_monthLabel</div>
-                <i class="bi bi-calendar3 k-ic"></i>
+            <div class="kt kt-violet" @onclick="@(() => Nav.NavigateTo("/reports/sales"))">
+                <i class="bi bi-calendar3 kt-wm" aria-hidden="true"></i>
+                <div class="kt-lbl">Revenue This Month</div>
+                <div class="kt-v">Rp @_data.Kpis.MonthRevenue.ToString("N0")</div>
+                <div class="kt-sub">month to date · @_monthLabel</div>
             </div>
-            <div class="k" @onclick="@(() => Nav.NavigateTo("/reports/sales"))">
-                <div class="k-lbl">Transactions This Month</div>
-                <div class="k-v">@_data.Kpis.MonthTxnCount.ToString("N0")</div>
-                <div class="k-trend flat">month to date · @_monthLabel</div>
-                <i class="bi bi-receipt-cutoff k-ic"></i>
+            <div class="kt kt-cyan" @onclick="@(() => Nav.NavigateTo("/reports/sales"))">
+                <i class="bi bi-receipt-cutoff kt-wm" aria-hidden="true"></i>
+                <div class="kt-lbl">Transactions This Month</div>
+                <div class="kt-v">@_data.Kpis.MonthTxnCount.ToString("N0")</div>
+                <div class="kt-sub">@_data.Kpis.TodayTxnCount today</div>
             </div>
-            <div class="k" @onclick="@(() => Nav.NavigateTo("/finance/ap-invoices"))">
-                <div class="k-lbl">Payables Due</div>
-                <div class="k-v">Rp @_data.Kpis.ApDue.ToString("N0")</div>
-                <div class="k-trend flat">overdue &amp; due ≤ 7 days</div>
-                <i class="bi bi-arrow-up-right-circle k-ic"></i>
+            <div class="kt kt-amber" @onclick="@(() => Nav.NavigateTo("/finance/ar-invoices"))">
+                <i class="bi bi-arrow-down-left-circle kt-wm" aria-hidden="true"></i>
+                <div class="kt-lbl">Receivables Due</div>
+                <div class="kt-v">Rp @_data.Kpis.ArDue.ToString("N0")</div>
+                <div class="kt-sub">overdue &amp; due ≤ 7 days</div>
+            </div>
+            <div class="kt kt-rose" @onclick="@(() => Nav.NavigateTo("/finance/ap-invoices"))">
+                <i class="bi bi-arrow-up-right-circle kt-wm" aria-hidden="true"></i>
+                <div class="kt-lbl">Payables Due</div>
+                <div class="kt-v">Rp @_data.Kpis.ApDue.ToString("N0")</div>
+                <div class="kt-sub">overdue &amp; due ≤ 7 days</div>
             </div>
         </div>
 
@@ -209,24 +210,20 @@
     private OperationalDashboardDto? _data;
     private string _dateLabel = "";
     private string _monthLabel = "";
+    private string _greeting = "";
     private (string cls, string txt) _revDelta;
-    private (string cls, string txt) _txnDelta;
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
     private static readonly CultureInfo En = CultureInfo.GetCultureInfo("en-US");
 
     protected override async Task OnInitializedAsync()
     {
-        var t = DateTime.Today;
+        var now = DateTime.Now;
+        var t = now.Date;
         _dateLabel = t.ToString("dddd, d MMMM yyyy", En);
         _monthLabel = t.ToString("MMMM yyyy", En);
+        _greeting = now.Hour < 12 ? "Good morning" : now.Hour < 18 ? "Good afternoon" : "Good evening";
         _data = await DashboardService.GetAsync(t);
-
-        var k = _data.Kpis;
-        _revDelta = Delta(k.TodayRevenue, k.YesterdayRevenue);
-        var td = k.TodayTxnCount - k.YesterdayTxnCount;
-        _txnDelta = (k.YesterdayTxnCount > 0 || k.TodayTxnCount > 0)
-            ? (td >= 0 ? "up" : "down", (td >= 0 ? "▲ " : "▼ ") + Math.Abs(td) + " vs yesterday")
-            : ("flat", "—");
+        _revDelta = Delta(_data.Kpis.TodayRevenue, _data.Kpis.YesterdayRevenue);
     }
 
     private void GoToProduct(int id) => Nav.NavigateTo($"/master/products/{id}/edit");

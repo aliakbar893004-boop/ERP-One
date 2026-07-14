@@ -8,7 +8,8 @@ public interface IStockService
     Task<int> GetOnHandAsync(int variantId, int warehouseId, CancellationToken ct = default);
     Task<IReadOnlyList<StockMovementDto>> GetMovementsByVariantAsync(int variantId, CancellationToken ct = default);
     Task<PagedResult<StockLevelDto>> GetLevelsPagedAsync(
-        int page, int pageSize, int? warehouseId, string? search, CancellationToken ct = default);
+        int page, int pageSize, int? warehouseId, string? search,
+        StockStatusFilter status = StockStatusFilter.All, CancellationToken ct = default);
 
     /// <summary>KPI Stock Levels: jumlah baris, total qty, low-stock, dan out-of-stock (opsional per gudang).</summary>
     Task<StockLevelSummary> GetLevelsSummaryAsync(int? warehouseId, CancellationToken ct = default);

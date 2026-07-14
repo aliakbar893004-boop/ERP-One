@@ -30,7 +30,8 @@ public class StockService(
             .ToListAsync(ct);
 
     public async Task<PagedResult<StockLevelDto>> GetLevelsPagedAsync(
-        int page, int pageSize, int? warehouseId, string? search, CancellationToken ct = default)
+        int page, int pageSize, int? warehouseId, string? search,
+        StockStatusFilter status = StockStatusFilter.All, CancellationToken ct = default)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 200);
@@ -47,6 +48,12 @@ public class StockService(
         if (warehouseId is int wid) q = q.Where(x => x.w.Id == wid);
         if (!string.IsNullOrWhiteSpace(search))
             q = q.Where(x => x.v.Sku.Contains(search) || x.p.Name.Contains(search));
+        q = status switch
+        {
+            StockStatusFilter.OutOfStock => q.Where(x => x.s.Quantity == 0),
+            StockStatusFilter.LowStock => q.Where(x => x.s.Quantity > 0 && x.s.Quantity <= LowStockThreshold),
+            _ => q
+        };
 
         var total = await q.CountAsync(ct);
         var items = await q

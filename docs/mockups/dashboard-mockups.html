@@ -156,9 +156,108 @@
 
   .foot{max-width:1120px;margin:10px auto 60px;padding:0 24px;color:var(--faint);font-size:.8rem}
 
+  /* ════════ MOCKUP 5 — "SPEKTRUM" : gradien penuh + glow berwarna ════════ */
+  .mk5{background:#F4F6FB;padding:26px}
+  .mk5 .top{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+  .mk5 .top h3{font-size:1.5rem;font-weight:800;margin:0;letter-spacing:-.02em;color:#0F1B2D}
+  .mk5 .top .date{font-size:.82rem;color:#64748B;font-weight:600}
+  .mk5 .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+  .mk5 .t{position:relative;overflow:hidden;border-radius:20px;padding:20px;color:#fff;min-height:120px;display:flex;flex-direction:column;justify-content:space-between}
+  .mk5 .t .lbl{font-size:.76rem;font-weight:700;opacity:.92}
+  .mk5 .t .v{font-size:1.7rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .mk5 .t .sub{font-size:.74rem;font-weight:600;opacity:.88}
+  .mk5 .t .wm{position:absolute;right:-8px;bottom:-18px;font-size:5.4rem;opacity:.18}
+  .mk5 .t.c1{background:linear-gradient(135deg,#7C3AED,#4F46E5);box-shadow:0 20px 36px -14px rgba(79,70,229,.6)}
+  .mk5 .t.c2{background:linear-gradient(135deg,#06B6D4,#2563EB);box-shadow:0 20px 36px -14px rgba(37,99,235,.55)}
+  .mk5 .t.c3{background:linear-gradient(135deg,#FB923C,#EA580C);box-shadow:0 20px 36px -14px rgba(234,88,12,.55)}
+  .mk5 .t.c4{background:linear-gradient(135deg,#10B981,#0D9488);box-shadow:0 20px 36px -14px rgba(13,148,136,.55)}
+  .mk5 .t.c5{background:linear-gradient(135deg,#EC4899,#E11D48);box-shadow:0 20px 36px -14px rgba(225,29,72,.5)}
+  .mk5 .t.c6{background:linear-gradient(135deg,#A855F7,#7C3AED);box-shadow:0 20px 36px -14px rgba(124,58,237,.5)}
+  .mk5 .cols{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
+  .mk5 .card{background:#fff;border-radius:18px;box-shadow:0 12px 32px -18px rgba(15,27,45,.4);overflow:hidden}
+  .mk5 .ch{padding:15px 18px;font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#334155;border-bottom:1px solid #EEF1F5;display:flex;align-items:center;gap:8px}
+  .mk5 .ch .pill{margin-left:auto;background:#FEEEDD;color:#EA580C;font-weight:800;font-size:.72rem;padding:2px 9px;border-radius:99px}
+  .mk5 .li{display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid #F1F4F8}
+  .mk5 .li:last-child{border-bottom:0}
+  .mk5 .li .tag{width:30px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:.65rem;font-weight:800;color:#fff}
+  .mk5 .li .no{font-weight:800;font-size:.76rem;color:#4F46E5;font-variant-numeric:tabular-nums}
+  .mk5 .li .who{flex:1;font-size:.85rem;font-weight:600;color:#0F1B2D}
+  .mk5 .li .amt{font-weight:700;font-size:.85rem;color:#0F1B2D}
+  .mk5 .aging{padding:18px}
+  .mk5 .aging .r{margin-bottom:14px}
+  .mk5 .aging .rt{display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:6px;color:#334155}
+  .mk5 .aging .bar{height:10px;border-radius:6px;background:#EEF1F5;overflow:hidden}
+  .mk5 .aging .bar i{display:block;height:100%;border-radius:6px}
+
+  /* ════════ MOCKUP 6 — "KACA" : glassmorphism + mesh gradient ════════ */
+  .mk6{position:relative;overflow:hidden;padding:30px;background:#0B1220}
+  .mk6::before{content:"";position:absolute;inset:-40px;background:
+    radial-gradient(38% 46% at 14% 18%,rgba(124,58,237,.60),transparent 70%),
+    radial-gradient(42% 52% at 86% 12%,rgba(6,182,212,.55),transparent 70%),
+    radial-gradient(48% 58% at 72% 92%,rgba(236,72,153,.50),transparent 70%),
+    radial-gradient(46% 56% at 18% 92%,rgba(16,185,129,.45),transparent 70%);
+    filter:blur(14px)}
+  .mk6 > *{position:relative;z-index:1}
+  .mk6 .top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;color:#fff}
+  .mk6 .top h3{margin:0;font-size:1.55rem;font-weight:800;letter-spacing:-.02em}
+  .mk6 .top .date{font-size:.82rem;opacity:.8;font-weight:600}
+  .mk6 .glass{background:rgba(255,255,255,.10);backdrop-filter:blur(16px) saturate(150%);-webkit-backdrop-filter:blur(16px) saturate(150%);border:1px solid rgba(255,255,255,.22);border-radius:20px;box-shadow:0 12px 44px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.25)}
+  .mk6 .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
+  .mk6 .k{padding:18px;color:#fff}
+  .mk6 .k .lbl{font-size:.75rem;opacity:.85;font-weight:600}
+  .mk6 .k .v{font-size:1.6rem;font-weight:800;margin:8px 0 4px;font-variant-numeric:tabular-nums}
+  .mk6 .k .sub{font-size:.74rem;font-weight:700;color:#6EE7B7}
+  .mk6 .k .sub.q{color:rgba(255,255,255,.7);font-weight:600}
+  .mk6 .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .mk6 .p{padding:18px;color:#fff}
+  .mk6 .p h4{margin:0 0 14px;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;opacity:.82}
+  .mk6 .row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.13);font-size:.85rem}
+  .mk6 .row:last-child{border-bottom:0}
+  .mk6 .row .amt{margin-left:auto;font-weight:800;font-variant-numeric:tabular-nums}
+  .mk6 .row .d{width:10px;height:10px;border-radius:3px}
+
+  /* ════════ MOCKUP 7 — "NUSANTARA VIVID" : palet rempah + batik halus ════════ */
+  .mk7{padding:28px;background:
+    radial-gradient(circle at 13px 13px,rgba(180,120,20,.06) 2.5px,transparent 3.5px) 0 0/28px 28px,
+    linear-gradient(180deg,#FBF7EF,#F5ECDD)}
+  .mk7 .top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px}
+  .mk7 .top .eb{font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#B45309}
+  .mk7 .top h3{margin:2px 0 0;font-size:1.6rem;font-weight:800;color:#3B2A17;letter-spacing:-.02em}
+  .mk7 .top .date{font-size:.82rem;color:#8A7657;font-weight:600}
+  .mk7 .kpis{display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px;margin-bottom:18px}
+  .mk7 .hero{grid-row:span 2;border-radius:22px;padding:26px;color:#fff;position:relative;overflow:hidden;background:linear-gradient(135deg,#0E9F6E,#0A6E4C);box-shadow:0 22px 42px -18px rgba(11,110,76,.7);display:flex;flex-direction:column;justify-content:center}
+  .mk7 .hero .batik{position:absolute;inset:0;opacity:.16;background:radial-gradient(circle at 22px 22px,#fff 3px,transparent 4px) 0 0/44px 44px}
+  .mk7 .hero .eb{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;opacity:.92;font-weight:700;position:relative}
+  .mk7 .hero .v{font-size:2.5rem;font-weight:800;margin:8px 0 6px;font-variant-numeric:tabular-nums;position:relative}
+  .mk7 .hero .sub{font-size:.84rem;opacity:.92;position:relative}
+  .mk7 .t{border-radius:18px;padding:16px 18px;color:#fff;position:relative;box-shadow:0 16px 30px -16px rgba(60,40,10,.45)}
+  .mk7 .t .lbl{font-size:.72rem;font-weight:700;opacity:.94}
+  .mk7 .t .v{font-size:1.35rem;font-weight:800;margin-top:6px;font-variant-numeric:tabular-nums}
+  .mk7 .t.gold{background:linear-gradient(135deg,#E0A82E,#C07C15)}
+  .mk7 .t.indigo{background:linear-gradient(135deg,#3B5BA5,#2A4178)}
+  .mk7 .t.terra{background:linear-gradient(135deg,#D9694C,#B24634)}
+  .mk7 .t.teal{background:linear-gradient(135deg,#12897E,#0B665D)}
+  .mk7 .cols{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+  .mk7 .card{background:#fff;border:1px solid #ECE1CC;border-radius:18px;overflow:hidden;box-shadow:0 14px 28px -18px rgba(90,60,20,.45)}
+  .mk7 .ch{padding:14px 18px;font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#7A5C2E;border-bottom:1px solid #F1E9D9;display:flex;align-items:center;gap:8px}
+  .mk7 .ch .pill{margin-left:auto;background:#F6E7C6;color:#9A6B12;font-weight:800;font-size:.72rem;padding:2px 9px;border-radius:99px}
+  .mk7 .li{display:flex;gap:12px;align-items:center;padding:11px 18px;border-bottom:1px solid #F4EEE0}
+  .mk7 .li:last-child{border-bottom:0}
+  .mk7 .li .tag{width:30px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:.65rem;font-weight:800;color:#fff}
+  .mk7 .li .who{flex:1;font-size:.85rem;font-weight:600;color:#3B2A17}
+  .mk7 .li .amt{font-weight:800;font-size:.85rem;color:#3B2A17}
+  .mk7 .aging{padding:18px}
+  .mk7 .aging .r{margin-bottom:14px}
+  .mk7 .aging .rt{display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:6px;color:#7A5C2E}
+  .mk7 .aging .bar{height:10px;border-radius:6px;background:#F1E9D9;overflow:hidden}
+  .mk7 .aging .bar i{display:block;height:100%;border-radius:6px}
+
   @media(max-width:860px){
     .mk1 .lead,.mk1 .g2,.mk2 .kpis,.mk2 .cols,.mk3 .cols,.mk3 .band,.mk4{grid-template-columns:1fr}
     .mk4{min-height:0}
+    .mk5 .kpis,.mk6 .kpis,.mk5 .cols,.mk6 .cols,.mk7 .cols{grid-template-columns:1fr}
+    .mk7 .kpis{grid-template-columns:1fr 1fr}
+    .mk7 .hero{grid-row:auto;grid-column:1/-1}
   }
 </style>
 </head>
@@ -174,6 +273,9 @@
   <a href="#m2">02 · Pulse</a>
   <a href="#m3">03 · Ledger</a>
   <a href="#m4">04 · Focus</a>
+  <a href="#m5">05 · Spektrum</a>
+  <a href="#m6">06 · Kaca</a>
+  <a href="#m7">07 · Nusantara Vivid</a>
 </nav>
 
 <!-- ══════════ MOCKUP 1 : AURORA ══════════ -->
@@ -356,6 +458,132 @@
         <div class="item"><span class="ic"><i class="bi bi-cart-plus-fill"></i></span><span class="l">PO menunggu</span><span class="v">3</span></div>
         <div class="item"><span class="ic"><i class="bi bi-bag-check-fill"></i></span><span class="l">SO menunggu</span><span class="v">2</span></div>
         <div class="item red"><span class="ic"><i class="bi bi-x-octagon-fill"></i></span><span class="l">Stok habis</span><span class="v">4</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ MOCKUP 5 : SPEKTRUM ══════════ -->
+<section class="mk-wrap" id="m5">
+  <div class="mk-cap">
+    <span class="n"><i class="bi bi-5-circle-fill"></i>Spektrum</span>
+    <h2>KPI gradien penuh warna + bayangan berwarna</h2>
+    <p>Tiap metrik punya warna & “glow” sendiri sehingga kartu terasa mengambang (kedalaman lewat colored shadow). Paling enerjik & penuh warna, tapi tetap rapi.</p>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><i></i><i></i><i></i><span class="url">erpone.app/dashboard</span></div>
+    <div class="mk5">
+      <div class="top"><h3>Dashboard</h3><span class="date">Monday, 14 July 2026</span></div>
+      <div class="kpis">
+        <div class="t c1"><i class="bi bi-graph-up-arrow wm"></i><div><div class="lbl">Today's Revenue</div><div class="v num">Rp 12.450.000</div></div><div class="sub">▲ 18% vs yesterday</div></div>
+        <div class="t c2"><i class="bi bi-receipt wm"></i><div><div class="lbl">Transactions Today</div><div class="v num">37</div></div><div class="sub">▲ 6 vs yesterday</div></div>
+        <div class="t c3"><i class="bi bi-arrow-down-left-circle wm"></i><div><div class="lbl">Receivables Due</div><div class="v num">Rp 8.200.000</div></div><div class="sub">overdue &amp; due ≤ 7 days</div></div>
+        <div class="t c4"><i class="bi bi-calendar3 wm"></i><div><div class="lbl">Revenue This Month</div><div class="v num">Rp 214.800.000</div></div><div class="sub">month to date · July</div></div>
+        <div class="t c5"><i class="bi bi-receipt-cutoff wm"></i><div><div class="lbl">Transactions This Month</div><div class="v num">512</div></div><div class="sub">month to date</div></div>
+        <div class="t c6"><i class="bi bi-arrow-up-right-circle wm"></i><div><div class="lbl">Payables Due</div><div class="v num">Rp 5.750.000</div></div><div class="sub">overdue &amp; due ≤ 7 days</div></div>
+      </div>
+      <div class="cols">
+        <div class="card">
+          <div class="ch"><i class="bi bi-hourglass-split"></i>Awaiting Approval<span class="pill">5</span></div>
+          <div class="li"><span class="tag" style="background:#4F46E5">PO</span><span class="no">PO-202607-014</span><span class="who">CV Sumber Makmur</span><span class="amt num">Rp 4.200.000</span></div>
+          <div class="li"><span class="tag" style="background:#4F46E5">PO</span><span class="no">PO-202607-013</span><span class="who">PT Aneka Jaya</span><span class="amt num">Rp 2.750.000</span></div>
+          <div class="li"><span class="tag" style="background:#4F46E5">PO</span><span class="no">PO-202607-011</span><span class="who">UD Berkah</span><span class="amt num">Rp 980.000</span></div>
+          <div class="li"><span class="tag" style="background:#2563EB">SO</span><span class="no">SO-202607-028</span><span class="who">Toko Melati</span><span class="amt num">Rp 3.100.000</span></div>
+          <div class="li"><span class="tag" style="background:#2563EB">SO</span><span class="no">SO-202607-027</span><span class="who">Toko Andalas</span><span class="amt num">Rp 1.450.000</span></div>
+        </div>
+        <div class="card">
+          <div class="ch"><i class="bi bi-bar-chart-steps"></i>Receivables Aging</div>
+          <div class="aging">
+            <div class="r"><div class="rt"><span>0–30 days</span><span class="num">Rp 5.200.000</span></div><div class="bar"><i style="width:63%;background:linear-gradient(90deg,#10B981,#0D9488)"></i></div></div>
+            <div class="r"><div class="rt"><span>31–60 days</span><span class="num">Rp 1.800.000</span></div><div class="bar"><i style="width:35%;background:linear-gradient(90deg,#FBBF24,#F59E0B)"></i></div></div>
+            <div class="r"><div class="rt"><span>61–90 days</span><span class="num">Rp 700.000</span></div><div class="bar"><i style="width:14%;background:linear-gradient(90deg,#FB923C,#EA580C)"></i></div></div>
+            <div class="r"><div class="rt"><span>90+ days</span><span class="num">Rp 500.000</span></div><div class="bar"><i style="width:10%;background:linear-gradient(90deg,#FB7185,#E11D48)"></i></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ MOCKUP 6 : KACA (glassmorphism) ══════════ -->
+<section class="mk-wrap" id="m6">
+  <div class="mk-cap">
+    <span class="n"><i class="bi bi-6-circle-fill"></i>Kaca</span>
+    <h2>Efek kaca (glassmorphism) di atas mesh gradient</h2>
+    <p>Latar gradient warna-warni dengan kartu kaca buram (frosted) yang tembus pandang & berlapis — kesan kedalaman paling kuat. Dramatis; paling pas untuk layar besar / mode gelap.</p>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><i></i><i></i><i></i><span class="url">erpone.app/dashboard</span></div>
+    <div class="mk6">
+      <div class="top"><h3>Dashboard</h3><span class="date">Monday, 14 July 2026</span></div>
+      <div class="kpis">
+        <div class="glass k"><div class="lbl">Today's Revenue</div><div class="v num">Rp 12.450.000</div><div class="sub">▲ 18% vs yesterday</div></div>
+        <div class="glass k"><div class="lbl">Transactions Today</div><div class="v num">37</div><div class="sub">▲ 6 vs yesterday</div></div>
+        <div class="glass k"><div class="lbl">Receivables Due</div><div class="v num">Rp 8.200.000</div><div class="sub q">overdue &amp; due ≤ 7 days</div></div>
+        <div class="glass k"><div class="lbl">Revenue This Month</div><div class="v num">Rp 214.800.000</div><div class="sub q">month to date · July</div></div>
+        <div class="glass k"><div class="lbl">Transactions This Month</div><div class="v num">512</div><div class="sub q">month to date</div></div>
+        <div class="glass k"><div class="lbl">Payables Due</div><div class="v num">Rp 5.750.000</div><div class="sub q">overdue &amp; due ≤ 7 days</div></div>
+      </div>
+      <div class="cols">
+        <div class="glass p">
+          <h4>Awaiting Approval · 5</h4>
+          <div class="row"><span class="d" style="background:#A78BFA"></span>PO-202607-014 · CV Sumber Makmur<span class="amt num">Rp 4.200.000</span></div>
+          <div class="row"><span class="d" style="background:#A78BFA"></span>PO-202607-013 · PT Aneka Jaya<span class="amt num">Rp 2.750.000</span></div>
+          <div class="row"><span class="d" style="background:#67E8F9"></span>SO-202607-028 · Toko Melati<span class="amt num">Rp 3.100.000</span></div>
+          <div class="row"><span class="d" style="background:#67E8F9"></span>SO-202607-027 · Toko Andalas<span class="amt num">Rp 1.450.000</span></div>
+        </div>
+        <div class="glass p">
+          <h4>Receivables Aging</h4>
+          <div class="row"><span class="d" style="background:#34D399"></span>0–30 days<span class="amt num">Rp 5.200.000</span></div>
+          <div class="row"><span class="d" style="background:#FBBF24"></span>31–60 days<span class="amt num">Rp 1.800.000</span></div>
+          <div class="row"><span class="d" style="background:#FB923C"></span>61–90 days<span class="amt num">Rp 700.000</span></div>
+          <div class="row"><span class="d" style="background:#FB7185"></span>90+ days<span class="amt num">Rp 500.000</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ MOCKUP 7 : NUSANTARA VIVID ══════════ -->
+<section class="mk-wrap" id="m7">
+  <div class="mk-cap">
+    <span class="n"><i class="bi bi-7-circle-fill"></i>Nusantara Vivid</span>
+    <h2>Berwarna + berdimensi, berkarakter Indonesia</h2>
+    <p>Menggabungkan permintaan “lebih berwarna &amp; berdimensi” dengan arah lokal: palet rempah (emerald sawah, emas kunyit, nila, terakota), tekstur batik halus, bahasa Indonesia. Hero omzet besar + kartu gradien bertumpuk.</p>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><i></i><i></i><i></i><span class="url">erpone.app/dashboard</span></div>
+    <div class="mk7">
+      <div class="top"><div><div class="eb">Selamat pagi, Ali ☕</div><h3>Dashboard</h3></div><span class="date">Senin, 14 Juli 2026</span></div>
+      <div class="kpis">
+        <div class="hero">
+          <div class="batik"></div>
+          <div class="eb">Omzet Hari Ini</div>
+          <div class="v num">Rp 12.450.000</div>
+          <div class="sub">37 transaksi · rata-rata Rp 336.000 · ▲ 18% dari kemarin</div>
+        </div>
+        <div class="t gold"><div class="lbl">Omzet Bulan Ini</div><div class="v num">Rp 214.800.000</div></div>
+        <div class="t teal"><div class="lbl">Transaksi Bulan Ini</div><div class="v num">512</div></div>
+        <div class="t terra"><div class="lbl">Piutang Jatuh Tempo</div><div class="v num">Rp 8.200.000</div></div>
+        <div class="t indigo"><div class="lbl">Hutang Jatuh Tempo</div><div class="v num">Rp 5.750.000</div></div>
+      </div>
+      <div class="cols">
+        <div class="card">
+          <div class="ch"><i class="bi bi-hourglass-split"></i>Menunggu Persetujuan<span class="pill">5</span></div>
+          <div class="li"><span class="tag" style="background:#0E9F6E">PO</span><span class="who">CV Sumber Makmur · PO-202607-014</span><span class="amt num">Rp 4.200.000</span></div>
+          <div class="li"><span class="tag" style="background:#0E9F6E">PO</span><span class="who">PT Aneka Jaya · PO-202607-013</span><span class="amt num">Rp 2.750.000</span></div>
+          <div class="li"><span class="tag" style="background:#3B5BA5">SO</span><span class="who">Toko Melati · SO-202607-028</span><span class="amt num">Rp 3.100.000</span></div>
+          <div class="li"><span class="tag" style="background:#3B5BA5">SO</span><span class="who">Toko Andalas · SO-202607-027</span><span class="amt num">Rp 1.450.000</span></div>
+        </div>
+        <div class="card">
+          <div class="ch"><i class="bi bi-bar-chart-steps"></i>Umur Piutang</div>
+          <div class="aging">
+            <div class="r"><div class="rt"><span>0–30 hari</span><span class="num">Rp 5.200.000</span></div><div class="bar"><i style="width:63%;background:linear-gradient(90deg,#12897E,#0E9F6E)"></i></div></div>
+            <div class="r"><div class="rt"><span>31–60 hari</span><span class="num">Rp 1.800.000</span></div><div class="bar"><i style="width:35%;background:linear-gradient(90deg,#E0A82E,#C07C15)"></i></div></div>
+            <div class="r"><div class="rt"><span>61–90 hari</span><span class="num">Rp 700.000</span></div><div class="bar"><i style="width:14%;background:linear-gradient(90deg,#D9694C,#B24634)"></i></div></div>
+            <div class="r"><div class="rt"><span>90+ hari</span><span class="num">Rp 500.000</span></div><div class="bar"><i style="width:10%;background:linear-gradient(90deg,#E11D48,#9F1239)"></i></div></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

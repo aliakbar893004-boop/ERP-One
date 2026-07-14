@@ -76,6 +76,11 @@
             <i class="bi bi-search"></i>
             <input placeholder="Search SKU or product…" @bind="_search" @bind:event="oninput" @onkeyup="ReloadAsync" />
         </div>
+        <div class="chips">
+            <button class="chip @(_status == StockStatusFilter.All ? "on" : "")" @onclick="() => SetStatusAsync(StockStatusFilter.All)">All</button>
+            <button class="chip @(_status == StockStatusFilter.LowStock ? "on" : "")" @onclick="() => SetStatusAsync(StockStatusFilter.LowStock)"><i class="bi bi-exclamation-triangle me-1"></i>Low stock</button>
+            <button class="chip @(_status == StockStatusFilter.OutOfStock ? "on" : "")" @onclick="() => SetStatusAsync(StockStatusFilter.OutOfStock)"><i class="bi bi-x-octagon me-1"></i>Out of stock</button>
+        </div>
     </div>
 
     @if (_page is null)
@@ -138,6 +143,7 @@
     private int _currentPage = 1;
     private int _warehouseId;
     private string? _search;
+    private StockStatusFilter _status = StockStatusFilter.All;
 
     protected override async Task OnInitializedAsync()
     {
@@ -149,9 +155,10 @@
     {
         var wid = _warehouseId == 0 ? (int?)null : _warehouseId;
         _summary = await StockService.GetLevelsSummaryAsync(wid);
-        _page = await StockService.GetLevelsPagedAsync(_currentPage, PageSize, wid, _search);
+        _page = await StockService.GetLevelsPagedAsync(_currentPage, PageSize, wid, _search, _status);
     }
 
     private async Task ReloadAsync() { _currentPage = 1; await LoadAsync(); }
+    private async Task SetStatusAsync(StockStatusFilter status) { _status = status; await ReloadAsync(); }
     private async Task GoToPageAsync(int page) { _currentPage = page; await LoadAsync(); }
 }
