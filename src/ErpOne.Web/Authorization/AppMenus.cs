@@ -37,6 +37,7 @@ public static class AppMenus
     [
         new(null,
         [
+            new("dashboard", "Dashboard", "bi-speedometer2", ViewOnly),
             new("home", "Home", "bi-house-door-fill", ViewOnly),
         ]),
         new("Master",

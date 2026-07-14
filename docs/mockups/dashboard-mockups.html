@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ErpOne — Dashboard Mockups</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  :root{
+    --accent:#0E9F6E; --accent-deep:#077E57; --accent-soft:#E7F8F1;
+    --ink:#0F1B2D; --muted:#64748B; --faint:#94A3B8; --line:#E9EDF2;
+    --panel:#fff; --field:#FBFCFD; --bg:#F1F4F8;
+    --amber:#F59E0B; --orange:#EA580C; --red:#E11D48; --blue:#2563EB;
+    --font:'IBM Plex Sans','Segoe UI',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+
+  /* ── Doc shell ── */
+  .doc-head{max-width:1120px;margin:0 auto;padding:40px 24px 8px}
+  .doc-head .kicker{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-deep)}
+  .doc-head h1{font-size:2rem;font-weight:800;letter-spacing:-.03em;margin:6px 0 4px}
+  .doc-head p{color:var(--muted);margin:0;max-width:60ch;font-size:.95rem}
+  .toc{max-width:1120px;margin:20px auto 0;padding:0 24px;display:flex;flex-wrap:wrap;gap:10px}
+  .toc a{border:1px solid var(--line);background:#fff;border-radius:99px;padding:8px 16px;font-size:.82rem;font-weight:600;color:var(--muted);transition:.15s}
+  .toc a:hover{border-color:var(--accent);color:var(--accent-deep)}
+
+  .mk-wrap{max-width:1120px;margin:0 auto;padding:34px 24px}
+  .mk-cap{margin:8px 0 16px}
+  .mk-cap .n{display:inline-flex;align-items:center;gap:8px;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-deep)}
+  .mk-cap h2{font-size:1.4rem;font-weight:800;letter-spacing:-.02em;margin:6px 0 4px}
+  .mk-cap p{color:var(--muted);margin:0;font-size:.9rem;max-width:70ch}
+  .frame{border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 30px 60px -40px rgba(15,27,45,.5)}
+  .frame-bar{display:flex;align-items:center;gap:7px;padding:11px 16px;background:#fff;border-bottom:1px solid var(--line)}
+  .frame-bar i{width:11px;height:11px;border-radius:50%;background:#E2E6EC}
+  .frame-bar .url{margin-left:12px;font-size:.72rem;color:var(--faint);font-variant-numeric:tabular-nums}
+
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ════════════════════════════════════════════════════
+     MOCKUP 1 — "AURORA" : hero omzet + rail aksi (baseline)
+     ════════════════════════════════════════════════════ */
+  .mk1{background:var(--bg);padding:24px}
+  .mk1 .top{margin-bottom:18px}
+  .mk1 .top .eb{font-size:.7rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent-deep)}
+  .mk1 .top h3{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin:2px 0 0}
+  .mk1 .lead{display:grid;grid-template-columns:1.45fr 1fr;gap:16px;margin-bottom:16px}
+  .mk1 .hero{position:relative;overflow:hidden;border-radius:20px;padding:26px 28px;min-height:186px;display:flex;flex-direction:column;justify-content:center;
+    background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;box-shadow:0 18px 34px -20px var(--accent)}
+  .mk1 .hero .mark{position:absolute;right:-14px;bottom:-24px;font-size:9rem;opacity:.13;transform:rotate(-8deg)}
+  .mk1 .hero .eb{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+  .mk1 .hero .v{font-size:2.7rem;font-weight:800;letter-spacing:-.03em;margin:6px 0 14px}
+  .mk1 .hero .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .mk1 .hero .chip{font-size:.8rem;font-weight:600;padding:5px 12px;border-radius:99px;background:rgba(255,255,255,.18)}
+  .mk1 .hero .chip.g{background:rgba(255,255,255,.10);font-weight:500}
+  .mk1 .attn{background:#fff;border:1px solid var(--line);border-radius:20px;padding:8px}
+  .mk1 .attn .h{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:10px 12px 8px}
+  .mk1 .row{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:13px;transition:.12s}
+  .mk1 .row:hover{background:var(--field)}
+  .mk1 .row .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:1.05rem;background:var(--field);color:var(--muted)}
+  .mk1 .row .l{font-size:.86rem;font-weight:600;flex:1}
+  .mk1 .row .val{font-size:.9rem;font-weight:700}
+  .mk1 .row .go{font-size:.7rem;color:var(--faint)}
+  .mk1 .row.warn .ic{background:rgba(245,158,11,.14);color:var(--amber)} .mk1 .row.warn .val{color:var(--orange)}
+  .mk1 .row.info .ic{background:var(--accent-soft);color:var(--accent-deep)}
+  .mk1 .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .mk1 .card{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .mk1 .card .ch{display:flex;align-items:center;gap:9px;padding:14px 18px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--line)}
+  .mk1 .card .ch i{color:var(--accent-deep)} .mk1 .card .ch .tot{margin-left:auto;color:var(--ink);text-transform:none;letter-spacing:0}
+  .mk1 .card .cb{padding:18px}
+  .mk1 .stack{display:flex;height:14px;border-radius:8px;overflow:hidden;background:var(--field)}
+  .mk1 .stack span{height:100%} .mk1 .stack span+span{border-left:2px solid #fff}
+  .mk1 .legend{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;margin-top:16px;font-size:.8rem}
+  .mk1 .leg{display:flex;align-items:center;gap:8px} .mk1 .leg .d{width:10px;height:10px;border-radius:3px}
+  .mk1 .leg .lv{margin-left:auto;font-weight:700}
+  .s0{background:var(--accent)} .s1{background:var(--amber)} .s2{background:var(--orange)} .s3{background:var(--red)}
+
+  /* ════════════════════════════════════════════════════
+     MOCKUP 2 — "PULSE" : KPI cards + tren + progress (SaaS)
+     ════════════════════════════════════════════════════ */
+  .mk2{background:#fff;padding:26px}
+  .mk2 .top{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+  .mk2 .top h3{font-size:1.45rem;font-weight:800;letter-spacing:-.02em;margin:0}
+  .mk2 .top .date{font-size:.82rem;color:var(--muted);font-weight:600}
+  .mk2 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+  .mk2 .k{border:1px solid var(--line);border-radius:16px;padding:18px;position:relative;overflow:hidden}
+  .mk2 .k .lbl{font-size:.75rem;color:var(--muted);font-weight:600}
+  .mk2 .k .v{font-size:1.55rem;font-weight:800;letter-spacing:-.02em;margin:8px 0 4px}
+  .mk2 .k .trend{font-size:.76rem;font-weight:700;display:inline-flex;align-items:center;gap:4px}
+  .mk2 .k .up{color:var(--accent-deep)} .mk2 .k .down{color:var(--red)}
+  .mk2 .k .spark{position:absolute;right:14px;bottom:14px;opacity:.9}
+  .mk2 .k.hot{background:linear-gradient(135deg,var(--accent),var(--accent-deep));border-color:transparent;color:#fff}
+  .mk2 .k.hot .lbl,.mk2 .k.hot .trend{color:rgba(255,255,255,.85)}
+  .mk2 .cols{display:grid;grid-template-columns:1.6fr 1fr;gap:16px}
+  .mk2 .card{border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .mk2 .ch{display:flex;align-items:center;gap:9px;padding:14px 18px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--line)}
+  .mk2 .ch i{color:var(--accent-deep)} .mk2 .ch .pill{margin-left:auto;background:rgba(245,158,11,.16);color:var(--orange);font-size:.72rem;font-weight:800;padding:2px 9px;border-radius:99px}
+  .mk2 .cb{padding:6px 0}
+  .mk2 .li{display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--line)}
+  .mk2 .li:last-child{border-bottom:0}
+  .mk2 .li .no{font-size:.76rem;font-weight:700;color:var(--accent-deep);font-variant-numeric:tabular-nums}
+  .mk2 .li .who{flex:1;font-size:.86rem;font-weight:600}
+  .mk2 .li .amt{font-size:.86rem;font-weight:700}
+  .mk2 .prog{padding:18px}
+  .mk2 .prog .r{margin-bottom:15px}
+  .mk2 .prog .rt{display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:6px}
+  .mk2 .prog .bar{height:8px;border-radius:6px;background:var(--field);overflow:hidden}
+  .mk2 .prog .bar i{display:block;height:100%;border-radius:6px}
+
+  /* ════════════════════════════════════════════════════
+     MOCKUP 3 — "LEDGER" : editorial finansial, hairline, mono-accent
+     ════════════════════════════════════════════════════ */
+  .mk3{background:#FAFAF7;padding:30px 32px;font-family:'IBM Plex Sans',system-ui,sans-serif}
+  .mk3 .masthead{border-bottom:2px solid var(--ink);padding-bottom:12px;margin-bottom:22px;display:flex;align-items:baseline;justify-content:space-between}
+  .mk3 .masthead h3{font-family:Georgia,'Times New Roman',serif;font-size:1.9rem;font-weight:700;letter-spacing:-.01em;margin:0}
+  .mk3 .masthead .meta{font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .mk3 .band{display:grid;grid-template-columns:2fr 1fr 1fr;gap:0;border:1px solid #E4E2DA;border-radius:2px;background:#fff;margin-bottom:24px}
+  .mk3 .band .cell{padding:22px 24px;border-right:1px solid #E4E2DA}
+  .mk3 .band .cell:last-child{border-right:0}
+  .mk3 .band .lbl{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+  .mk3 .band .big{font-family:Georgia,serif;font-size:2.4rem;font-weight:700;letter-spacing:-.02em;margin-top:6px;line-height:1}
+  .mk3 .band .sub{font-size:.78rem;color:var(--muted);margin-top:8px}
+  .mk3 .band .mid{font-family:Georgia,serif;font-size:1.5rem;font-weight:700;margin-top:6px}
+  .mk3 .band .accent{color:var(--accent-deep)}
+  .mk3 .cols{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+  .mk3 h4{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);font-weight:800;border-bottom:1px solid var(--ink);padding-bottom:7px;margin:0 0 12px}
+  .mk3 table{width:100%;border-collapse:collapse;font-size:.85rem}
+  .mk3 td{padding:9px 0;border-bottom:1px solid #EBE9E1}
+  .mk3 td.r{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+  .mk3 td .age{font-size:.7rem;color:var(--muted)}
+  .mk3 .rule{display:flex;align-items:center;gap:10px;font-size:.85rem;padding:9px 0;border-bottom:1px solid #EBE9E1}
+  .mk3 .rule .tick{width:6px;height:22px;border-radius:1px}
+  .mk3 .rule .amt{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums}
+
+  /* ════════════════════════════════════════════════════
+     MOCKUP 4 — "FOCUS" : minimal, satu angka besar + sidebar tenang
+     ════════════════════════════════════════════════════ */
+  .mk4{background:#0F1B2D;color:#E6EAF2;padding:0;display:grid;grid-template-columns:1.7fr 1fr;min-height:440px}
+  .mk4 .stage{padding:46px 44px;display:flex;flex-direction:column;justify-content:center;position:relative}
+  .mk4 .stage .eb{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:#5EEAD4;font-weight:700}
+  .mk4 .stage .huge{font-size:4rem;font-weight:800;letter-spacing:-.04em;margin:10px 0 4px;line-height:1;font-variant-numeric:tabular-nums}
+  .mk4 .stage .cap{color:#9AA7BD;font-size:1rem}
+  .mk4 .stage .infra{display:flex;gap:28px;margin-top:34px}
+  .mk4 .stage .mm .mv{font-size:1.5rem;font-weight:800;font-variant-numeric:tabular-nums}
+  .mk4 .stage .mm .ml{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:#6C7B94;margin-top:4px;font-weight:600}
+  .mk4 .side{background:#16223C;border-left:1px solid #2A374F;padding:26px 24px}
+  .mk4 .side .h{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:#6C7B94;font-weight:700;margin-bottom:14px}
+  .mk4 .item{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid #24314A}
+  .mk4 .item:last-child{border-bottom:0}
+  .mk4 .item .ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:#0F1B31;color:#9AA7BD}
+  .mk4 .item .l{flex:1;font-size:.85rem;font-weight:600}
+  .mk4 .item .v{font-weight:800;font-variant-numeric:tabular-nums}
+  .mk4 .item.alert .ic{background:rgba(245,158,11,.16);color:#FBBF24} .mk4 .item.alert .v{color:#FBBF24}
+  .mk4 .item.red .ic{background:rgba(225,69,59,.18);color:#FCA5A5} .mk4 .item.red .v{color:#FCA5A5}
+
+  .foot{max-width:1120px;margin:10px auto 60px;padding:0 24px;color:var(--faint);font-size:.8rem}
+
+  @media(max-width:860px){
+    .mk1 .lead,.mk1 .g2,.mk2 .kpis,.mk2 .cols,.mk3 .cols,.mk3 .band,.mk4{grid-template-columns:1fr}
+    .mk4{min-height:0}
+  }
+</style>
+</head>
+<body>
+
+<div class="doc-head">
+  <div class="kicker">ErpOne · Design Exploration</div>
+  <h1>Dashboard — Sample Mockups</h1>
+  <p>Empat arah desain untuk halaman <code>/dashboard</code>, memakai data contoh. Semua memakai palet & aksen ErpOne (emerald, bisa diganti user). Pilih satu arah — atau kombinasi elemen — lalu saya implementasikan.</p>
+</div>
+<nav class="toc">
+  <a href="#m1">01 · Aurora</a>
+  <a href="#m2">02 · Pulse</a>
+  <a href="#m3">03 · Ledger</a>
+  <a href="#m4">04 · Focus</a>
+</nav>
+
+<!-- ══════════ MOCKUP 1 : AURORA ══════════ -->
+<section class="mk-wrap" id="m1">
+  <div class="mk-cap">
+    <span class="n"><i class="bi bi-1-circle-fill"></i>Aurora</span>
+    <h2>Hero omzet + rail “perlu perhatian”</h2>
+    <p>Memisahkan <b>performa</b> (omzet, elemen paling menonjol) dari <b>aksi</b> (uang jatuh tempo & approval tertunda). Ini arah yang sedang terpasang sekarang. Hangat, hierarki jelas, satu titik fokus.</p>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><i></i><i></i><i></i><span class="url">erpone.app/dashboard</span></div>
+    <div class="mk1">
+      <div class="top"><div class="eb">Senin · 14 Juli 2026</div><h3>Dashboard</h3></div>
+      <div class="lead">
+        <div class="hero">
+          <i class="bi bi-graph-up-arrow mark"></i>
+          <div class="eb">Omzet Hari Ini</div>
+          <div class="v num">Rp 12.450.000</div>
+          <div class="chips"><span class="chip"><i class="bi bi-receipt"></i> 37 transaksi</span><span class="chip g">Rata-rata Rp 336.000</span></div>
+        </div>
+        <div class="attn">
+          <div class="h">Perlu Perhatian</div>
+          <div class="row warn"><span class="ic"><i class="bi bi-arrow-down-left-circle-fill"></i></span><span class="l">Piutang jatuh tempo</span><span class="val num">Rp 8.200.000</span><i class="bi bi-chevron-right go"></i></div>
+          <div class="row warn"><span class="ic"><i class="bi bi-arrow-up-right-circle-fill"></i></span><span class="l">Hutang jatuh tempo</span><span class="val num">Rp 5.750.000</span><i class="bi bi-chevron-right go"></i></div>
+          <div class="row info"><span class="ic"><i class="bi bi-cart-plus-fill"></i></span><span class="l">Purchase Order menunggu</span><span class="val num">3</span><i class="bi bi-chevron-right go"></i></div>
+          <div class="row info"><span class="ic"><i class="bi bi-bag-check-fill"></i></span><span class="l">Sales Order menunggu</span><span class="val num">2</span><i class="bi bi-chevron-right go"></i></div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="ch"><i class="bi bi-arrow-down-left-circle"></i>Umur Piutang<span class="tot num">Rp 8.200.000</span></div>
+          <div class="cb">
+            <div class="stack"><span class="s0" style="width:63%"></span><span class="s1" style="width:22%"></span><span class="s2" style="width:9%"></span><span class="s3" style="width:6%"></span></div>
+            <div class="legend">
+              <div class="leg"><span class="d s0"></span>0–30 hari<span class="lv num">Rp 5.200.000</span></div>
+              <div class="leg"><span class="d s1"></span>31–60<span class="lv num">Rp 1.800.000</span></div>
+              <div class="leg"><span class="d s2"></span>61–90<span class="lv num">Rp 700.000</span></div>
+              <div class="leg"><span class="d s3"></span>90+ hari<span class="lv num">Rp 500.000</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><i class="bi bi-arrow-up-right-circle"></i>Umur Hutang<span class="tot num">Rp 5.750.000</span></div>
+          <div class="cb">
+            <div class="stack"><span class="s0" style="width:70%"></span><span class="s1" style="width:18%"></span><span class="s2" style="width:12%"></span></div>
+            <div class="legend">
+              <div class="leg"><span class="d s0"></span>0–30 hari<span class="lv num">Rp 4.000.000</span></div>
+              <div class="leg"><span class="d s1"></span>31–60<span class="lv num">Rp 1.050.000</span></div>
+              <div class="leg"><span class="d s2"></span>61–90<span class="lv num">Rp 700.000</span></div>
+              <div class="leg" style="opacity:.45"><span class="d s3"></span>90+ hari<span class="lv num">Rp 0</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ MOCKUP 2 : PULSE ══════════ -->
+<section class="mk-wrap" id="m2">
+  <div class="mk-cap">
+    <span class="n"><i class="bi bi-2-circle-fill"></i>Pulse</span>
+    <h2>Kartu KPI dengan tren + antrian approval</h2>
+    <p>Gaya SaaS modern: baris KPI dengan indikator naik/turun & sparkline, lalu daftar dokumen menunggu approval + progress aging. Cocok kalau nanti ada data historis untuk tren. <span style="color:var(--faint)">(sparkline/tren di sini masih contoh — butuh data harian).</span></p>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><i></i><i></i><i></i><span class="url">erpone.app/dashboard</span></div>
+    <div class="mk2">
+      <div class="top"><h3>Dashboard</h3><span class="date">Senin, 14 Juli 2026</span></div>
+      <div class="kpis">
+        <div class="k hot">
+          <div class="lbl">Omzet Hari Ini</div><div class="v num">Rp 12,45jt</div>
+          <span class="trend">▲ 18% vs kemarin</span>
+          <svg class="spark" width="56" height="24" viewBox="0 0 56 24"><polyline points="0,18 10,15 20,17 30,9 40,11 56,3" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2"/></svg>
+        </div>
+        <div class="k">
+          <div class="lbl">Transaksi</div><div class="v num">37</div>
+          <span class="trend up">▲ 6</span>
+          <svg class="spark" width="56" height="24"><polyline points="0,20 12,16 24,18 36,12 48,10 56,8" fill="none" stroke="var(--accent)" stroke-width="2"/></svg>
+        </div>
+        <div class="k">
+          <div class="lbl">Piutang Jatuh Tempo</div><div class="v num" style="color:var(--orange)">Rp 8,2jt</div>
+          <span class="trend down">▲ Rp 1,1jt</span>
+          <i class="bi bi-arrow-down-left-circle spark" style="font-size:1.4rem;color:var(--amber)"></i>
+        </div>
+        <div class="k">
+          <div class="lbl">Hutang Jatuh Tempo</div><div class="v num">Rp 5,75jt</div>
+          <span class="trend">jatuh tempo ≤ 7 hari</span>
+          <i class="bi bi-arrow-up-right-circle spark" style="font-size:1.4rem;color:var(--muted)"></i>
+        </div>
+      </div>
+      <div class="cols">
+        <div class="card">
+          <div class="ch"><i class="bi bi-hourglass-split"></i>Menunggu Approval<span class="pill">5</span></div>
+          <div class="cb">
+            <div class="li"><span class="no">PO-202607-014</span><span class="who">CV Sumber Makmur</span><span class="amt num">Rp 4.200.000</span></div>
+            <div class="li"><span class="no">PO-202607-013</span><span class="who">PT Aneka Jaya</span><span class="amt num">Rp 2.750.000</span></div>
+            <div class="li"><span class="no">PO-202607-011</span><span class="who">UD Berkah</span><span class="amt num">Rp 980.000</span></div>
+            <div class="li"><span class="no">SO-202607-028</span><span class="who">Toko Melati</span><span class="amt num">Rp 3.100.000</span></div>
+            <div class="li"><span class="no">SO-202607-027</span><span class="who">Toko Andalas</span><span class="amt num">Rp 1.450.000</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><i class="bi bi-bar-chart-steps"></i>Umur Piutang</div>
+          <div class="prog">
+            <div class="r"><div class="rt"><span>0–30 hari</span><span class="num">Rp 5.200.000</span></div><div class="bar"><i style="width:63%;background:var(--accent)"></i></div></div>
+            <div class="r"><div class="rt"><span>31–60 hari</span><span class="num">Rp 1.800.000</span></div><div class="bar"><i style="width:35%;background:var(--amber)"></i></div></div>
+            <div class="r"><div class="rt"><span>61–90 hari</span><span class="num">Rp 700.000</span></div><div class="bar"><i style="width:14%;background:var(--orange)"></i></div></div>
+            <div class="r"><div class="rt"><span>90+ hari</span><span class="num">Rp 500.000</span></div><div class="bar"><i style="width:10%;background:var(--red)"></i></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ MOCKUP 3 : LEDGER ══════════ -->
+<section class="mk-wrap" id="m3">
+  <div class="mk-cap">
+    <span class="n"><i class="bi bi-3-circle-fill"></i>Ledger</span>
+    <h2>Editorial finansial — hairline & serif</h2>
+    <p>Karakter “laporan keuangan”: tipografi serif untuk angka, garis rambut, aksen tunggal. Terasa serius & presisi — pas untuk bisnis yang berat di sisi akuntansi/AR-AP. Padat angka, minim warna.</p>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><i></i><i></i><i></i><span class="url">erpone.app/dashboard</span></div>
+    <div class="mk3">
+      <div class="masthead"><h3>Dashboard</h3><span class="meta">Senin · 14 Juli 2026</span></div>
+      <div class="band">
+        <div class="cell"><div class="lbl">Omzet Hari Ini</div><div class="big accent num">Rp 12.450.000</div><div class="sub">37 transaksi · rata-rata Rp 336.000</div></div>
+        <div class="cell"><div class="lbl">Piutang Jatuh Tempo</div><div class="mid num">Rp 8.200.000</div><div class="sub">14 faktur terbuka</div></div>
+        <div class="cell"><div class="lbl">Hutang Jatuh Tempo</div><div class="mid num">Rp 5.750.000</div><div class="sub">9 faktur terbuka</div></div>
+      </div>
+      <div class="cols">
+        <div>
+          <h4>Umur Piutang</h4>
+          <table>
+            <tr><td>0–30 hari <span class="age">lancar</span></td><td class="r">Rp 5.200.000</td></tr>
+            <tr><td>31–60 hari</td><td class="r">Rp 1.800.000</td></tr>
+            <tr><td>61–90 hari</td><td class="r">Rp 700.000</td></tr>
+            <tr><td>90+ hari <span class="age">macet</span></td><td class="r">Rp 500.000</td></tr>
+          </table>
+        </div>
+        <div>
+          <h4>Menunggu Persetujuan</h4>
+          <div class="rule"><span class="tick" style="background:var(--accent)"></span>Purchase Order<span class="amt">3</span></div>
+          <div class="rule"><span class="tick" style="background:var(--accent)"></span>Sales Order<span class="amt">2</span></div>
+          <h4 style="margin-top:20px">Persediaan</h4>
+          <div class="rule"><span class="tick" style="background:var(--red)"></span>Stok habis<span class="amt">4</span></div>
+          <div class="rule"><span class="tick" style="background:var(--amber)"></span>Stok menipis (≤5)<span class="amt">11</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ MOCKUP 4 : FOCUS ══════════ -->
+<section class="mk-wrap" id="m4">
+  <div class="mk-cap">
+    <span class="n"><i class="bi bi-4-circle-fill"></i>Focus</span>
+    <h2>Minimal gelap — satu angka, sisanya tenang</h2>
+    <p>Panggung gelap dengan omzet sebagai bintang tunggal; semua kebutuhan-aksi rapi di sidebar. Paling dramatis & fokus. Cocok kalau dashboard dipakai sekilas (mis. layar monitoring), bukan kerja detail.</p>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><i></i><i></i><i></i><span class="url">erpone.app/dashboard</span></div>
+    <div class="mk4">
+      <div class="stage">
+        <div class="eb">Omzet Hari Ini · Senin 14 Juli</div>
+        <div class="huge">Rp 12.450.000</div>
+        <div class="cap">37 transaksi hari ini · rata-rata Rp 336.000</div>
+        <div class="infra">
+          <div class="mm"><div class="mv" style="color:#5EEAD4">Rp 8,2jt</div><div class="ml">Piutang tempo</div></div>
+          <div class="mm"><div class="mv">Rp 5,75jt</div><div class="ml">Hutang tempo</div></div>
+          <div class="mm"><div class="mv">5</div><div class="ml">Approval tertunda</div></div>
+        </div>
+      </div>
+      <div class="side">
+        <div class="h">Perlu Perhatian</div>
+        <div class="item alert"><span class="ic"><i class="bi bi-arrow-down-left-circle-fill"></i></span><span class="l">Piutang jatuh tempo</span><span class="v">Rp 8,2jt</span></div>
+        <div class="item"><span class="ic"><i class="bi bi-arrow-up-right-circle-fill"></i></span><span class="l">Hutang jatuh tempo</span><span class="v">Rp 5,75jt</span></div>
+        <div class="item"><span class="ic"><i class="bi bi-cart-plus-fill"></i></span><span class="l">PO menunggu</span><span class="v">3</span></div>
+        <div class="item"><span class="ic"><i class="bi bi-bag-check-fill"></i></span><span class="l">SO menunggu</span><span class="v">2</span></div>
+        <div class="item red"><span class="ic"><i class="bi bi-x-octagon-fill"></i></span><span class="l">Stok habis</span><span class="v">4</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="foot">Data pada mockup ini hanya contoh. Palet mengikuti aksen ErpOne (emerald) dan otomatis mengikuti aksen pilihan user saat diimplementasikan.</div>
+
+</body>
+</html>
