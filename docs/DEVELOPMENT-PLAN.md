@@ -142,7 +142,7 @@ Belum ada modul Reports sama sekali. Buat grup **Reports** + isi dashboard.
 - [ ] **Laporan Penjualan** (per periode/produk/customer/kasir)
 - [ ] **Laporan Pembelian** (per periode/supplier)
 - [ ] **Laba Kotor** (penjualan − HPP)
-- [ ] **Aging Piutang & Hutang** (AR/AP)
+- [x] **Aging Piutang & Hutang** (AR/AP) — point-in-time, 5 bucket, dua halaman `/reports/ar-aging` & `/reports/ap-aging` + export
 - [ ] **Laporan Shift Kasir** (rekap per shift/kasir/metode)
 - [ ] **Dashboard KPI**: omzet hari ini, transaksi, stok menipis, PO/SO pending approval, hutang/piutang jatuh tempo.
 - Teknis: layanan query read-only + export (CSV/PDF); UI reuse pola dashboard `.cr-kpis`/`.cr-hero` yang sudah dibuat.
@@ -172,6 +172,11 @@ Untuk yang butuh pembukuan penuh.
 - **Audit / Activity Log** (jejak aksi user — beda dari Error Log yang teknis).
 - **Batch / Expiry / Serial number** (jika produk butuh).
 - **Backup & data tools**.
+- **Multi-bahasa / Lokalisasi (i18n)** — *backlog, belum dikerjakan.* Saat ini belum ada infrastruktur lokalisasi (tanpa `AddLocalization`/`.resx`/`IStringLocalizer`); teks hardcode & campur EN/ID. Rencana bertahap:
+  1. **Format locale id-ID** (biaya kecil) — Rupiah `Rp 12.450.000`, tanggal & angka gaya Indonesia via `CurrentCulture`. Dampak besar, tak menyentuh string.
+  2. **Seragamkan UI ke satu bahasa (Indonesia)** — hilangkan campur EN/ID (langkah paling terasa "lebih Indonesia").
+  3. **Toggle bahasa EN↔ID penuh** — hanya bila benar-benar butuh bilingual: `AddLocalization` + `RequestLocalizationOptions` (id-ID/en-US) + cookie culture + toggle di top-bar (pola popover Appearance), lalu externalisasi **semua** string ke resource `@Localizer["..."]` (pekerjaan besar, bertahap per modul).
+  - Catatan: langkah 1–2 tak butuh toggle; toggle (langkah 3) hanya jika ada user beda bahasa.
 
 ---
 

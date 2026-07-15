@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>ErpOne — Ikhtisar Proyek</title>
+<style>
+  @page { margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; color: #17223a; font-size: 11pt; line-height: 1.5; margin: 0; }
+  h1 { font-size: 26pt; margin: 0 0 4px; letter-spacing: -.02em; color: #0B7A54; }
+  h2 { font-size: 15pt; margin: 26px 0 8px; padding-bottom: 5px; border-bottom: 2px solid #0E9F6E; color: #0B7A54; page-break-after: avoid; }
+  h3 { font-size: 12pt; margin: 16px 0 6px; color: #17223a; page-break-after: avoid; }
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0 6px 0; padding-left: 20px; }
+  li { margin: 3px 0; }
+  code { font-family: "Cascadia Code", Consolas, monospace; font-size: 9.5pt; background: #eef2f6; padding: 1px 5px; border-radius: 4px; }
+  pre { background: #0f1b2d; color: #e6eaf2; padding: 12px 14px; border-radius: 8px; font-family: "Cascadia Code", Consolas, monospace; font-size: 8.6pt; line-height: 1.45; overflow-x: auto; white-space: pre-wrap; page-break-inside: avoid; }
+  pre .c { color: #7f9cc0; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9.6pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d7dee8; padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: #eaf6f1; color: #0B7A54; font-weight: 700; }
+  .lead { color: #55627a; font-size: 11.5pt; margin: 2px 0 10px; }
+  .cover { border-bottom: 3px solid #0E9F6E; padding-bottom: 14px; margin-bottom: 8px; }
+  .badge { display: inline-block; background: #E7F8F1; color: #0B7A54; border: 1px solid #b9e6d5; border-radius: 99px; padding: 2px 10px; font-size: 8.5pt; font-weight: 700; margin: 2px 4px 2px 0; }
+  .meta { color: #8a95a8; font-size: 9pt; }
+  .note { background: #FEF6E7; border: 1px solid #f2dca0; border-radius: 8px; padding: 8px 12px; margin: 10px 0; font-size: 9.8pt; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>ErpOne</h1>
+  <div class="lead">Ikhtisar Proyek &amp; Referensi Arsitektur</div>
+  <div class="meta">Brand: ERP_One &nbsp;·&nbsp; Database SQL: MyApp &nbsp;·&nbsp; Solusi: <code>ErpOne.slnx</code> &nbsp;·&nbsp; Dibuat 2026-07-14</div>
+</div>
+
+<h2>1. Apa itu ErpOne?</h2>
+<p>ErpOne adalah aplikasi ERP berbasis web untuk bisnis ritel &amp; distribusi (konteks UMKM/distributor Indonesia). Mencakup data master, pembelian, penjualan, gudang/persediaan, kasir (POS), keuangan (Piutang/Hutang/Biaya), laporan, dan dashboard operasional. Antarmuka memadukan label Inggris dengan istilah bisnis Indonesia.</p>
+
+<h3>Teknologi</h3>
+<p>
+<span class="badge">.NET 10</span>
+<span class="badge">Blazor Server (InteractiveServer)</span>
+<span class="badge">EF Core</span>
+<span class="badge">SQL Server</span>
+<span class="badge">FluentValidation</span>
+<span class="badge">ClosedXML (Excel)</span>
+<span class="badge">QuestPDF (PDF)</span>
+<span class="badge">Bootstrap + Bootstrap Icons</span>
+<span class="badge">xUnit (+ SQLite in-memory)</span>
+<span class="badge">ASP.NET Identity</span>
+</p>
+
+<h2>2. Arsitektur (Clean Architecture)</h2>
+<p>Empat project dengan ketergantungan mengarah ke dalam. Layer luar bergantung pada layer dalam; Domain tidak bergantung pada apa pun.</p>
+<table>
+  <tr><th>Layer</th><th>Project</th><th>Tanggung jawab</th><th>Bergantung pada</th></tr>
+  <tr><td>Domain</td><td><code>ErpOne.Domain</code></td><td>Entity, enum, aturan domain. Tanpa dependensi framework.</td><td>—</td></tr>
+  <tr><td>Application</td><td><code>ErpOne.Application</code></td><td>Interface service, DTO, validator FluentValidation, kontrak/port.</td><td>Domain</td></tr>
+  <tr><td>Infrastructure</td><td><code>ErpOne.Infrastructure</code></td><td>EF Core <code>AppDbContext</code>, implementasi service, migrasi, wiring DI.</td><td>Application, Domain</td></tr>
+  <tr><td>Web</td><td><code>ErpOne.Web</code></td><td>Halaman/komponen Blazor, otorisasi, menu, seeding, tampilan (appearance).</td><td>Application, Infrastructure</td></tr>
+</table>
+<p>Pengujian: <code>ErpOne.UnitTests</code> (logika domain) dan <code>ErpOne.IntegrationTests</code> (service di atas SQLite; mereferensi <code>ErpOne.Web</code> lewat <code>WebApplicationFactory&lt;Program&gt;</code>).</p>
+
+<h2>3. Organisasi folder (per header menu)</h2>
+<p>Di setiap project, file dikelompokkan ke subfolder yang mengikuti header menu sidebar. <strong>Folder hanya untuk penataan — namespace TIDAK di-nest</strong> (mis. service di <code>Services/Master/</code> tetap di namespace <code>ErpOne.Infrastructure.Services</code>). Ini menjaga build tanpa friksi sekaligus memberi peta yang jelas.</p>
+<pre><span class="c">Master/</span>        Product, ProductCategory, Brand, Unit, Attribute, Warehouse,
+              Tax, PaymentMethod, Supplier, Customer, Currency
+<span class="c">Inventory/</span>     Stock (StockMovement, ProductStock)
+<span class="c">Transactions/</span>  PurchaseOrder, GoodsReceipt, SalesOrder, DeliveryOrder
+<span class="c">Cashier/</span>       CashierShift, PosSale
+<span class="c">Finance/</span>       CashBank, Faktur Supplier/Customer, Pembayaran/Penerimaan, Expense
+<span class="c">Reports/</span>       StockLedger, InventoryValuation, Sales, Purchase, GrossProfit
+<span class="c">Dashboard/</span>     Dashboard
+<span class="c">Settings/</span>      CompanySetting, ApprovalChain, NumberSequence, DocumentNumber, Log</pre>
+<p>Berlaku untuk <code>Domain/Entities/*</code>, <code>Application/*</code> (folder fitur di-nest di bawah header), dan <code>Infrastructure/Services/*</code>. <code>Application/Common</code>, <code>Reports</code>, dan <code>Dashboard</code> tetap di root project-nya.</p>
+
+<h2>4. Data &amp; persistence</h2>
+<ul>
+  <li><strong>DbContext:</strong> <code>ErpOne.Infrastructure.Persistence.AppDbContext</code>. Entity dikonfigurasi inline di <code>OnModelCreating</code> (blok per-entity).</li>
+  <li><strong>Penamaan tabel:</strong> tabel fisik memakai prefiks domain — <code>M_*</code> (master, mis. <code>M_ProductVariants</code>), <code>T_*</code> (transaksi, mis. <code>T_DeliveryOrders</code>).</li>
+  <li><strong>Migrasi:</strong> <code>dotnet ef migrations add &lt;Nama&gt; --project src/ErpOne.Infrastructure --startup-project src/ErpOne.Web</code>, lalu <code>dotnet ef database update ...</code>.</li>
+  <li><strong>Koneksi:</strong> <code>ConnectionStrings:Default</code> di <code>appsettings.json</code> → database SQL Server <code>MyApp</code>.</li>
+  <li><strong>Perhitungan HPP:</strong> stok memakai moving-average; COGS pada pengiriman di-<em>snapshot</em> dari <code>ProductVariant.CostPrice</code> saat <em>Post</em> (baris draft menampilkan 0 sampai diposting).</li>
+</ul>
+
+<h2>5. Sistem menu &amp; navigasi</h2>
+<p>Sidebar kiri (icon rail terang, membentang saat hover) bersifat <strong>data-driven</strong> dari satu registry.</p>
+<ul>
+  <li><strong><code>AppMenus.cs</code></strong> (Web/Authorization) — mendeklarasikan <code>ResourceGroup</code> (header menu) yang masing-masing berisi <code>AppResource</code>. Tiap resource = <code>(key, label, icon, actions[])</code>. Action berupa <code>AppAction</code> seperti <code>index/create/edit/delete/approve/post/void/export</code>.</li>
+  <li><strong><code>NavMenuBuilder.cs</code></strong> — membangun sidebar secara konvensi: <code>Href = key.Replace('.', '/')</code>; gate visibilitas = <code>{key}.index</code>; ikon = ikon deklarasi tanpa <code>-fill</code>. Kasus tak beraturan ditangani tabel <code>Overrides</code> (Href/action khusus / selalu tampil / item tambahan).</li>
+  <li><strong>Permission</strong> otomatis diturunkan: <code>AppMenus.AllPermissions</code> = seluruh <code>{resource}.{action}</code>. Helper: <code>AppMenus.Perm("master.brands","create")</code>.</li>
+</ul>
+
+<h2>6. Otorisasi &amp; permission</h2>
+<ul>
+  <li>Nama policy = string permission = <code>{resource}.{action}</code> (mis. <code>finance.ar-invoices.index</code>).</li>
+  <li><code>FallbackPolicy</code> global mewajibkan user terautentikasi (setiap halaman butuh login kecuali <code>[AllowAnonymous]</code>).</li>
+  <li>Halaman dikunci dengan <code>@attribute [Authorize(Policy = "…")]</code>; tombol/kartu dengan <code>&lt;AuthorizeView Policy="…"&gt;</code>; form mengecek ulang permission create/edit di <code>OnInitializedAsync</code>.</li>
+  <li><strong><code>BootstrapSeeder.cs</code></strong> (Web/Infrastructure) memberikan <em>semua</em> <code>AppMenus.AllPermissions</code> ke role admin saat startup (idempoten) dan memastikan user admin bootstrap. <em>Setelah menambah permission, restart + sign out/in agar klaim admin ter-refresh.</em></li>
+</ul>
+
+<h2>7. Layanan lintas-cutting</h2>
+<table>
+  <tr><th>Kebutuhan</th><th>Layanan</th><th>Catatan</th></tr>
+  <tr><td>Penomoran dokumen</td><td><code>IDocumentNumberService</code> + <code>NumberSequence</code></td><td>Urutan berprefiks (mis. APV/APP/ARV/ARR/EXP). Test integrasi memverifikasi jumlah sequence.</td></tr>
+  <tr><td>Laporan/ekspor</td><td><code>ReportDocument</code> + <code>IReportExporter</code></td><td>Excel via ClosedXML, PDF via QuestPDF. Service query read-only di <code>Application/Reports</code>.</td></tr>
+  <tr><td>Validasi</td><td>FluentValidation</td><td>Validator diregistrasi via <code>AddValidatorsFromAssemblyContaining&lt;CreateProductValidator&gt;()</code>. Service melempar <code>ValidationException</code>.</td></tr>
+  <tr><td>Persetujuan</td><td><code>ApprovalChain</code> / <code>ApprovalService</code></td><td>PO/SO submit → PendingApproval; chain kosong auto-confirm. Alur void memverifikasi kredensial + role.</td></tr>
+</table>
+
+<h2>8. Sistem desain UI</h2>
+<p>Berbasis token dan sadar-tema (terang / <code>html[data-bs-theme="dark"]</code>). Aksen &amp; font dapat diatur user lewat popover Appearance (<code>--app-accent</code>, <code>--app-font</code> pada <code>&lt;html&gt;</code>).</p>
+<table>
+  <tr><th>Kelas container</th><th>Dipakai untuk</th><th>Definisi token?</th></tr>
+  <tr><td><code>.pi</code></td><td>Halaman index/daftar (KPI, toolbar, chips, tabel, Pager)</td><td>Ya (scoped di app.css) + override gelap</td></tr>
+  <tr><td><code>.cf</code></td><td>Form create/edit master (card + grid)</td><td>Ya + override gelap</td></tr>
+  <tr><td><code>.pf .pf-form</code></td><td>Form transaksi (tabel baris item)</td><td>Ya + override gelap</td></tr>
+  <tr><td><code>.pf .pf-detail</code></td><td>Halaman detail transaksi (info grid, item, timeline)</td><td>Ya + override gelap</td></tr>
+  <tr><td><code>.dash</code> / <code>.landing</code></td><td>Dashboard &amp; Home (token mandiri)</td><td>Ya (didefinisikan di CSS komponen)</td></tr>
+</table>
+<div class="note"><strong>Aturan token:</strong> token desain (<code>--ink, --muted, --accent, --panel, --field, --line, --danger</code>) didefinisikan <em>scoped pada tiap kelas container halaman</em> dan menjembatani ke <code>--app-accent</code>. Container halaman top-level baru WAJIB mendefinisikan token sendiri + override <code>html[data-bs-theme="dark"] .containerAnda</code>, atau warna tak akan resolve.</div>
+
+<h2>9. Modul fungsional</h2>
+<table>
+  <tr><th>Area</th><th>Sorotan</th></tr>
+  <tr><td>Master</td><td>Produk (+varian, atribut, gambar), kategori, satuan, brand, gudang, pajak, metode bayar, pemasok, pelanggan, mata uang.</td></tr>
+  <tr><td>Inventory</td><td>Stock levels (per varian × gudang, HPP moving-average), penyesuaian/opname. Filter: Semua / Low stock (≤5) / Out of stock.</td></tr>
+  <tr><td>Transaksi</td><td>Purchase Order → Goods Receipt (stok masuk); Sales Order → Delivery Order (stok keluar + COGS). Status termasuk PendingApproval.</td></tr>
+  <tr><td>Kasir</td><td>Buka/tutup sesi kasir; penjualan POS (omzet = line total, COGS = unit cost × qty).</td></tr>
+  <tr><td>Finance</td><td>Buku Kas &amp; Bank; Faktur/Pembayaran Supplier (Hutang); Faktur/Penerimaan Customer (Piutang, limit kredit); Biaya &amp; kategori; void-dengan-otorisasi.</td></tr>
+  <tr><td>Laporan</td><td>Kartu Stok, Nilai Persediaan (as-of-date), Penjualan, Pembelian, Laba Kotor — semua dengan ekspor Excel/PDF.</td></tr>
+  <tr><td>Dashboard</td><td>Hero omzet (hari ini, gradient aksen) + bulan berjalan, piutang/hutang jatuh tempo, PO/SO pending, aging, persediaan. Tren 7-hari nyata via satu query.</td></tr>
+  <tr><td>Settings</td><td>User, role, profil perusahaan, rantai persetujuan, penomoran dokumen, log error.</td></tr>
+</table>
+
+<h2>10. Build, jalankan &amp; test</h2>
+<pre><span class="c"># Build / test seluruh solusi</span>
+dotnet build ErpOne.slnx
+dotnet test  ErpOne.slnx
+
+<span class="c"># Menjalankan: dari Visual Studio (IIS Express) atau</span>
+dotnet run --project src/ErpOne.Web</pre>
+<div class="note"><strong>Gotcha:</strong> saat app berjalan di Visual Studio/IIS Express, DLL <code>ErpOne.Web</code> terkunci, sehingga <code>dotnet build/test</code> seluruh solusi gagal dengan error copy (MSB3021) — <em>bukan</em> error kompilasi. Test integrasi mereferensi <code>ErpOne.Web</code>, jadi <strong>hentikan app yang berjalan sebelum <code>dotnet test</code></strong>. Build <code>Domain/Application/Infrastructure</code> per-project tetap bisa saat app jalan.</div>
+
+<h2>11. Konvensi &amp; gotcha</h2>
+<ul>
+  <li><strong>Git:</strong> commit / merge / push dilakukan <em>manual</em> oleh developer. Otomasi meninggalkan perubahan di working tree (rename memakai <code>git mv</code>).</li>
+  <li><strong>Translasi query:</strong> test integrasi berjalan di SQLite — hindari translasi khusus SQL Server (mis. <code>EF.Functions.DateDiffDay</code>). Pakai perbandingan ambang tanggal atau agregasi di memori untuk set kecil.</li>
+  <li><strong>Rupiah:</strong> nominal ditampilkan dengan <code>ToString("N0")</code>/<code>N2</code>. (Format locale Indonesia adalah kandidat peningkatan berikutnya.)</li>
+  <li><strong>Test penomoran:</strong> saat menambah <code>NumberSequence</code>, naikkan assert jumlah di <code>NumberSequenceServiceTests</code>.</li>
+  <li><strong>File solusi</strong> adalah <code>ErpOne.slnx</code> (bukan <code>.sln</code>).</li>
+</ul>
+
+</body>
+</html>

@@ -1,0 +1,166 @@
+@page "/reports/ap-aging"
+@attribute [Authorize(Policy = "reports.ap-aging.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Reports
+@using ErpOne.Application.Suppliers
+@using Microsoft.JSInterop
+@inject IAgingReportService Aging
+@inject ISupplierService SupplierService
+@inject IReportExporter Exporter
+@inject IJSRuntime JS
+
+<PageTitle>AP Aging</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs">
+                <a href="/">Home</a><span class="sep">·</span><span>Reports</span><span class="sep">·</span><span class="here">AP Aging</span>
+            </nav>
+            <h1>AP Aging</h1>
+            <p>Outstanding supplier payables by age, point-in-time as of a chosen date.</p>
+        </div>
+        <AuthorizeView Policy="reports.ap-aging.export">
+            <Authorized>
+                <div class="pi-actions">
+                    <button class="btn btn-outline-secondary" @onclick="ExportExcel"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                    <button class="btn btn-outline-secondary" @onclick="ExportPdf"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    @if (_result is not null)
+    {
+        <div class="kpis">
+            <div class="kpi accent">
+                <div class="ic ic-grn"><i class="bi bi-cash-stack"></i></div>
+                <div class="kpi-tx"><div class="v">Rp @_result.GrandTotals.Total.ToString("N0")</div><div class="l">Total outstanding</div></div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-amb"><i class="bi bi-hourglass-bottom"></i></div>
+                <div class="kpi-tx"><div class="v">Rp @Overdue.ToString("N0")</div><div class="l">Overdue</div></div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-blu"><i class="bi bi-receipt"></i></div>
+                <div class="kpi-tx"><div class="v">@_result.InvoiceCount.ToString("N0")</div><div class="l">Invoices</div></div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-blu"><i class="bi bi-truck"></i></div>
+                <div class="kpi-tx"><div class="v">@_result.PartyCount.ToString("N0")</div><div class="l">Suppliers</div></div>
+            </div>
+        </div>
+    }
+
+    <div class="toolbar">
+        <input type="date" @bind="_asOf" @bind:after="ReloadAsync" />
+        <select @bind="_supplierId" @bind:after="ReloadAsync">
+            <option value="0">All suppliers</option>
+            @foreach (var s in _suppliers) { <option value="@s.Id">@s.Name</option> }
+        </select>
+    </div>
+
+    @if (_result is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_result.InvoiceCount == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-cash-stack"></i></div><p>No outstanding payables for these filters.</p></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Supplier</th><th style="width:150px">Invoice #</th>
+                            <th style="width:110px">Inv Date</th><th style="width:110px">Due Date</th>
+                            <th class="r" style="width:70px">Days</th>
+                            <th class="r" style="width:120px">Not Due</th><th class="r" style="width:120px">1–30</th>
+                            <th class="r" style="width:120px">31–60</th><th class="r" style="width:120px">61–90</th>
+                            <th class="r" style="width:120px">90+</th><th class="r" style="width:130px">Outstanding</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in _result.Parties)
+                        {
+                            <tr class="fw-bold table-light"><td colspan="11">@p.PartyCode — @p.PartyName</td></tr>
+                            @foreach (var i in p.Invoices)
+                            {
+                                <tr>
+                                    <td></td>
+                                    <td class="code mono">@i.InvoiceNumber</td>
+                                    <td class="mono">@i.InvoiceDate.ToString("yyyy-MM-dd")</td>
+                                    <td class="mono">@i.DueDate.ToString("yyyy-MM-dd")</td>
+                                    <td class="r mono">@i.DaysPastDue</td>
+                                    <td class="r mono">@F(i.Buckets.NotDue)</td>
+                                    <td class="r mono">@F(i.Buckets.D1_30)</td>
+                                    <td class="r mono">@F(i.Buckets.D31_60)</td>
+                                    <td class="r mono">@F(i.Buckets.D61_90)</td>
+                                    <td class="r mono">@F(i.Buckets.D90Plus)</td>
+                                    <td class="r mono">@i.Outstanding.ToString("N0")</td>
+                                </tr>
+                            }
+                            <tr class="fw-bold">
+                                <td colspan="5">@p.PartyName subtotal</td>
+                                <td class="r mono">@F(p.Subtotals.NotDue)</td>
+                                <td class="r mono">@F(p.Subtotals.D1_30)</td>
+                                <td class="r mono">@F(p.Subtotals.D31_60)</td>
+                                <td class="r mono">@F(p.Subtotals.D61_90)</td>
+                                <td class="r mono">@F(p.Subtotals.D90Plus)</td>
+                                <td class="r mono">@p.Subtotals.Total.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold">
+                            <td colspan="5">Grand total</td>
+                            <td class="r mono">@F(_result.GrandTotals.NotDue)</td>
+                            <td class="r mono">@F(_result.GrandTotals.D1_30)</td>
+                            <td class="r mono">@F(_result.GrandTotals.D31_60)</td>
+                            <td class="r mono">@F(_result.GrandTotals.D61_90)</td>
+                            <td class="r mono">@F(_result.GrandTotals.D90Plus)</td>
+                            <td class="r mono">@_result.GrandTotals.Total.ToString("N0")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private AgingResultDto? _result;
+    private IReadOnlyList<SupplierDto> _suppliers = [];
+    private DateTime _asOf = DateTime.Today;
+    private int _supplierId;
+
+    private decimal Overdue => _result is null ? 0 : _result.GrandTotals.Total - _result.GrandTotals.NotDue;
+    private static string F(decimal v) => v == 0 ? "–" : v.ToString("N0");
+
+    protected override async Task OnInitializedAsync()
+    {
+        _suppliers = await SupplierService.GetAllAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync() => _result = await Aging.GetApAgingAsync(_asOf, _supplierId == 0 ? null : _supplierId);
+    private async Task ReloadAsync() => await LoadAsync();
+
+    private async Task ExportExcel()
+    {
+        var doc = await Aging.BuildApAgingReportAsync(_asOf, _supplierId == 0 ? null : _supplierId);
+        await DownloadAsync(Exporter.ToExcel(doc), "ap-aging.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+
+    private async Task ExportPdf()
+    {
+        var doc = await Aging.BuildApAgingReportAsync(_asOf, _supplierId == 0 ? null : _supplierId);
+        await DownloadAsync(await Exporter.ToPdfAsync(doc), "ap-aging.pdf", "application/pdf");
+    }
+
+    private async Task DownloadAsync(byte[] bytes, string fileName, string mime) =>
+        await JS.InvokeVoidAsync("saveAsFile", fileName, Convert.ToBase64String(bytes), mime);
+}

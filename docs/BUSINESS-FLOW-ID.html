@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>ErpOne — Alur Bisnis Aplikasi</title>
+<style>
+  @page { margin: 16mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; color: #17223a; font-size: 10.5pt; line-height: 1.5; margin: 0; }
+  h1 { font-size: 25pt; margin: 0 0 4px; letter-spacing: -.02em; color: #0B7A54; }
+  h2 { font-size: 15pt; margin: 24px 0 6px; padding-bottom: 5px; border-bottom: 2px solid #0E9F6E; color: #0B7A54; page-break-after: avoid; }
+  h3 { font-size: 12pt; margin: 14px 0 5px; color: #17223a; page-break-after: avoid; }
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0; padding-left: 20px; } li { margin: 2px 0; }
+  code { font-family: "Cascadia Code", Consolas, monospace; font-size: 9pt; background: #eef2f6; padding: 1px 5px; border-radius: 4px; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 8.8pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d7dee8; padding: 5px 8px; text-align: left; vertical-align: top; }
+  th { background: #eaf6f1; color: #0B7A54; font-weight: 700; }
+  .lead { color: #55627a; font-size: 11.5pt; margin: 2px 0 10px; }
+  .cover { border-bottom: 3px solid #0E9F6E; padding-bottom: 14px; margin-bottom: 8px; }
+  .meta { color: #8a95a8; font-size: 9pt; }
+  .note { background: #FEF6E7; border: 1px solid #f2dca0; border-radius: 8px; padding: 8px 12px; margin: 10px 0; font-size: 9.4pt; }
+  .sec { page-break-inside: avoid; }
+  .legend { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 4px; font-size:8.6pt; }
+  .lg { display:inline-flex; align-items:center; gap:5px; }
+  .sw { width:13px; height:13px; border-radius:3px; border:1.5px solid; display:inline-block; }
+
+  /* Flowchart */
+  .flow { display:flex; flex-direction:column; align-items:center; margin:12px 0; page-break-inside:avoid; }
+  .fnode { border-radius:10px; padding:8px 14px; font-size:9.4pt; font-weight:600; text-align:center; border:1.5px solid; max-width:520px; }
+  .fnode .sub { font-weight:400; font-size:8.2pt; color:#55627a; display:block; margin-top:2px; }
+  .n-start { background:#eef2f6; border-color:#c2ccda; color:#33405c; border-radius:99px; }
+  .n-proc  { background:#E7F8F1; border-color:#0E9F6E; color:#0B7A54; }
+  .n-io    { background:#E8F0FE; border-color:#2563EB; color:#1749b8; }
+  .n-money { background:#FEF6E7; border-color:#D9A21B; color:#8A6212; }
+  .n-dec   { background:#FDECEA; border-color:#E1453B; color:#a5342c; }
+  .n-end   { background:#E5E7EB; border-color:#9aa4b2; color:#374151; border-radius:99px; }
+  .farrow { width:0; height:0; border-left:6px solid transparent; border-right:6px solid transparent; border-top:8px solid #9aa4b2; margin:3px 0; }
+  .fline { width:2px; height:9px; background:#9aa4b2; }
+  .flabel { font-size:7.8pt; color:#8a95a8; font-weight:700; margin:1px 0; }
+  .branch { display:flex; gap:30px; justify-content:center; align-items:flex-start; margin:2px 0; }
+  .blimb { display:flex; flex-direction:column; align-items:center; }
+
+  /* Status chain */
+  .chain { display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin:6px 0; font-size:8.8pt; }
+  .pill { border-radius:99px; padding:3px 11px; font-weight:700; border:1.5px solid; }
+  .p-draft{ background:#EEF1F4; border-color:#c9d2dd; color:#5b6472; }
+  .p-wait { background:#FEF6E7; border-color:#e6c76a; color:#8a6212; }
+  .p-ok   { background:#E7F8F1; border-color:#0E9F6E; color:#0B7A54; }
+  .p-done { background:#DCFCE7; border-color:#4ec07f; color:#15803d; }
+  .p-bad  { background:#FDECEA; border-color:#eaa39c; color:#b23a30; }
+  .arw { color:#9aa4b2; font-weight:700; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>ErpOne — Alur Bisnis Aplikasi</h1>
+  <div class="lead">Proses end-to-end, flowchart, siklus status, &amp; fungsi tiap form</div>
+  <div class="meta">Brand: ERP_One &nbsp;·&nbsp; Dibuat 2026-07-14 &nbsp;·&nbsp; Pendamping: PROJECT-OVERVIEW-ID &amp; DEV-GUIDE-ID</div>
+</div>
+
+<div class="legend">
+  <span class="lg"><span class="sw n-start"></span> Mulai/Selesai</span>
+  <span class="lg"><span class="sw" style="background:#E7F8F1;border-color:#0E9F6E"></span> Proses/Form</span>
+  <span class="lg"><span class="sw" style="background:#E8F0FE;border-color:#2563EB"></span> Efek Stok/Data</span>
+  <span class="lg"><span class="sw" style="background:#FEF6E7;border-color:#D9A21B"></span> Efek Kas/Keuangan</span>
+  <span class="lg"><span class="sw" style="background:#FDECEA;border-color:#E1453B"></span> Keputusan</span>
+</div>
+
+<h2>1. Peta Alur Besar</h2>
+<p>ErpOne mengikuti pola ERP klasik: <strong>Data Master</strong> menjadi fondasi; darinya berjalan tiga alur transaksi (<strong>Pembelian</strong>, <strong>Penjualan B2B</strong>, <strong>Kasir/POS</strong>) yang memutakhirkan <strong>Persediaan</strong> dan <strong>Keuangan</strong>; hasilnya diringkas di <strong>Laporan</strong> &amp; <strong>Dashboard</strong>.</p>
+<div class="flow">
+  <div class="fnode n-start">DATA MASTER<span class="sub">Produk, Supplier, Customer, Gudang, Pajak, Metode Bayar</span></div>
+  <div class="farrow"></div>
+  <div class="branch">
+    <div class="blimb"><div class="fnode n-proc">PEMBELIAN<span class="sub">PO → GRN → Faktur → Bayar</span></div></div>
+    <div class="blimb"><div class="fnode n-proc">PENJUALAN B2B<span class="sub">SO → DO → Faktur → Terima</span></div></div>
+    <div class="blimb"><div class="fnode n-proc">KASIR / POS<span class="sub">Sesi → Penjualan → Tutup</span></div></div>
+  </div>
+  <div class="farrow"></div>
+  <div class="branch">
+    <div class="blimb"><div class="fnode n-io">PERSEDIAAN<span class="sub">Stok + HPP moving-average</span></div></div>
+    <div class="blimb"><div class="fnode n-money">KEUANGAN<span class="sub">Kas &amp; Bank, Piutang, Hutang, Biaya</span></div></div>
+  </div>
+  <div class="farrow"></div>
+  <div class="fnode n-end">LAPORAN &amp; DASHBOARD</div>
+</div>
+
+<h2>2. Alur Pembelian (Pengadaan → Pembayaran)</h2>
+<div class="flow">
+  <div class="fnode n-start">Prasyarat: Supplier &amp; Produk (Master)</div>
+  <div class="farrow"></div>
+  <div class="fnode n-proc">1. Buat Purchase Order (PO)<span class="sub">/transactions/purchase-orders/new · status Draft</span></div>
+  <div class="farrow"></div>
+  <div class="fnode n-dec">2. Submit → Perlu persetujuan?</div>
+  <div class="fline"></div>
+  <div class="branch">
+    <div class="blimb"><div class="flabel">CHAIN KOSONG</div><div class="farrow"></div><div class="fnode n-proc">Auto-Confirmed</div></div>
+    <div class="blimb"><div class="flabel">ADA APPROVER</div><div class="farrow"></div><div class="fnode n-money">PendingApproval → Approve / Reject</div></div>
+  </div>
+  <div class="farrow"></div>
+  <div class="fnode n-proc">3. Buat Goods Receipt (GRN) dari PO<span class="sub">/transactions/goods-receipts/new · Draft → Post</span></div>
+  <div class="farrow"></div>
+  <div class="fnode n-io">Efek Post GRN: STOK MASUK + HPP moving-average diperbarui<span class="sub">PO → PartiallyReceived / Received</span></div>
+  <div class="farrow"></div>
+  <div class="fnode n-proc">4. Buat Faktur Supplier dari GRN<span class="sub">/finance/ap-invoices · nomor APV</span></div>
+  <div class="farrow"></div>
+  <div class="fnode n-money">Efek: HUTANG (AP) bertambah — status Open</div>
+  <div class="farrow"></div>
+  <div class="fnode n-proc">5. Buat Pembayaran Supplier<span class="sub">/finance/ap-payments · Draft → Approval → Posted · nomor APP</span></div>
+  <div class="farrow"></div>
+  <div class="fnode n-money">Efek Posted: HUTANG berkurang + KAS/BANK keluar</div>
+  <div class="farrow"></div>
+  <div class="fnode n-end">Selesai (faktur Paid saat lunas)</div>
+</div>
+<table>
+  <tr><th>Form</th><th>Route</th><th>Fungsi</th><th>Efek</th></tr>
+  <tr><td>Purchase Order</td><td><code>/transactions/purchase-orders</code></td><td>Pesan barang ke supplier: pilih supplier, gudang, baris produk (qty, harga, diskon, pajak). Submit untuk persetujuan.</td><td>Membuat komitmen beli; status Draft→Confirmed.</td></tr>
+  <tr><td>Goods Receipt (GRN)</td><td><code>/transactions/goods-receipts</code></td><td>Catat penerimaan barang dari PO Confirmed (qty diterima per baris). Post untuk mengesahkan.</td><td><strong>Stok masuk</strong> + HPP moving-average. PO jadi Partially/Received.</td></tr>
+  <tr><td>Faktur Supplier</td><td><code>/finance/ap-invoices</code></td><td>Terbitkan tagihan hutang dari satu/lebih GRN yang sudah diposting. Ada jatuh tempo (DueDate).</td><td>Menambah <strong>Hutang (AP)</strong>, status Open.</td></tr>
+  <tr><td>Pembayaran Supplier</td><td><code>/finance/ap-payments</code></td><td>Bayar faktur supplier dari akun Kas/Bank; alokasi ke faktur. Lifecycle approval; bisa di-void dengan otorisasi.</td><td>Hutang berkurang + <strong>Kas/Bank keluar</strong>.</td></tr>
+</table>
+
+<h2>3. Alur Penjualan B2B (Pesanan → Penerimaan Uang)</h2>
+<div class="flow">
+  <div class="fnode n-start">Prasyarat: Customer (limit kredit) &amp; Produk</div>
+  <div class="farrow"></div>
+  <div class="fnode n-proc">1. Buat Sales Order (SO)<span class="sub">/transactions/sales-orders/new · Draft · cek limit kredit</span></div>
+  <div class="farrow"></div>
+  <div class="fnode n-dec">2. Submit → Perlu persetujuan?</div>
+  <div class="fline"></div>
+  <div class="branch">
+    <div class="blimb"><div class="flabel">CHAIN KOSONG</div><div class="farrow"></div><div class="fnode n-proc">Auto-Confirmed</div></div>
+    <div class="blimb"><div class="flabel">ADA APPROVER</div><div class="farrow"></div><div class="fnode n-money">PendingApproval → Approve / Reject</div></div>
+  </div>
+  <div class="farrow"></div>
+  <div class="fnode n-proc">3. Buat Delivery Order (DO) dari SO<span class="sub">/transactions/delivery-orders/new · Draft → Post</span></div>
+  <div class="farrow"></div>
+  <div class="fnode n-io">Efek Post DO: STOK KELUAR + COGS di-snapshot (HPP)<span class="sub">SO → PartiallyDelivered / Delivered</span></div>
+  <div class="farrow"></div>
+  <div class="fnode n-proc">4. Buat Faktur Customer dari SO<span class="sub">/finance/ar-invoices · nomor ARV · cek limit</span></div>
+  <div class="farrow"></div>
+  <div class="fnode n-money">Efek: PIUTANG (AR) bertambah — status Open</div>
+  <div class="farrow"></div>
+  <div class="fnode n-proc">5. Buat Penerimaan Customer<span class="sub">/finance/ar-receipts · langsung Posted · nomor ARR</span></div>
+  <div class="farrow"></div>
+  <div class="fnode n-money">Efek Posted: PIUTANG berkurang + KAS/BANK masuk</div>
+  <div class="farrow"></div>
+  <div class="fnode n-end">Selesai (faktur Paid saat lunas)</div>
+</div>
+<table>
+  <tr><th>Form</th><th>Route</th><th>Fungsi</th><th>Efek</th></tr>
+  <tr><td>Sales Order</td><td><code>/transactions/sales-orders</code></td><td>Pesanan pelanggan: pilih customer, gudang sumber, baris produk (qty, harga, diskon, pajak). Cek limit kredit; submit untuk persetujuan.</td><td>Komitmen jual; status Draft→Confirmed.</td></tr>
+  <tr><td>Delivery Order (DO)</td><td><code>/transactions/delivery-orders</code></td><td>Kirim barang dari SO Confirmed (qty dikirim per baris). Post untuk mengesahkan.</td><td><strong>Stok keluar</strong> + <strong>COGS</strong> (HPP × qty). SO jadi Partially/Delivered.</td></tr>
+  <tr><td>Faktur Customer</td><td><code>/finance/ar-invoices</code></td><td>Terbitkan tagihan piutang dari SO. Ada jatuh tempo; mengurangi sisa limit kredit.</td><td>Menambah <strong>Piutang (AR)</strong>, status Open.</td></tr>
+  <tr><td>Penerimaan Customer</td><td><code>/finance/ar-receipts</code></td><td>Terima pembayaran ke akun Kas/Bank; alokasi ke faktur. Dibuat langsung Posted; void dengan otorisasi.</td><td>Piutang berkurang + <strong>Kas/Bank masuk</strong>.</td></tr>
+</table>
+
+<h2>4. Alur Kasir / POS (Ritel)</h2>
+<div class="flow">
+  <div class="fnode n-start">Kasir login</div>
+  <div class="farrow"></div>
+  <div class="fnode n-proc">1. Buka Sesi Kasir<span class="sub">/cashier/shifts · pilih gudang + modal awal (float) · status Open</span></div>
+  <div class="farrow"></div>
+  <div class="fnode n-proc">2. Transaksi POS<span class="sub">/cashier/pos · pilih produk, diskon, pajak, metode bayar, uang diterima</span></div>
+  <div class="farrow"></div>
+  <div class="fnode n-io">Efek (langsung): STOK KELUAR + COGS</div>
+  <div class="fline"></div>
+  <div class="fnode n-money">+ KAS/pembayaran masuk (kembalian dihitung) · transaksi Posted</div>
+  <div class="farrow"></div>
+  <div class="fnode n-dec">Masih ada penjualan? → ya: ulang langkah 2</div>
+  <div class="farrow"></div>
+  <div class="fnode n-proc">3. Tutup Sesi Kasir<span class="sub">rekap per metode bayar; hitung selisih kas · status Closed</span></div>
+  <div class="farrow"></div>
+  <div class="fnode n-end">Selesai — data masuk Laporan Penjualan &amp; Dashboard</div>
+</div>
+<table>
+  <tr><th>Form</th><th>Route</th><th>Fungsi</th><th>Efek</th></tr>
+  <tr><td>Sesi Kasir</td><td><code>/cashier/shifts</code></td><td>Buka sesi dengan modal awal; menutup sesi merekap total per metode bayar dan selisih fisik vs sistem.</td><td>Kerangka pengendalian kas kasir (Open/Closed).</td></tr>
+  <tr><td>Kasir (POS)</td><td><code>/cashier/pos</code></td><td>Layar penjualan cepat: tambah item, diskon, pajak, metode bayar, uang diterima → kembalian. Transaksi selesai seketika.</td><td><strong>Stok keluar + COGS + kas masuk</strong> dalam satu langkah (Posted).</td></tr>
+  <tr><td>Riwayat Penjualan</td><td><code>/cashier/sales</code></td><td>Melihat daftar &amp; detail transaksi POS.</td><td>Baca-saja.</td></tr>
+</table>
+
+<h2>5. Alur Persediaan</h2>
+<div class="flow">
+  <div class="fnode n-proc">Saldo Awal saat buat Produk<span class="sub">RecordOpening — qty &amp; HPP awal per varian/gudang</span></div>
+  <div class="farrow"></div>
+  <div class="fnode n-io">Setiap GRN (masuk) / DO &amp; POS (keluar) memutakhirkan stok + moving-average</div>
+  <div class="farrow"></div>
+  <div class="fnode n-proc">Penyesuaian / Opname<span class="sub">/inventory/adjustments/new — selisih bertanda per varian</span></div>
+  <div class="farrow"></div>
+  <div class="fnode n-io">Efek: mutasi stok (Adjustment) + koreksi saldo</div>
+  <div class="farrow"></div>
+  <div class="fnode n-end">Pantau di Stock Levels (filter Low/Out) &amp; Kartu Stok</div>
+</div>
+<table>
+  <tr><th>Form</th><th>Route</th><th>Fungsi</th><th>Efek</th></tr>
+  <tr><td>Stock Levels</td><td><code>/inventory/stock-levels</code></td><td>Monitor saldo stok per varian × gudang + HPP. KPI &amp; filter: Semua / Low stock (≤5) / Out of stock.</td><td>Baca-saja.</td></tr>
+  <tr><td>Stock Adjustment / Opname</td><td><code>/inventory/adjustments/new</code></td><td>Terapkan selisih qty (positif/negatif) per varian dalam satu transaksi (mis. hasil stock opname).</td><td>Mutasi stok + recompute moving-average.</td></tr>
+  <tr><td>Kartu Stok (Laporan)</td><td><code>/reports/stock-ledger</code></td><td>Riwayat mutasi masuk/keluar + saldo berjalan per produk/gudang.</td><td>Baca-saja (ekspor Excel/PDF).</td></tr>
+</table>
+
+<h2>6. Alur Keuangan</h2>
+<p>Semua transaksi kas bermuara ke buku <strong>Kas &amp; Bank</strong>: <code>saldo = saldo awal + Σ masuk − Σ keluar</code>. Sumber "masuk" = Penerimaan Customer &amp; penjualan POS tunai; "keluar" = Pembayaran Supplier &amp; Biaya.</p>
+<div class="flow">
+  <div class="branch">
+    <div class="blimb"><div class="fnode n-money">Penerimaan Customer (AR)<span class="sub">kas masuk</span></div></div>
+    <div class="blimb"><div class="fnode n-money">POS tunai<span class="sub">kas masuk</span></div></div>
+    <div class="blimb"><div class="fnode n-money">Pembayaran Supplier (AP)<span class="sub">kas keluar</span></div></div>
+    <div class="blimb"><div class="fnode n-money">Biaya / Expense<span class="sub">kas keluar</span></div></div>
+  </div>
+  <div class="farrow"></div>
+  <div class="fnode n-io">Buku Kas &amp; Bank — CashBankMovement (ledger)</div>
+  <div class="farrow"></div>
+  <div class="fnode n-end">Saldo akun ter-update · muncul di Dashboard &amp; Laporan</div>
+</div>
+<table>
+  <tr><th>Form</th><th>Route</th><th>Fungsi</th><th>Efek</th></tr>
+  <tr><td>Cash &amp; Bank</td><td><code>/finance/cash-bank</code></td><td>Master akun kas/bank + buku mutasi. Saldo = opening + masuk − keluar.</td><td>Sumber kebenaran saldo kas.</td></tr>
+  <tr><td>Biaya (Expense)</td><td><code>/finance/expenses</code></td><td>Catat pengeluaran operasional per kategori dari akun Kas/Bank. Dibuat langsung Posted; void dengan otorisasi (nomor EXP).</td><td><strong>Kas/Bank keluar</strong>.</td></tr>
+  <tr><td>Kategori Biaya</td><td><code>/finance/expense-categories</code></td><td>Master kategori untuk klasifikasi biaya.</td><td>Referensi.</td></tr>
+</table>
+<div class="note"><strong>Pola Void berotorisasi:</strong> pembatalan pembayaran/penerimaan/biaya membuka popup <em>user + password</em>. Sistem memverifikasi kredensial &amp; role (dari approval-chain <code>{Doc}Void</code>, fallback ke permission <code>.void</code>), lalu membalik efek kas/piutang/hutang. Nomor prefiks: APV/APP/ARV/ARR/EXP.</div>
+
+<h2>7. Siklus Status Dokumen</h2>
+<h3>Purchase Order</h3>
+<div class="chain"><span class="pill p-draft">Draft</span><span class="arw">→</span><span class="pill p-wait">PendingApproval</span><span class="arw">→</span><span class="pill p-ok">Confirmed</span><span class="arw">→</span><span class="pill p-ok">PartiallyReceived</span><span class="arw">→</span><span class="pill p-done">Received</span><span class="arw">→</span><span class="pill p-done">Closed</span> &nbsp;|&nbsp; <span class="pill p-bad">Rejected</span> <span class="pill p-bad">Cancelled</span></div>
+<h3>Sales Order</h3>
+<div class="chain"><span class="pill p-draft">Draft</span><span class="arw">→</span><span class="pill p-wait">PendingApproval</span><span class="arw">→</span><span class="pill p-ok">Confirmed</span><span class="arw">→</span><span class="pill p-ok">PartiallyDelivered</span><span class="arw">→</span><span class="pill p-done">Delivered</span><span class="arw">→</span><span class="pill p-done">Closed</span> &nbsp;|&nbsp; <span class="pill p-bad">Rejected</span> <span class="pill p-bad">Cancelled</span></div>
+<h3>Goods Receipt &amp; Delivery Order</h3>
+<div class="chain"><span class="pill p-draft">Draft</span><span class="arw">→</span><span class="pill p-done">Posted</span> <span style="color:#8a95a8">(Post = mengesahkan mutasi stok; tidak bisa dibatalkan)</span></div>
+<h3>Faktur (Supplier &amp; Customer)</h3>
+<div class="chain"><span class="pill p-ok">Open</span><span class="arw">→</span><span class="pill p-wait">PartiallyPaid</span><span class="arw">→</span><span class="pill p-done">Paid</span> &nbsp;|&nbsp; <span class="pill p-bad">Cancelled</span></div>
+<h3>Pembayaran Supplier / Penerimaan Customer / Biaya</h3>
+<div class="chain"><span style="font-weight:600">Pembayaran Supplier:</span> <span class="pill p-draft">Draft</span><span class="arw">→</span><span class="pill p-wait">PendingApproval</span><span class="arw">→</span><span class="pill p-done">Posted</span><span class="arw">→</span><span class="pill p-bad">Voided</span></div>
+<div class="chain"><span style="font-weight:600">Penerimaan / Biaya:</span> <span class="pill p-done">Posted</span><span class="arw">→</span><span class="pill p-bad">Voided</span> <span style="color:#8a95a8">(dibuat langsung Posted)</span></div>
+<h3>Sesi Kasir</h3>
+<div class="chain"><span class="pill p-ok">Open</span><span class="arw">→</span><span class="pill p-done">Closed</span></div>
+
+<h2>8. Ringkasan Fungsi Semua Form (Matriks)</h2>
+<table>
+  <tr><th>Area</th><th>Form</th><th>Efek Stok</th><th>Efek Kas/Keuangan</th><th>Alur status</th></tr>
+  <tr><td>Master</td><td>Produk, Kategori, Satuan, Brand, Gudang, Pajak, Metode Bayar, Atribut, Supplier, Customer, Mata Uang</td><td>Opening stock (Produk)</td><td>—</td><td>CRUD</td></tr>
+  <tr><td>Persediaan</td><td>Stock Levels; Stock Adjustment</td><td>Adjustment: ±stok</td><td>—</td><td>—</td></tr>
+  <tr><td>Pembelian</td><td>Purchase Order</td><td>—</td><td>Komitmen beli</td><td>Draft→Confirmed→Received</td></tr>
+  <tr><td>Pembelian</td><td>Goods Receipt</td><td>+Stok, HPP MA</td><td>—</td><td>Draft→Posted</td></tr>
+  <tr><td>Penjualan</td><td>Sales Order</td><td>—</td><td>Cek limit kredit</td><td>Draft→Confirmed→Delivered</td></tr>
+  <tr><td>Penjualan</td><td>Delivery Order</td><td>−Stok, +COGS</td><td>—</td><td>Draft→Posted</td></tr>
+  <tr><td>Kasir</td><td>Sesi Kasir</td><td>—</td><td>Kontrol kas</td><td>Open→Closed</td></tr>
+  <tr><td>Kasir</td><td>Kasir (POS)</td><td>−Stok, +COGS</td><td>+Kas (langsung)</td><td>Posted</td></tr>
+  <tr><td>Finance</td><td>Faktur Supplier (AP)</td><td>—</td><td>+Hutang</td><td>Open→Paid</td></tr>
+  <tr><td>Finance</td><td>Pembayaran Supplier</td><td>—</td><td>−Hutang, −Kas</td><td>Draft→Posted→Voided</td></tr>
+  <tr><td>Finance</td><td>Faktur Customer (AR)</td><td>—</td><td>+Piutang</td><td>Open→Paid</td></tr>
+  <tr><td>Finance</td><td>Penerimaan Customer</td><td>—</td><td>−Piutang, +Kas</td><td>Posted→Voided</td></tr>
+  <tr><td>Finance</td><td>Biaya (Expense)</td><td>—</td><td>−Kas</td><td>Posted→Voided</td></tr>
+  <tr><td>Finance</td><td>Cash &amp; Bank</td><td>—</td><td>Ledger saldo</td><td>—</td></tr>
+  <tr><td>Laporan</td><td>Kartu Stok, Nilai Persediaan, Penjualan, Pembelian, Laba Kotor</td><td>Baca-saja</td><td>Baca-saja</td><td>Ekspor Excel/PDF</td></tr>
+  <tr><td>Dashboard</td><td>Dashboard operasional</td><td>Ringkasan</td><td>Ringkasan</td><td>Baca-saja</td></tr>
+  <tr><td>Settings</td><td>User, Role, Profil Perusahaan, Approval Chain, Penomoran Dokumen, Log Error</td><td>—</td><td>—</td><td>Konfigurasi</td></tr>
+</table>
+
+<div class="note"><strong>Prinsip kunci:</strong> mutasi stok &amp; HPP hanya terjadi saat dokumen di-<em>Post</em> (GRN/DO) atau transaksi POS selesai — bukan saat Draft. Uang bergerak hanya lewat Kas &amp; Bank (Penerimaan/Pembayaran/Biaya/POS tunai). Persetujuan mengontrol PO/SO/Pembayaran sebelum berdampak.</div>
+
+</body>
+</html>

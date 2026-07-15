@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ErpOne — Developer Guide: Adding a Menu &amp; Form</title>
+<style>
+  @page { margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; color: #17223a; font-size: 11pt; line-height: 1.5; margin: 0; }
+  h1 { font-size: 24pt; margin: 0 0 4px; letter-spacing: -.02em; color: #0B7A54; }
+  h2 { font-size: 15pt; margin: 24px 0 8px; padding-bottom: 5px; border-bottom: 2px solid #0E9F6E; color: #0B7A54; page-break-after: avoid; }
+  h3 { font-size: 12pt; margin: 15px 0 5px; color: #17223a; page-break-after: avoid; }
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0; padding-left: 20px; }
+  li { margin: 3px 0; }
+  code { font-family: "Cascadia Code", Consolas, monospace; font-size: 9.5pt; background: #eef2f6; padding: 1px 5px; border-radius: 4px; }
+  pre { background: #0f1b2d; color: #e6eaf2; padding: 12px 14px; border-radius: 8px; font-family: "Cascadia Code", Consolas, monospace; font-size: 8.4pt; line-height: 1.45; overflow-x: auto; white-space: pre-wrap; page-break-inside: avoid; }
+  pre .c { color: #7f9cc0; }
+  pre .k { color: #6ee7b7; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9.6pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d7dee8; padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: #eaf6f1; color: #0B7A54; font-weight: 700; }
+  .lead { color: #55627a; font-size: 11.5pt; margin: 2px 0 10px; }
+  .cover { border-bottom: 3px solid #0E9F6E; padding-bottom: 14px; margin-bottom: 8px; }
+  .meta { color: #8a95a8; font-size: 9pt; }
+  .note { background: #FEF6E7; border: 1px solid #f2dca0; border-radius: 8px; padding: 8px 12px; margin: 10px 0; font-size: 9.8pt; }
+  .ok { background: #E7F8F1; border: 1px solid #b9e6d5; border-radius: 8px; padding: 8px 12px; margin: 10px 0; font-size: 9.8pt; }
+  .step { background:#0E9F6E; color:#fff; border-radius:99px; padding:1px 9px; font-weight:700; font-size:9pt; margin-right:6px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>ErpOne — Developer Guide</h1>
+  <div class="lead">Adding a Menu Entry &amp; Building a Form (end-to-end vertical slice)</div>
+  <div class="meta">Canonical example: <code>Brand</code> master. Applies to any CRUD feature. Generated 2026-07-14</div>
+</div>
+
+<h2>0. The vertical slice</h2>
+<p>A new feature touches every layer. Build in this order:</p>
+<ol>
+  <li><strong>Domain</strong> — entity + EF config + migration.</li>
+  <li><strong>Application</strong> — DTOs, service interface, FluentValidation validators.</li>
+  <li><strong>Infrastructure</strong> — service implementation + DI registration.</li>
+  <li><strong>Web</strong> — Index (list), Form (create/edit), optional Detail page.</li>
+  <li><strong>Menu &amp; permissions</strong> — register in <code>AppMenus.cs</code>.</li>
+  <li><strong>Tests</strong> — integration test for the service.</li>
+</ol>
+<p>Place files in the subfolder matching the menu header (Master / Transactions / Finance / …) in each project. Keep the existing namespace (folders are organizational only).</p>
+
+<h2>Part A — Register the menu &amp; permissions</h2>
+<h3><span class="step">A1</span> Add the resource in <code>AppMenus.cs</code></h3>
+<p>Add an <code>AppResource</code> to the correct <code>ResourceGroup</code>. The key drives route, permission, and icon by convention.</p>
+<pre><span class="c">// Web/Authorization/AppMenus.cs → inside the "Master" group</span>
+new("master.brands", "Brand", "bi-bookmark-star-fill", CRUD),
+<span class="c">// key            label     bootstrap icon          actions preset</span></pre>
+<p>Action presets already defined: <code>CRUD</code> = index/create/edit/delete; <code>ViewOnly</code>, <code>ViewCreate</code>, <code>ReportActions</code> (index+export), and document presets (with approve/post/void). This auto-creates permissions <code>master.brands.index|create|edit|delete</code>.</p>
+
+<h3><span class="step">A2</span> Routing convention (and overrides)</h3>
+<p><code>NavMenuBuilder</code> derives the link automatically:</p>
+<ul>
+  <li>Href = <code>key.Replace('.', '/')</code> → <code>master.brands</code> ⇒ <code>/master/brands</code>.</li>
+  <li>Visibility gate = <code>{key}.index</code>.</li>
+  <li>Icon = declared icon minus <code>-fill</code>.</li>
+</ul>
+<p>Only if the route/action is irregular, add an entry to the <code>Overrides</code> dictionary:</p>
+<pre><span class="c">// e.g. category route differs, POS points to the create action + extra link</span>
+["master.categories"]     = new(Href: "master/product-categories"),
+["cashier.pos"]           = new(Href: "cashier/pos", Action: "create", Extra: [ ... ]),</pre>
+
+<h3><span class="step">A3</span> Grant the permission</h3>
+<p><code>BootstrapSeeder</code> grants <em>all</em> <code>AppMenus.AllPermissions</code> to the admin role on startup (idempotent). No code needed.</p>
+<div class="note"><strong>Manual step after deploy:</strong> restart the app and <strong>sign out / sign in</strong> so the admin's permission claims refresh. Configure non-admin roles under <em>Settings → Role</em>.</div>
+
+<h2>Part B — Domain layer</h2>
+<h3><span class="step">B1</span> Entity</h3>
+<pre><span class="c">// Domain/Entities/Master/Brand.cs — namespace ErpOne.Domain.Entities</span>
+public class Brand : AuditableEntity      <span class="c">// gives CreatedAt/CreatedBy/…</span>
+{
+    public int Id { get; private set; }
+    public string Code { get; private set; } = default!;
+    public string Name { get; private set; } = default!;
+    public string? Description { get; private set; }
+
+    private Brand() { }                    <span class="c">// EF</span>
+    public Brand(string code, string name, string? description)
+    {
+        if (string.IsNullOrWhiteSpace(code)) throw new ArgumentException("Code required.", nameof(code));
+        Code = code.Trim(); Name = name.Trim(); Description = description;
+    }
+    public void Update(string code, string name, string? description) { <span class="c">/* mutate + validate */</span> }
+}</pre>
+<p>Rich domain model: private setters, behavior methods, guard clauses. Enums (statuses) go in their own file in the same folder.</p>
+
+<h3><span class="step">B2</span> EF configuration + migration</h3>
+<pre><span class="c">// Infrastructure/Persistence/AppDbContext.cs</span>
+public DbSet&lt;Brand&gt; Brands =&gt; Set&lt;Brand&gt;();
+<span class="c">// in OnModelCreating:</span>
+modelBuilder.Entity&lt;Brand&gt;(e =&gt; {
+    e.ToTable("M_Brands");                 <span class="c">// M_ master / T_ transaction prefix</span>
+    e.HasKey(x =&gt; x.Id);
+    e.Property(x =&gt; x.Code).HasMaxLength(20).IsRequired();
+    e.HasIndex(x =&gt; x.Code).IsUnique();
+    e.Property(x =&gt; x.Name).HasMaxLength(100).IsRequired();
+});</pre>
+<pre>dotnet ef migrations add AddBrand --project src/ErpOne.Infrastructure --startup-project src/ErpOne.Web
+dotnet ef database update            --project src/ErpOne.Infrastructure --startup-project src/ErpOne.Web</pre>
+
+<h2>Part C — Application layer</h2>
+<h3><span class="step">C1</span> DTOs</h3>
+<pre><span class="c">// Application/Master/Brands/BrandDtos.cs — namespace ErpOne.Application.Brands</span>
+public record BrandDto(int Id, string Code, string Name, string? Description, DateTime CreatedAt, string? CreatedBy);
+public record CreateBrandRequest(string Code, string Name, string? Description);
+public record UpdateBrandRequest(string Code, string Name, string? Description);</pre>
+
+<h3><span class="step">C2</span> Service interface</h3>
+<pre>public interface IBrandService
+{
+    Task&lt;IReadOnlyList&lt;BrandDto&gt;&gt; GetAllAsync(CancellationToken ct = default);
+    Task&lt;PagedResult&lt;BrandDto&gt;&gt; GetPagedAsync(int page, int pageSize, string? search = null, CancellationToken ct = default);
+    Task&lt;BrandDto?&gt; GetByIdAsync(int id, CancellationToken ct = default);
+    Task&lt;BrandDto&gt; CreateAsync(CreateBrandRequest request, CancellationToken ct = default);
+    Task&lt;bool&gt; UpdateAsync(int id, UpdateBrandRequest request, CancellationToken ct = default);
+    Task&lt;bool&gt; DeleteAsync(int id, CancellationToken ct = default);
+}</pre>
+
+<h3><span class="step">C3</span> Validators (FluentValidation)</h3>
+<pre>public class CreateBrandValidator : AbstractValidator&lt;CreateBrandRequest&gt;
+{
+    public CreateBrandValidator()
+    {
+        RuleFor(x =&gt; x.Code).NotEmpty().MaximumLength(20)
+            .Matches("^[A-Za-z0-9-]+$").WithMessage("Code may only contain letters, numbers, and dashes.");
+        RuleFor(x =&gt; x.Name).NotEmpty().MaximumLength(100);
+        RuleFor(x =&gt; x.Description).MaximumLength(300);
+    }
+}
+<span class="c">// + UpdateBrandValidator. Auto-registered via AddValidatorsFromAssemblyContaining&lt;CreateProductValidator&gt;().</span></pre>
+
+<h2>Part D — Infrastructure layer</h2>
+<h3><span class="step">D1</span> Service implementation</h3>
+<pre><span class="c">// Infrastructure/Services/Master/BrandService.cs — namespace ErpOne.Infrastructure.Services</span>
+public class BrandService(
+    AppDbContext db,
+    IValidator&lt;CreateBrandRequest&gt; createValidator,
+    IValidator&lt;UpdateBrandRequest&gt; updateValidator) : IBrandService   <span class="c">// primary-ctor DI</span>
+{
+    public async Task&lt;PagedResult&lt;BrandDto&gt;&gt; GetPagedAsync(int page, int pageSize, string? search = null, CancellationToken ct = default)
+    {
+        page = Math.Max(1, page); pageSize = Math.Clamp(pageSize, 1, 200);
+        var q = db.Brands.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(search))
+            q = q.Where(x =&gt; x.Name.Contains(search) || x.Code.Contains(search));
+        var total = await q.CountAsync(ct);
+        var items = await q.OrderBy(x =&gt; x.Name).Skip((page-1)*pageSize).Take(pageSize)
+            .Select(x =&gt; ToDto(x)).ToListAsync(ct);
+        return new PagedResult&lt;BrandDto&gt;(items, total, page, pageSize);
+    }
+
+    public async Task&lt;BrandDto&gt; CreateAsync(CreateBrandRequest req, CancellationToken ct = default)
+    {
+        await createValidator.ValidateAndThrowAsync(req, ct);       <span class="c">// throws ValidationException</span>
+        var e = new Brand(req.Code, req.Name, req.Description);
+        db.Brands.Add(e); await db.SaveChangesAsync(ct);
+        return ToDto(e);
+    }
+    <span class="c">// GetAll/GetById/Update/Delete similar; always AsNoTracking for reads.</span>
+    private static BrandDto ToDto(Brand x) =&gt; new(x.Id, x.Code, x.Name, x.Description, x.CreatedAt, x.CreatedBy);
+}</pre>
+
+<h3><span class="step">D2</span> Register in DI</h3>
+<pre><span class="c">// Infrastructure/DependencyInjection.cs</span>
+services.AddScoped&lt;IBrandService, BrandService&gt;();</pre>
+
+<h2>Part E — Web: Index (list) page</h2>
+<p>Use the <code>.pi</code> master-index pattern: crumbs + KPIs (optional) + toolbar (search / filters / chips) + card table + <code>&lt;Pager&gt;</code>. Gate route with the <code>.index</code> policy.</p>
+<pre><span class="c">// Web/Components/Pages/Master/Brands/BrandIndex.razor</span>
+@page "/master/brands"
+@attribute [Authorize(Policy = "master.brands.index")]
+@rendermode InteractiveServer
+@inject IBrandService BrandService
+
+&lt;div class="pi"&gt;
+  &lt;div class="pi-head"&gt; <span class="c">/* crumbs + title + New button (AuthorizeView create) */</span> &lt;/div&gt;
+  &lt;div class="toolbar"&gt;
+    &lt;div class="search"&gt;&lt;i class="bi bi-search"&gt;&lt;/i&gt;
+      &lt;input placeholder="Search…" @bind="_search" @bind:event="oninput" @onkeyup="ReloadAsync" /&gt;&lt;/div&gt;
+  &lt;/div&gt;
+  <span class="c">@* card + &lt;table&gt; over _page.Items, then &lt;Pager Page= TotalPages= OnPageChanged= /&gt; *@</span>
+&lt;/div&gt;
+
+@code {
+  private const int PageSize = 15;
+  private PagedResult&lt;BrandDto&gt;? _page; private string? _search; private int _currentPage = 1;
+  protected override Task OnInitializedAsync() =&gt; LoadAsync();
+  private async Task LoadAsync() =&gt; _page = await BrandService.GetPagedAsync(_currentPage, PageSize, _search);
+  private async Task ReloadAsync() { _currentPage = 1; await LoadAsync(); }
+  private async Task GoToPageAsync(int p) { _currentPage = p; await LoadAsync(); }
+}</pre>
+<p>For status filters use chips: <code>&lt;div class="chips"&gt;&lt;button class="chip @(on?"on":"")" @onclick="…"&gt;…&lt;/button&gt;&lt;/div&gt;</code> (see Stock Levels for a working example).</p>
+
+<h2>Part F — Web: Form (create/edit) page</h2>
+<p>Master forms use the <code>.cf</code> container (card + responsive grid). One route handles both create and edit. Re-check permission in <code>OnInitializedAsync</code>. Map <code>ValidationException</code> errors back to per-field messages.</p>
+<pre><span class="c">// Web/Components/Pages/Master/Brands/BrandForm.razor</span>
+@page "/master/brands/new"
+@page "/master/brands/{Id:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using FluentValidation
+@inject IBrandService BrandService
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+
+&lt;div class="cf"&gt;
+  &lt;div class="cf-top"&gt;&lt;div class="crumbs"&gt; … &lt;/div&gt;&lt;/div&gt;
+  &lt;div class="cf-wrap"&gt;
+    &lt;section class="card"&gt;
+      &lt;div class="card-h"&gt;&lt;span class="hd-ic"&gt;&lt;i class="bi bi-award"&gt;&lt;/i&gt;&lt;/span&gt;
+        &lt;div class="hd-tx"&gt;&lt;h2&gt;Brand information&lt;/h2&gt;&lt;p&gt;…&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class="card-b"&gt;
+        &lt;div class="grid"&gt;
+          &lt;div class="f c4"&gt;&lt;label class="fl"&gt;Code &lt;span class="req"&gt;*&lt;/span&gt;&lt;/label&gt;
+            &lt;input class="ctl mono up @(_codeError!=null?"bad":"")" @bind="_code" @bind:event="oninput" /&gt;
+            @if (_codeError!=null){&lt;div class="err-txt"&gt;@_codeError&lt;/div&gt;}&lt;/div&gt;
+          &lt;div class="f c8"&gt; … Name … &lt;/div&gt;
+          &lt;div class="f c12"&gt; … Description (textarea) … &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/section&gt;
+    &lt;div class="pf-footer"&gt;&lt;div class="in"&gt;
+      &lt;a class="btn btn-ghost" href="/master/brands"&gt;Cancel&lt;/a&gt;
+      &lt;button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving"&gt;Save brand&lt;/button&gt;
+    &lt;/div&gt;&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+@code {
+  [Parameter] public int? Id { get; set; }
+  [CascadingParameter] private Task&lt;AuthenticationState&gt; AuthStateTask { get; set; } = default!;
+  private string _code="", _name=""; private string? _description, _error, _codeError, _nameError;
+  private bool _loading=true, _saving, _notFound;
+
+  protected override async Task OnInitializedAsync() {
+    var user = (await AuthStateTask).User;
+    var perm = Id is null ? AppMenus.Perm("master.brands","create") : AppMenus.Perm("master.brands","edit");
+    if (!(await Auth.AuthorizeAsync(user, perm)).Succeeded) { Nav.NavigateTo("/master/brands"); return; }
+    if (Id is int id) { var b = await BrandService.GetByIdAsync(id);
+      if (b is null) _notFound = true; else { _code=b.Code; _name=b.Name; _description=b.Description; } }
+    _loading = false;
+  }
+
+  private async Task SaveAsync() {
+    _error=_codeError=_nameError=null; _saving=true;
+    try {
+      if (Id is int id) await BrandService.UpdateAsync(id, new UpdateBrandRequest(_code,_name,_description));
+      else              await BrandService.CreateAsync(new CreateBrandRequest(_code,_name,_description));
+      Nav.NavigateTo("/master/brands");
+    }
+    catch (ValidationException ex) {                    <span class="c">// map field errors</span>
+      foreach (var e in ex.Errors) {
+        if (e.PropertyName == nameof(CreateBrandRequest.Code)) _codeError = e.ErrorMessage;
+        else if (e.PropertyName == nameof(CreateBrandRequest.Name)) _nameError = e.ErrorMessage;
+        else _error = e.ErrorMessage;
+      }
+    }
+    finally { _saving = false; }
+  }
+}</pre>
+
+<h3>Form grid &amp; control classes (.cf)</h3>
+<table>
+  <tr><th>Class</th><th>Purpose</th></tr>
+  <tr><td><code>.grid</code> + <code>.f .cN</code></td><td>12-column responsive grid; a field spans <code>c4</code>/<code>c8</code>/<code>c12</code> etc.</td></tr>
+  <tr><td><code>.fl</code> / <code>.req</code></td><td>Field label / required asterisk.</td></tr>
+  <tr><td><code>.ctl</code> (+ <code>.mono .up .bad</code>)</td><td>Input/select/textarea; <code>.up</code> uppercases, <code>.bad</code> = error border.</td></tr>
+  <tr><td><code>.err-txt</code> / <code>.cnt</code></td><td>Inline field error / character counter.</td></tr>
+  <tr><td><code>.pf-footer .in</code></td><td>Sticky action bar (Cancel / Save).</td></tr>
+</table>
+<div class="note"><strong>Transaction forms</strong> (with line-item tables) use <code>&lt;div class="pf pf-form"&gt;</code> and a <code>.items</code> table instead of <code>.cf</code>. Detail pages use <code>&lt;div class="pf pf-detail"&gt;</code> with an info-grid + <code>.items</code> + status <code>.badge</code>. See <code>PoForm</code>/<code>PoDetail</code>.</div>
+
+<h2>Part G — Tests</h2>
+<p>Integration test the service against SQLite. Fixture builds the schema; seed via services or the DbContext.</p>
+<pre>public class BrandServiceTests : IClassFixture&lt;CustomWebApplicationFactory&gt;
+{
+    private readonly CustomWebApplicationFactory _f;
+    public BrandServiceTests(CustomWebApplicationFactory f) { _f = f; _f.InitializeDatabase(); }
+
+    [Fact] public async Task Create_then_get_roundtrips() {
+        using var scope = _f.Services.CreateScope();
+        var svc = scope.ServiceProvider.GetRequiredService&lt;IBrandService&gt;();
+        var dto = await svc.CreateAsync(new CreateBrandRequest("NKE","Nike",null));
+        Assert.Equal("Nike", (await svc.GetByIdAsync(dto.Id))!.Name);
+    }
+}</pre>
+<div class="note">SQLite is one in-memory connection shared across a test class (isolated per class). Avoid SQL-Server-only EF translations. Stop the running app before <code>dotnet test</code> (tests reference <code>ErpOne.Web</code>).</div>
+
+<h2>Part H — Definition of done (checklist)</h2>
+<ul>
+  <li>☐ Entity + EF config + migration applied.</li>
+  <li>☐ DTOs, service interface, validators, service impl, DI registration.</li>
+  <li>☐ <code>AppMenus.cs</code> resource added (+ <code>Overrides</code> if route/action irregular).</li>
+  <li>☐ Index page (<code>.pi</code>), Form page (<code>.cf</code> / <code>.pf-form</code>), Detail page (<code>.pf-detail</code>) if needed; all with <code>[Authorize(Policy)]</code> + <code>AuthorizeView</code> on actions.</li>
+  <li>☐ Integration test green; <code>dotnet build ErpOne.slnx</code> = 0 errors.</li>
+  <li>☐ Restart + sign out/in so admin gets the new permission.</li>
+  <li>☐ New file placed in the correct menu-header subfolder (namespace unchanged).</li>
+</ul>
+
+</body>
+</html>

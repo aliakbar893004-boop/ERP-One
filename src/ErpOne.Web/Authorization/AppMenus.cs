@@ -89,6 +89,8 @@ public static class AppMenus
             new("reports.sales", "Sales Report", "bi-graph-up-arrow", ReportActions),
             new("reports.purchases", "Purchase Report", "bi-cart-check", ReportActions),
             new("reports.gross-profit", "Gross Profit", "bi-coin", ReportActions),
+            new("reports.ar-aging", "AR Aging", "bi-hourglass-split", ReportActions),
+            new("reports.ap-aging", "AP Aging", "bi-hourglass-bottom", ReportActions),
         ]),
         new("Settings",
         [

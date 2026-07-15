@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>ErpOne — Panduan Developer: Menambah Menu &amp; Form</title>
+<style>
+  @page { margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; color: #17223a; font-size: 11pt; line-height: 1.5; margin: 0; }
+  h1 { font-size: 24pt; margin: 0 0 4px; letter-spacing: -.02em; color: #0B7A54; }
+  h2 { font-size: 15pt; margin: 24px 0 8px; padding-bottom: 5px; border-bottom: 2px solid #0E9F6E; color: #0B7A54; page-break-after: avoid; }
+  h3 { font-size: 12pt; margin: 15px 0 5px; color: #17223a; page-break-after: avoid; }
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0; padding-left: 20px; }
+  li { margin: 3px 0; }
+  code { font-family: "Cascadia Code", Consolas, monospace; font-size: 9.5pt; background: #eef2f6; padding: 1px 5px; border-radius: 4px; }
+  pre { background: #0f1b2d; color: #e6eaf2; padding: 12px 14px; border-radius: 8px; font-family: "Cascadia Code", Consolas, monospace; font-size: 8.4pt; line-height: 1.45; overflow-x: auto; white-space: pre-wrap; page-break-inside: avoid; }
+  pre .c { color: #7f9cc0; }
+  pre .k { color: #6ee7b7; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9.6pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d7dee8; padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: #eaf6f1; color: #0B7A54; font-weight: 700; }
+  .lead { color: #55627a; font-size: 11.5pt; margin: 2px 0 10px; }
+  .cover { border-bottom: 3px solid #0E9F6E; padding-bottom: 14px; margin-bottom: 8px; }
+  .meta { color: #8a95a8; font-size: 9pt; }
+  .note { background: #FEF6E7; border: 1px solid #f2dca0; border-radius: 8px; padding: 8px 12px; margin: 10px 0; font-size: 9.8pt; }
+  .ok { background: #E7F8F1; border: 1px solid #b9e6d5; border-radius: 8px; padding: 8px 12px; margin: 10px 0; font-size: 9.8pt; }
+  .step { background:#0E9F6E; color:#fff; border-radius:99px; padding:1px 9px; font-weight:700; font-size:9pt; margin-right:6px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>ErpOne — Panduan Developer</h1>
+  <div class="lead">Menambah Menu &amp; Membangun Form (vertical slice end-to-end)</div>
+  <div class="meta">Contoh acuan: master <code>Brand</code>. Berlaku untuk fitur CRUD apa pun. Dibuat 2026-07-14</div>
+</div>
+
+<h2>0. Vertical slice</h2>
+<p>Fitur baru menyentuh semua layer. Bangun dengan urutan ini:</p>
+<ol>
+  <li><strong>Domain</strong> — entity + konfigurasi EF + migrasi.</li>
+  <li><strong>Application</strong> — DTO, interface service, validator FluentValidation.</li>
+  <li><strong>Infrastructure</strong> — implementasi service + registrasi DI.</li>
+  <li><strong>Web</strong> — Index (daftar), Form (create/edit), Detail (opsional).</li>
+  <li><strong>Menu &amp; permission</strong> — daftarkan di <code>AppMenus.cs</code>.</li>
+  <li><strong>Test</strong> — integration test untuk service.</li>
+</ol>
+<p>Letakkan file di subfolder sesuai header menu (Master / Transactions / Finance / …) pada tiap project. Pertahankan namespace yang ada (folder hanya untuk penataan).</p>
+
+<h2>Bagian A — Daftarkan menu &amp; permission</h2>
+<h3><span class="step">A1</span> Tambahkan resource di <code>AppMenus.cs</code></h3>
+<p>Tambahkan <code>AppResource</code> ke <code>ResourceGroup</code> yang tepat. Key menggerakkan route, permission, dan ikon secara konvensi.</p>
+<pre><span class="c">// Web/Authorization/AppMenus.cs → di dalam grup "Master"</span>
+new("master.brands", "Brand", "bi-bookmark-star-fill", CRUD),
+<span class="c">// key            label     ikon bootstrap          preset action</span></pre>
+<p>Preset action yang sudah ada: <code>CRUD</code> = index/create/edit/delete; <code>ViewOnly</code>, <code>ViewCreate</code>, <code>ReportActions</code> (index+export), serta preset dokumen (dengan approve/post/void). Ini otomatis membuat permission <code>master.brands.index|create|edit|delete</code>.</p>
+
+<h3><span class="step">A2</span> Konvensi routing (dan override)</h3>
+<p><code>NavMenuBuilder</code> menurunkan link otomatis:</p>
+<ul>
+  <li>Href = <code>key.Replace('.', '/')</code> → <code>master.brands</code> ⇒ <code>/master/brands</code>.</li>
+  <li>Gate visibilitas = <code>{key}.index</code>.</li>
+  <li>Ikon = ikon deklarasi tanpa <code>-fill</code>.</li>
+</ul>
+<p>Hanya jika route/action tidak beraturan, tambahkan entri ke dictionary <code>Overrides</code>:</p>
+<pre><span class="c">// mis. route kategori berbeda; POS mengarah ke action create + link tambahan</span>
+["master.categories"]     = new(Href: "master/product-categories"),
+["cashier.pos"]           = new(Href: "cashier/pos", Action: "create", Extra: [ ... ]),</pre>
+
+<h3><span class="step">A3</span> Berikan permission</h3>
+<p><code>BootstrapSeeder</code> memberikan <em>semua</em> <code>AppMenus.AllPermissions</code> ke role admin saat startup (idempoten). Tak perlu kode.</p>
+<div class="note"><strong>Langkah manual setelah deploy:</strong> restart app lalu <strong>sign out / sign in</strong> agar klaim permission admin ter-refresh. Atur role non-admin di <em>Settings → Role</em>.</div>
+
+<h2>Bagian B — Layer Domain</h2>
+<h3><span class="step">B1</span> Entity</h3>
+<pre><span class="c">// Domain/Entities/Master/Brand.cs — namespace ErpOne.Domain.Entities</span>
+public class Brand : AuditableEntity      <span class="c">// memberi CreatedAt/CreatedBy/…</span>
+{
+    public int Id { get; private set; }
+    public string Code { get; private set; } = default!;
+    public string Name { get; private set; } = default!;
+    public string? Description { get; private set; }
+
+    private Brand() { }                    <span class="c">// EF</span>
+    public Brand(string code, string name, string? description)
+    {
+        if (string.IsNullOrWhiteSpace(code)) throw new ArgumentException("Code wajib diisi.", nameof(code));
+        Code = code.Trim(); Name = name.Trim(); Description = description;
+    }
+    public void Update(string code, string name, string? description) { <span class="c">/* ubah + validasi */</span> }
+}</pre>
+<p>Model domain kaya: setter private, method perilaku, guard clause. Enum (status) diletakkan di file sendiri pada folder yang sama.</p>
+
+<h3><span class="step">B2</span> Konfigurasi EF + migrasi</h3>
+<pre><span class="c">// Infrastructure/Persistence/AppDbContext.cs</span>
+public DbSet&lt;Brand&gt; Brands =&gt; Set&lt;Brand&gt;();
+<span class="c">// di OnModelCreating:</span>
+modelBuilder.Entity&lt;Brand&gt;(e =&gt; {
+    e.ToTable("M_Brands");                 <span class="c">// prefiks M_ master / T_ transaksi</span>
+    e.HasKey(x =&gt; x.Id);
+    e.Property(x =&gt; x.Code).HasMaxLength(20).IsRequired();
+    e.HasIndex(x =&gt; x.Code).IsUnique();
+    e.Property(x =&gt; x.Name).HasMaxLength(100).IsRequired();
+});</pre>
+<pre>dotnet ef migrations add AddBrand --project src/ErpOne.Infrastructure --startup-project src/ErpOne.Web
+dotnet ef database update            --project src/ErpOne.Infrastructure --startup-project src/ErpOne.Web</pre>
+
+<h2>Bagian C — Layer Application</h2>
+<h3><span class="step">C1</span> DTO</h3>
+<pre><span class="c">// Application/Master/Brands/BrandDtos.cs — namespace ErpOne.Application.Brands</span>
+public record BrandDto(int Id, string Code, string Name, string? Description, DateTime CreatedAt, string? CreatedBy);
+public record CreateBrandRequest(string Code, string Name, string? Description);
+public record UpdateBrandRequest(string Code, string Name, string? Description);</pre>
+
+<h3><span class="step">C2</span> Interface service</h3>
+<pre>public interface IBrandService
+{
+    Task&lt;IReadOnlyList&lt;BrandDto&gt;&gt; GetAllAsync(CancellationToken ct = default);
+    Task&lt;PagedResult&lt;BrandDto&gt;&gt; GetPagedAsync(int page, int pageSize, string? search = null, CancellationToken ct = default);
+    Task&lt;BrandDto?&gt; GetByIdAsync(int id, CancellationToken ct = default);
+    Task&lt;BrandDto&gt; CreateAsync(CreateBrandRequest request, CancellationToken ct = default);
+    Task&lt;bool&gt; UpdateAsync(int id, UpdateBrandRequest request, CancellationToken ct = default);
+    Task&lt;bool&gt; DeleteAsync(int id, CancellationToken ct = default);
+}</pre>
+
+<h3><span class="step">C3</span> Validator (FluentValidation)</h3>
+<pre>public class CreateBrandValidator : AbstractValidator&lt;CreateBrandRequest&gt;
+{
+    public CreateBrandValidator()
+    {
+        RuleFor(x =&gt; x.Code).NotEmpty().MaximumLength(20)
+            .Matches("^[A-Za-z0-9-]+$").WithMessage("Code hanya boleh huruf, angka, dan strip.");
+        RuleFor(x =&gt; x.Name).NotEmpty().MaximumLength(100);
+        RuleFor(x =&gt; x.Description).MaximumLength(300);
+    }
+}
+<span class="c">// + UpdateBrandValidator. Otomatis diregistrasi via AddValidatorsFromAssemblyContaining&lt;CreateProductValidator&gt;().</span></pre>
+
+<h2>Bagian D — Layer Infrastructure</h2>
+<h3><span class="step">D1</span> Implementasi service</h3>
+<pre><span class="c">// Infrastructure/Services/Master/BrandService.cs — namespace ErpOne.Infrastructure.Services</span>
+public class BrandService(
+    AppDbContext db,
+    IValidator&lt;CreateBrandRequest&gt; createValidator,
+    IValidator&lt;UpdateBrandRequest&gt; updateValidator) : IBrandService   <span class="c">// DI primary-ctor</span>
+{
+    public async Task&lt;PagedResult&lt;BrandDto&gt;&gt; GetPagedAsync(int page, int pageSize, string? search = null, CancellationToken ct = default)
+    {
+        page = Math.Max(1, page); pageSize = Math.Clamp(pageSize, 1, 200);
+        var q = db.Brands.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(search))
+            q = q.Where(x =&gt; x.Name.Contains(search) || x.Code.Contains(search));
+        var total = await q.CountAsync(ct);
+        var items = await q.OrderBy(x =&gt; x.Name).Skip((page-1)*pageSize).Take(pageSize)
+            .Select(x =&gt; ToDto(x)).ToListAsync(ct);
+        return new PagedResult&lt;BrandDto&gt;(items, total, page, pageSize);
+    }
+
+    public async Task&lt;BrandDto&gt; CreateAsync(CreateBrandRequest req, CancellationToken ct = default)
+    {
+        await createValidator.ValidateAndThrowAsync(req, ct);       <span class="c">// melempar ValidationException</span>
+        var e = new Brand(req.Code, req.Name, req.Description);
+        db.Brands.Add(e); await db.SaveChangesAsync(ct);
+        return ToDto(e);
+    }
+    <span class="c">// GetAll/GetById/Update/Delete serupa; selalu AsNoTracking untuk baca.</span>
+    private static BrandDto ToDto(Brand x) =&gt; new(x.Id, x.Code, x.Name, x.Description, x.CreatedAt, x.CreatedBy);
+}</pre>
+
+<h3><span class="step">D2</span> Registrasi di DI</h3>
+<pre><span class="c">// Infrastructure/DependencyInjection.cs</span>
+services.AddScoped&lt;IBrandService, BrandService&gt;();</pre>
+
+<h2>Bagian E — Web: Halaman Index (daftar)</h2>
+<p>Gunakan pola master-index <code>.pi</code>: crumbs + KPI (opsional) + toolbar (search / filter / chips) + card tabel + <code>&lt;Pager&gt;</code>. Kunci route dengan policy <code>.index</code>.</p>
+<pre><span class="c">// Web/Components/Pages/Master/Brands/BrandIndex.razor</span>
+@page "/master/brands"
+@attribute [Authorize(Policy = "master.brands.index")]
+@rendermode InteractiveServer
+@inject IBrandService BrandService
+
+&lt;div class="pi"&gt;
+  &lt;div class="pi-head"&gt; <span class="c">/* crumbs + judul + tombol New (AuthorizeView create) */</span> &lt;/div&gt;
+  &lt;div class="toolbar"&gt;
+    &lt;div class="search"&gt;&lt;i class="bi bi-search"&gt;&lt;/i&gt;
+      &lt;input placeholder="Cari…" @bind="_search" @bind:event="oninput" @onkeyup="ReloadAsync" /&gt;&lt;/div&gt;
+  &lt;/div&gt;
+  <span class="c">@* card + &lt;table&gt; atas _page.Items, lalu &lt;Pager Page= TotalPages= OnPageChanged= /&gt; *@</span>
+&lt;/div&gt;
+
+@code {
+  private const int PageSize = 15;
+  private PagedResult&lt;BrandDto&gt;? _page; private string? _search; private int _currentPage = 1;
+  protected override Task OnInitializedAsync() =&gt; LoadAsync();
+  private async Task LoadAsync() =&gt; _page = await BrandService.GetPagedAsync(_currentPage, PageSize, _search);
+  private async Task ReloadAsync() { _currentPage = 1; await LoadAsync(); }
+  private async Task GoToPageAsync(int p) { _currentPage = p; await LoadAsync(); }
+}</pre>
+<p>Untuk filter status pakai chips: <code>&lt;div class="chips"&gt;&lt;button class="chip @(on?"on":"")" @onclick="…"&gt;…&lt;/button&gt;&lt;/div&gt;</code> (lihat contoh nyata di halaman Stock Levels).</p>
+
+<h2>Bagian F — Web: Halaman Form (create/edit)</h2>
+<p>Form master memakai container <code>.cf</code> (card + grid responsif). Satu route menangani create dan edit. Cek ulang permission di <code>OnInitializedAsync</code>. Petakan error <code>ValidationException</code> ke pesan per-field.</p>
+<pre><span class="c">// Web/Components/Pages/Master/Brands/BrandForm.razor</span>
+@page "/master/brands/new"
+@page "/master/brands/{Id:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using FluentValidation
+@inject IBrandService BrandService
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+
+&lt;div class="cf"&gt;
+  &lt;div class="cf-top"&gt;&lt;div class="crumbs"&gt; … &lt;/div&gt;&lt;/div&gt;
+  &lt;div class="cf-wrap"&gt;
+    &lt;section class="card"&gt;
+      &lt;div class="card-h"&gt;&lt;span class="hd-ic"&gt;&lt;i class="bi bi-award"&gt;&lt;/i&gt;&lt;/span&gt;
+        &lt;div class="hd-tx"&gt;&lt;h2&gt;Informasi brand&lt;/h2&gt;&lt;p&gt;…&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class="card-b"&gt;
+        &lt;div class="grid"&gt;
+          &lt;div class="f c4"&gt;&lt;label class="fl"&gt;Code &lt;span class="req"&gt;*&lt;/span&gt;&lt;/label&gt;
+            &lt;input class="ctl mono up @(_codeError!=null?"bad":"")" @bind="_code" @bind:event="oninput" /&gt;
+            @if (_codeError!=null){&lt;div class="err-txt"&gt;@_codeError&lt;/div&gt;}&lt;/div&gt;
+          &lt;div class="f c8"&gt; … Name … &lt;/div&gt;
+          &lt;div class="f c12"&gt; … Description (textarea) … &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/section&gt;
+    &lt;div class="pf-footer"&gt;&lt;div class="in"&gt;
+      &lt;a class="btn btn-ghost" href="/master/brands"&gt;Batal&lt;/a&gt;
+      &lt;button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving"&gt;Simpan brand&lt;/button&gt;
+    &lt;/div&gt;&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+@code {
+  [Parameter] public int? Id { get; set; }
+  [CascadingParameter] private Task&lt;AuthenticationState&gt; AuthStateTask { get; set; } = default!;
+  private string _code="", _name=""; private string? _description, _error, _codeError, _nameError;
+  private bool _loading=true, _saving, _notFound;
+
+  protected override async Task OnInitializedAsync() {
+    var user = (await AuthStateTask).User;
+    var perm = Id is null ? AppMenus.Perm("master.brands","create") : AppMenus.Perm("master.brands","edit");
+    if (!(await Auth.AuthorizeAsync(user, perm)).Succeeded) { Nav.NavigateTo("/master/brands"); return; }
+    if (Id is int id) { var b = await BrandService.GetByIdAsync(id);
+      if (b is null) _notFound = true; else { _code=b.Code; _name=b.Name; _description=b.Description; } }
+    _loading = false;
+  }
+
+  private async Task SaveAsync() {
+    _error=_codeError=_nameError=null; _saving=true;
+    try {
+      if (Id is int id) await BrandService.UpdateAsync(id, new UpdateBrandRequest(_code,_name,_description));
+      else              await BrandService.CreateAsync(new CreateBrandRequest(_code,_name,_description));
+      Nav.NavigateTo("/master/brands");
+    }
+    catch (ValidationException ex) {                    <span class="c">// petakan error per-field</span>
+      foreach (var e in ex.Errors) {
+        if (e.PropertyName == nameof(CreateBrandRequest.Code)) _codeError = e.ErrorMessage;
+        else if (e.PropertyName == nameof(CreateBrandRequest.Name)) _nameError = e.ErrorMessage;
+        else _error = e.ErrorMessage;
+      }
+    }
+    finally { _saving = false; }
+  }
+}</pre>
+
+<h3>Kelas grid &amp; kontrol form (.cf)</h3>
+<table>
+  <tr><th>Kelas</th><th>Fungsi</th></tr>
+  <tr><td><code>.grid</code> + <code>.f .cN</code></td><td>Grid responsif 12-kolom; satu field membentang <code>c4</code>/<code>c8</code>/<code>c12</code> dst.</td></tr>
+  <tr><td><code>.fl</code> / <code>.req</code></td><td>Label field / tanda wajib (*).</td></tr>
+  <tr><td><code>.ctl</code> (+ <code>.mono .up .bad</code>)</td><td>Input/select/textarea; <code>.up</code> huruf besar, <code>.bad</code> = border error.</td></tr>
+  <tr><td><code>.err-txt</code> / <code>.cnt</code></td><td>Pesan error inline / penghitung karakter.</td></tr>
+  <tr><td><code>.pf-footer .in</code></td><td>Bar aksi menempel (Batal / Simpan).</td></tr>
+</table>
+<div class="note"><strong>Form transaksi</strong> (dengan tabel baris item) memakai <code>&lt;div class="pf pf-form"&gt;</code> dan tabel <code>.items</code>, bukan <code>.cf</code>. Halaman detail memakai <code>&lt;div class="pf pf-detail"&gt;</code> dengan info-grid + <code>.items</code> + <code>.badge</code> status. Lihat <code>PoForm</code>/<code>PoDetail</code>.</div>
+
+<h2>Bagian G — Test</h2>
+<p>Integration test service terhadap SQLite. Fixture membangun skema; seed lewat service atau DbContext.</p>
+<pre>public class BrandServiceTests : IClassFixture&lt;CustomWebApplicationFactory&gt;
+{
+    private readonly CustomWebApplicationFactory _f;
+    public BrandServiceTests(CustomWebApplicationFactory f) { _f = f; _f.InitializeDatabase(); }
+
+    [Fact] public async Task Create_lalu_get_roundtrip() {
+        using var scope = _f.Services.CreateScope();
+        var svc = scope.ServiceProvider.GetRequiredService&lt;IBrandService&gt;();
+        var dto = await svc.CreateAsync(new CreateBrandRequest("NKE","Nike",null));
+        Assert.Equal("Nike", (await svc.GetByIdAsync(dto.Id))!.Name);
+    }
+}</pre>
+<div class="note">SQLite = satu koneksi in-memory yang dibagi dalam satu kelas test (terisolasi antar-kelas). Hindari translasi EF khusus SQL Server. Hentikan app yang berjalan sebelum <code>dotnet test</code> (test mereferensi <code>ErpOne.Web</code>).</div>
+
+<h2>Bagian H — Definition of done (checklist)</h2>
+<ul>
+  <li>☐ Entity + konfigurasi EF + migrasi diterapkan.</li>
+  <li>☐ DTO, interface service, validator, implementasi service, registrasi DI.</li>
+  <li>☐ Resource di <code>AppMenus.cs</code> ditambahkan (+ <code>Overrides</code> jika route/action tak beraturan).</li>
+  <li>☐ Halaman Index (<code>.pi</code>), Form (<code>.cf</code> / <code>.pf-form</code>), Detail (<code>.pf-detail</code>) bila perlu; semua dengan <code>[Authorize(Policy)]</code> + <code>AuthorizeView</code> pada aksi.</li>
+  <li>☐ Integration test hijau; <code>dotnet build ErpOne.slnx</code> = 0 error.</li>
+  <li>☐ Restart + sign out/in agar admin mendapat permission baru.</li>
+  <li>☐ File baru diletakkan di subfolder header menu yang benar (namespace tetap).</li>
+</ul>
+
+</body>
+</html>

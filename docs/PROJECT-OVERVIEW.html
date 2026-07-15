@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ErpOne — Project Overview</title>
+<style>
+  @page { margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; color: #17223a; font-size: 11pt; line-height: 1.5; margin: 0; }
+  h1 { font-size: 26pt; margin: 0 0 4px; letter-spacing: -.02em; color: #0B7A54; }
+  h2 { font-size: 15pt; margin: 26px 0 8px; padding-bottom: 5px; border-bottom: 2px solid #0E9F6E; color: #0B7A54; page-break-after: avoid; }
+  h3 { font-size: 12pt; margin: 16px 0 6px; color: #17223a; page-break-after: avoid; }
+  p { margin: 6px 0; }
+  ul, ol { margin: 6px 0 6px 0; padding-left: 20px; }
+  li { margin: 3px 0; }
+  code { font-family: "Cascadia Code", Consolas, monospace; font-size: 9.5pt; background: #eef2f6; padding: 1px 5px; border-radius: 4px; }
+  pre { background: #0f1b2d; color: #e6eaf2; padding: 12px 14px; border-radius: 8px; font-family: "Cascadia Code", Consolas, monospace; font-size: 8.6pt; line-height: 1.45; overflow-x: auto; white-space: pre-wrap; page-break-inside: avoid; }
+  pre .c { color: #7f9cc0; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 9.6pt; page-break-inside: avoid; }
+  th, td { border: 1px solid #d7dee8; padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: #eaf6f1; color: #0B7A54; font-weight: 700; }
+  .lead { color: #55627a; font-size: 11.5pt; margin: 2px 0 10px; }
+  .cover { border-bottom: 3px solid #0E9F6E; padding-bottom: 14px; margin-bottom: 8px; }
+  .badge { display: inline-block; background: #E7F8F1; color: #0B7A54; border: 1px solid #b9e6d5; border-radius: 99px; padding: 2px 10px; font-size: 8.5pt; font-weight: 700; margin: 2px 4px 2px 0; }
+  .meta { color: #8a95a8; font-size: 9pt; }
+  .note { background: #FEF6E7; border: 1px solid #f2dca0; border-radius: 8px; padding: 8px 12px; margin: 10px 0; font-size: 9.8pt; }
+  .sec { page-break-inside: avoid; }
+  .toc { columns: 2; font-size: 10pt; color: #33405c; }
+  .toc a { color: #33405c; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>ErpOne</h1>
+  <div class="lead">Project Overview &amp; Architecture Reference</div>
+  <div class="meta">Brand: ERP_One &nbsp;·&nbsp; SQL Database: MyApp &nbsp;·&nbsp; Solution: <code>ErpOne.slnx</code> &nbsp;·&nbsp; Generated 2026-07-14</div>
+</div>
+
+<h2>1. What is ErpOne?</h2>
+<p>ErpOne is a web-based ERP for retail &amp; distribution businesses (Indonesian SME/distributor context). It covers master data, purchasing, sales, warehouse/inventory, point-of-sale, finance (AR/AP/expense), reporting, and an operational dashboard. The UI blends English labels with Indonesian business terminology.</p>
+
+<h3>Tech stack</h3>
+<p>
+<span class="badge">.NET 10</span>
+<span class="badge">Blazor Server (InteractiveServer)</span>
+<span class="badge">EF Core</span>
+<span class="badge">SQL Server</span>
+<span class="badge">FluentValidation</span>
+<span class="badge">ClosedXML (Excel)</span>
+<span class="badge">QuestPDF (PDF)</span>
+<span class="badge">Bootstrap + Bootstrap Icons</span>
+<span class="badge">xUnit (+ SQLite in-memory)</span>
+<span class="badge">ASP.NET Identity</span>
+</p>
+
+<h2>2. Architecture (Clean Architecture)</h2>
+<p>Four projects with strict inward dependencies. Outer layers depend on inner; the Domain depends on nothing.</p>
+<table>
+  <tr><th>Layer</th><th>Project</th><th>Responsibility</th><th>Depends on</th></tr>
+  <tr><td>Domain</td><td><code>ErpOne.Domain</code></td><td>Entities, enums, domain rules. No framework deps.</td><td>—</td></tr>
+  <tr><td>Application</td><td><code>ErpOne.Application</code></td><td>Service interfaces, DTOs, FluentValidation validators, ports.</td><td>Domain</td></tr>
+  <tr><td>Infrastructure</td><td><code>ErpOne.Infrastructure</code></td><td>EF Core <code>AppDbContext</code>, service implementations, migrations, DI wiring.</td><td>Application, Domain</td></tr>
+  <tr><td>Web</td><td><code>ErpOne.Web</code></td><td>Blazor pages/components, authorization, menu, seeding, appearance.</td><td>Application, Infrastructure</td></tr>
+</table>
+<p>Tests: <code>ErpOne.UnitTests</code> (domain/logic) and <code>ErpOne.IntegrationTests</code> (services over SQLite; references <code>ErpOne.Web</code> via <code>WebApplicationFactory&lt;Program&gt;</code>).</p>
+
+<h2>3. Folder organization (by menu header)</h2>
+<p>Within each project, files are grouped into subfolders that mirror the sidebar menu headers. <strong>Folders are organizational only — namespaces are NOT nested</strong> (e.g. a service under <code>Services/Master/</code> still lives in namespace <code>ErpOne.Infrastructure.Services</code>). This keeps zero-friction builds while giving a clear map.</p>
+<pre><span class="c">Master/</span>        Product, ProductCategory, Brand, Unit, Attribute, Warehouse,
+              Tax, PaymentMethod, Supplier, Customer, Currency
+<span class="c">Inventory/</span>     Stock (StockMovement, ProductStock)
+<span class="c">Transactions/</span>  PurchaseOrder, GoodsReceipt, SalesOrder, DeliveryOrder
+<span class="c">Cashier/</span>       CashierShift, PosSale
+<span class="c">Finance/</span>       CashBank, Supplier/CustomerInvoice, Supplier/CustomerPayment&amp;Receipt, Expense
+<span class="c">Reports/</span>       StockLedger, InventoryValuation, Sales, Purchase, GrossProfit
+<span class="c">Dashboard/</span>     Dashboard
+<span class="c">Settings/</span>      CompanySetting, ApprovalChain, NumberSequence, DocumentNumber, Log</pre>
+<p>Applies to <code>Domain/Entities/*</code>, <code>Application/*</code> (feature folders nested under headers), and <code>Infrastructure/Services/*</code>. <code>Application/Common</code>, <code>Reports</code>, <code>Dashboard</code> stay at their project root.</p>
+
+<h2>4. Data &amp; persistence</h2>
+<ul>
+  <li><strong>DbContext:</strong> <code>ErpOne.Infrastructure.Persistence.AppDbContext</code>. Entities configured inline in <code>OnModelCreating</code> (per-entity blocks).</li>
+  <li><strong>Table naming:</strong> physical tables use domain prefixes — <code>M_*</code> (master, e.g. <code>M_ProductVariants</code>), <code>T_*</code> (transactions, e.g. <code>T_DeliveryOrders</code>).</li>
+  <li><strong>Migrations:</strong> <code>dotnet ef migrations add &lt;Name&gt; --project src/ErpOne.Infrastructure --startup-project src/ErpOne.Web</code>, then <code>dotnet ef database update ...</code>.</li>
+  <li><strong>Connection:</strong> <code>ConnectionStrings:Default</code> in <code>appsettings.json</code> → SQL Server database <code>MyApp</code>.</li>
+  <li><strong>Costing:</strong> stock uses moving-average; COGS on delivery is snapshotted from <code>ProductVariant.CostPrice</code> at <em>Post</em> time (draft lines show 0 until posted).</li>
+</ul>
+
+<h2>5. Menu &amp; navigation system</h2>
+<p>The left sidebar (light hover-expand icon rail) is <strong>data-driven</strong> from a single registry.</p>
+<ul>
+  <li><strong><code>AppMenus.cs</code></strong> (Web/Authorization) — declares <code>ResourceGroup</code>s (menu headers) each containing <code>AppResource</code>s. Each resource = <code>(key, label, icon, actions[])</code>. Actions are <code>AppAction</code> like <code>index/create/edit/delete/approve/post/void/export</code>.</li>
+  <li><strong><code>NavMenuBuilder.cs</code></strong> — builds the sidebar by convention: <code>Href = key.Replace('.', '/')</code>; visibility gate = <code>{key}.index</code>; icon = declared icon minus <code>-fill</code>. Irregular cases handled by an <code>Overrides</code> table (custom Href / action / always-visible / extra items).</li>
+  <li><strong>Permissions</strong> are auto-derived: <code>AppMenus.AllPermissions</code> = every <code>{resource}.{action}</code>. Helper: <code>AppMenus.Perm("master.brands","create")</code>.</li>
+</ul>
+
+<h2>6. Authorization &amp; permissions</h2>
+<ul>
+  <li>Policy name = permission string = <code>{resource}.{action}</code> (e.g. <code>finance.ar-invoices.index</code>).</li>
+  <li>Global <code>FallbackPolicy</code> requires an authenticated user (every page needs login unless <code>[AllowAnonymous]</code>).</li>
+  <li>Pages gate with <code>@attribute [Authorize(Policy = "…")]</code>; buttons/cards gate with <code>&lt;AuthorizeView Policy="…"&gt;</code>; forms re-check create/edit permission in <code>OnInitializedAsync</code>.</li>
+  <li><strong><code>BootstrapSeeder.cs</code></strong> (Web/Infrastructure) grants <em>all</em> <code>AppMenus.AllPermissions</code> to the admin role on startup (idempotent) and ensures the bootstrap admin user. <em>After adding a permission, restart + sign out/in so the admin's claims refresh.</em></li>
+</ul>
+
+<h2>7. Cross-cutting services</h2>
+<table>
+  <tr><th>Concern</th><th>Service</th><th>Notes</th></tr>
+  <tr><td>Document numbering</td><td><code>IDocumentNumberService</code> + <code>NumberSequence</code></td><td>Prefixed sequences (e.g. APV/APP/ARV/ARR/EXP). Integration tests assert the sequence count.</td></tr>
+  <tr><td>Reporting/export</td><td><code>ReportDocument</code> + <code>IReportExporter</code></td><td>Excel via ClosedXML, PDF via QuestPDF. Read-only query services in <code>Application/Reports</code>.</td></tr>
+  <tr><td>Validation</td><td>FluentValidation</td><td>Validators registered via <code>AddValidatorsFromAssemblyContaining&lt;CreateProductValidator&gt;()</code>. Services throw <code>ValidationException</code>.</td></tr>
+  <tr><td>Approvals</td><td><code>ApprovalChain</code> / <code>ApprovalService</code></td><td>PO/SO submit → PendingApproval; empty chain auto-confirms. Void flows verify credentials + role.</td></tr>
+</table>
+
+<h2>8. UI design system</h2>
+<p>Token-based and theme-aware (light / <code>html[data-bs-theme="dark"]</code>). Accent &amp; font are user-configurable via an Appearance popover (<code>--app-accent</code>, <code>--app-font</code> on <code>&lt;html&gt;</code>).</p>
+<table>
+  <tr><th>Container class</th><th>Used for</th><th>Tokens defined?</th></tr>
+  <tr><td><code>.pi</code></td><td>Index / list pages (KPIs, toolbar, chips, table, Pager)</td><td>Yes (scoped in app.css) + dark overrides</td></tr>
+  <tr><td><code>.cf</code></td><td>Master create/edit forms (card + grid)</td><td>Yes + dark overrides</td></tr>
+  <tr><td><code>.pf .pf-form</code></td><td>Transaction forms (line-items table)</td><td>Yes + dark overrides</td></tr>
+  <tr><td><code>.pf .pf-detail</code></td><td>Transaction detail pages (info grid, items, timeline)</td><td>Yes + dark overrides</td></tr>
+  <tr><td><code>.dash</code> / <code>.landing</code></td><td>Dashboard &amp; Home (self-contained tokens)</td><td>Yes (defined in component CSS)</td></tr>
+</table>
+<div class="note"><strong>Token rule:</strong> design tokens (<code>--ink, --muted, --accent, --panel, --field, --line, --danger</code>) are defined <em>scoped to each page-container class</em> and bridge to <code>--app-accent</code>. A new top-level page container MUST define its own tokens + a <code>html[data-bs-theme="dark"] .yourcontainer</code> override, or colors resolve to nothing.</div>
+
+<h2>9. Functional modules</h2>
+<table>
+  <tr><th>Area</th><th>Highlights</th></tr>
+  <tr><td>Master</td><td>Products (+variants, attributes, images), categories, units, brands, warehouses, taxes, payment methods, suppliers, customers, currencies.</td></tr>
+  <tr><td>Inventory</td><td>Stock levels (per variant × warehouse, moving-average cost), stock adjustments/opname. Filters: All / Low stock (≤5) / Out of stock.</td></tr>
+  <tr><td>Transactions</td><td>Purchase Order → Goods Receipt (stock in); Sales Order → Delivery Order (stock out + COGS). Statuses incl. PendingApproval.</td></tr>
+  <tr><td>Cashier</td><td>Cashier shift open/close; POS sale (revenue = line total, COGS = unit cost × qty).</td></tr>
+  <tr><td>Finance</td><td>Cash &amp; Bank ledger; Supplier Invoice/Payment (AP); Customer Invoice/Receipt (AR, credit limit); Expense &amp; categories; void-with-authorization.</td></tr>
+  <tr><td>Reports</td><td>Stock Ledger, Inventory Valuation (as-of-date), Sales, Purchase, Gross Profit — all with Excel/PDF export.</td></tr>
+  <tr><td>Dashboard</td><td>Hero revenue (today, accent gradient) + month-to-date, receivables/payables due, PO/SO pending, aging, inventory. Real 7-day trend via one query.</td></tr>
+  <tr><td>Settings</td><td>Users, roles, company profile, approval chains, document numbering, error log.</td></tr>
+</table>
+
+<h2>10. Build, run &amp; test</h2>
+<pre><span class="c"># Build / test the whole solution</span>
+dotnet build ErpOne.slnx
+dotnet test  ErpOne.slnx
+
+<span class="c"># Run: from Visual Studio (IIS Express) or</span>
+dotnet run --project src/ErpOne.Web</pre>
+<div class="note"><strong>Gotcha:</strong> while the app runs in Visual Studio/IIS Express, the <code>ErpOne.Web</code> DLLs are locked, so <code>dotnet build/test</code> of the solution fails with copy errors (MSB3021) — <em>not</em> a compile error. Integration tests reference <code>ErpOne.Web</code>, so <strong>stop the running app before <code>dotnet test</code></strong>. Building <code>Domain/Application/Infrastructure</code> individually works while the app runs.</p></div>
+
+<h2>11. Conventions &amp; gotchas</h2>
+<ul>
+  <li><strong>Git:</strong> commit / merge / push are done <em>manually</em> by the developer. Tooling leaves changes in the working tree (uses <code>git mv</code> for renames).</li>
+  <li><strong>Query translation:</strong> integration tests run on SQLite — avoid SQL-Server-only translations (e.g. <code>EF.Functions.DateDiffDay</code>). Prefer date-threshold comparisons or in-memory aggregation for small sets.</li>
+  <li><strong>Rupiah:</strong> amounts shown with <code>ToString("N0")</code>/<code>N2</code>. (Indonesian locale formatting is a candidate future improvement.)</li>
+  <li><strong>Numbering test:</strong> when adding a <code>NumberSequence</code>, bump the count assert in <code>NumberSequenceServiceTests</code>.</li>
+  <li><strong>Solution file</strong> is <code>ErpOne.slnx</code> (not <code>.sln</code>).</li>
+</ul>
+
+</body>
+</html>
