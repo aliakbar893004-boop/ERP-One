@@ -84,6 +84,7 @@ public static class DependencyInjection
         services.AddScoped<IPurchaseReportService, PurchaseReportService>();
         services.AddScoped<IGrossProfitReportService, GrossProfitReportService>();
         services.AddScoped<IAgingReportService, AgingReportService>();
+        services.AddScoped<ICashierShiftReportService, CashierShiftReportService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<ILogService, LogService>();
         services.AddScoped<IApprovalChainService, ApprovalChainService>();

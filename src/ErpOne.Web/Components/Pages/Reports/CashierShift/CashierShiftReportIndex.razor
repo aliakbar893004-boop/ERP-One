@@ -1,0 +1,185 @@
+@page "/reports/cashier-shifts"
+@attribute [Authorize(Policy = "reports.cashier-shifts.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Reports
+@using ErpOne.Application.Warehouses
+@using Microsoft.JSInterop
+@inject ICashierShiftReportService Report
+@inject IWarehouseService WarehouseService
+@inject IReportExporter Exporter
+@inject IJSRuntime JS
+
+<PageTitle>Cashier Shift Report</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs">
+                <a href="/">Home</a><span class="sep">·</span><span>Reports</span><span class="sep">·</span><span class="here">Cashier Shifts</span>
+            </nav>
+            <h1>Cashier Shift Report</h1>
+            <p>Closed cashier shifts by cashier, with per-method breakdown and cash reconciliation.</p>
+        </div>
+        <AuthorizeView Policy="reports.cashier-shifts.export">
+            <Authorized>
+                <div class="pi-actions">
+                    <button class="btn btn-outline-secondary" @onclick="ExportExcel"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                    <button class="btn btn-outline-secondary" @onclick="ExportPdf"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    @if (_result is not null)
+    {
+        <div class="kpis">
+            <div class="kpi accent">
+                <div class="ic ic-grn"><i class="bi bi-cash-stack"></i></div>
+                <div class="kpi-tx"><div class="v">Rp @_result.GrandTotalSales.ToString("N0")</div><div class="l">Total sales</div></div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-amb"><i class="bi bi-scale"></i></div>
+                <div class="kpi-tx"><div class="v">Rp @_result.GrandVariance.ToString("N0")</div><div class="l">Cash variance</div></div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-blu"><i class="bi bi-clock-history"></i></div>
+                <div class="kpi-tx"><div class="v">@_result.ShiftCount.ToString("N0")</div><div class="l">Shifts</div></div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-blu"><i class="bi bi-receipt"></i></div>
+                <div class="kpi-tx"><div class="v">@_result.GrandTransactionCount.ToString("N0")</div><div class="l">Transactions</div></div>
+            </div>
+        </div>
+    }
+
+    <div class="toolbar">
+        <input type="date" @bind="_from" @bind:after="ReloadAsync" />
+        <input type="date" @bind="_to" @bind:after="ReloadAsync" />
+        <select @bind="_warehouseId" @bind:after="ReloadAsync">
+            <option value="0">All warehouses</option>
+            @foreach (var w in _warehouses) { <option value="@w.Id">@w.Name</option> }
+        </select>
+        <select @bind="_cashierUserId" @bind:after="ReloadAsync">
+            <option value="">All cashiers</option>
+            @foreach (var c in _cashiers) { <option value="@c.UserId">@c.Name</option> }
+        </select>
+    </div>
+
+    @if (_result is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_result.ShiftCount == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-cash-stack"></i></div><p>No closed shifts for these filters.</p></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Shift / Method</th>
+                            <th style="width:140px">Opened</th><th style="width:140px">Closed</th>
+                            <th>Warehouse</th>
+                            <th class="r" style="width:110px">Opening</th>
+                            <th class="r" style="width:120px">Sales</th>
+                            <th class="r" style="width:70px">Txns</th>
+                            <th class="r" style="width:120px">Expected</th>
+                            <th class="r" style="width:120px">Counted</th>
+                            <th class="r" style="width:110px">Variance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in _result.Cashiers)
+                        {
+                            <tr class="fw-bold table-light"><td colspan="10">@c.CashierName (@c.CashierUserId)</td></tr>
+                            @foreach (var s in c.Shifts)
+                            {
+                                <tr>
+                                    <td class="code mono">@s.ShiftNumber</td>
+                                    <td class="mono">@s.OpenedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                    <td class="mono">@(s.ClosedAt?.ToString("yyyy-MM-dd HH:mm"))</td>
+                                    <td>@s.WarehouseName</td>
+                                    <td class="r mono">@s.OpeningFloat.ToString("N0")</td>
+                                    <td class="r mono">@s.TotalSales.ToString("N0")</td>
+                                    <td class="r mono">@s.TransactionCount</td>
+                                    <td class="r mono">@s.ExpectedCash.ToString("N0")</td>
+                                    <td class="r mono">@(s.CountedCash?.ToString("N0"))</td>
+                                    <td class="r mono">@(s.CashVariance?.ToString("N0"))</td>
+                                </tr>
+                                @foreach (var m in s.Methods)
+                                {
+                                    <tr class="text-muted">
+                                        <td class="ps-4">@m.PaymentMethodName</td>
+                                        <td colspan="4"></td>
+                                        <td class="r mono">@m.Amount.ToString("N0")</td>
+                                        <td class="r mono">@m.TransactionCount</td>
+                                        <td colspan="3"></td>
+                                    </tr>
+                                }
+                            }
+                            <tr class="fw-bold">
+                                <td colspan="5">@c.CashierName subtotal</td>
+                                <td class="r mono">@c.TotalSales.ToString("N0")</td>
+                                <td class="r mono">@c.TransactionCount</td>
+                                <td colspan="2"></td>
+                                <td class="r mono">@c.TotalVariance.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold">
+                            <td colspan="5">Grand total</td>
+                            <td class="r mono">@_result.GrandTotalSales.ToString("N0")</td>
+                            <td class="r mono">@_result.GrandTransactionCount</td>
+                            <td colspan="2"></td>
+                            <td class="r mono">@_result.GrandVariance.ToString("N0")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private ShiftReportResultDto? _result;
+    private IReadOnlyList<WarehouseDto> _warehouses = [];
+    private IReadOnlyList<CashierOptionDto> _cashiers = [];
+    private DateTime _from = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime _to = DateTime.Today;
+    private int _warehouseId;
+    private string _cashierUserId = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _warehouses = await WarehouseService.GetAllAsync();
+        _cashiers = await Report.GetCashiersAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync() => _result = await Report.GetShiftReportAsync(
+        _from, _to, _warehouseId == 0 ? null : _warehouseId,
+        string.IsNullOrEmpty(_cashierUserId) ? null : _cashierUserId);
+
+    private async Task ReloadAsync() => await LoadAsync();
+
+    private async Task ExportExcel()
+    {
+        var doc = await Report.BuildShiftReportAsync(_from, _to, _warehouseId == 0 ? null : _warehouseId,
+            string.IsNullOrEmpty(_cashierUserId) ? null : _cashierUserId);
+        await DownloadAsync(Exporter.ToExcel(doc), "cashier-shifts.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+
+    private async Task ExportPdf()
+    {
+        var doc = await Report.BuildShiftReportAsync(_from, _to, _warehouseId == 0 ? null : _warehouseId,
+            string.IsNullOrEmpty(_cashierUserId) ? null : _cashierUserId);
+        await DownloadAsync(await Exporter.ToPdfAsync(doc), "cashier-shifts.pdf", "application/pdf");
+    }
+
+    private async Task DownloadAsync(byte[] bytes, string fileName, string mime) =>
+        await JS.InvokeVoidAsync("saveAsFile", fileName, Convert.ToBase64String(bytes), mime);
+}

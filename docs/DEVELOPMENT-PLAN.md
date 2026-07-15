@@ -143,7 +143,7 @@ Belum ada modul Reports sama sekali. Buat grup **Reports** + isi dashboard.
 - [ ] **Laporan Pembelian** (per periode/supplier)
 - [ ] **Laba Kotor** (penjualan − HPP)
 - [x] **Aging Piutang & Hutang** (AR/AP) — point-in-time, 5 bucket, dua halaman `/reports/ar-aging` & `/reports/ap-aging` + export
-- [ ] **Laporan Shift Kasir** (rekap per shift/kasir/metode)
+- [x] **Laporan Shift Kasir** (rekap per shift/kasir/metode) — grouped per kasir, rincian per metode + rekonsiliasi kas, `/reports/cashier-shifts` + export
 - [ ] **Dashboard KPI**: omzet hari ini, transaksi, stok menipis, PO/SO pending approval, hutang/piutang jatuh tempo.
 - Teknis: layanan query read-only + export (CSV/PDF); UI reuse pola dashboard `.cr-kpis`/`.cr-hero` yang sudah dibuat.
 - Permissions: grup `reports.*` (view + export).
