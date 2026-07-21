@@ -5,6 +5,7 @@ using ErpOne.Application.Common;
 using ErpOne.Infrastructure;
 using ErpOne.Infrastructure.Identity;
 using ErpOne.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using ErpOne.Web.Account;
 using ErpOne.Web.Authorization;
 using ErpOne.Web.Components;
@@ -170,9 +171,17 @@ app.MapProductEndpoints();
 app.MapProductImportEndpoints(); // template Excel impor produk
 app.MapAccountEndpoints(); // logout
 
-// Bootstrap admin awal (lewati di Testing).
+// Terapkan migration EF yang tertunda + bootstrap admin awal (lewati di Testing;
+// test pakai SQLite in-memory via EnsureCreated, bukan migration SQL Server).
 if (!app.Environment.IsEnvironment("Testing"))
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await db.Database.MigrateAsync();
+    }
     await app.SeedBootstrapAdminsAsync();
+}
 
 app.Run();
 

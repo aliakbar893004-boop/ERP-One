@@ -74,9 +74,15 @@ public static class AccountingSeeder
         if (cfg is not null && cfg.ArAccountId is null)
         {
             cfg.Update(
-                ar: await IdOf("1130"), ap: await IdOf("2110"), inventory: await IdOf("1140"),
-                grIr: await IdOf("1160"), sales: await IdOf("4100"), cogs: await IdOf("5100"),
-                inputTax: await IdOf("1150"), outputTax: await IdOf("2120"), posCash: await IdOf("1110"),
+                ar: await IdOf("1130"), 
+                ap: await IdOf("2110"), 
+                inventory: await IdOf("1140"),
+                grIr: await IdOf("1160"), 
+                sales: await IdOf("4100"), 
+                cogs: await IdOf("5100"),
+                inputTax: await IdOf("1150"), 
+                outputTax: await IdOf("2120"), 
+                posCash: await IdOf("1110"),
                 purchasePriceVariance: await IdOf("5150"));
             await db.SaveChangesAsync(ct);
         }
