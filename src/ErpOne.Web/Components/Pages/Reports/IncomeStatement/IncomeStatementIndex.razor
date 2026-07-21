@@ -1,0 +1,90 @@
+@page "/reports/income-statement"
+@attribute [Authorize(Policy = "reports.income-statement.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Accounting
+@using ErpOne.Application.Reports
+@using Microsoft.JSInterop
+@inject IFinancialStatementService Statements
+@inject IReportExporter Exporter
+@inject IJSRuntime JS
+
+<PageTitle>Income Statement</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Reports</span><span class="sep">·</span><span class="here">Income Statement</span></nav>
+            <h1>Income Statement</h1>
+            <p>Revenue minus expenses for the selected period.</p>
+        </div>
+        <AuthorizeView Policy="reports.income-statement.export">
+            <Authorized>
+                <div class="pi-actions">
+                    <button class="btn btn-outline-secondary" @onclick="ExportExcel"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                    <button class="btn btn-outline-secondary" @onclick="ExportPdf"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <div class="toolbar">
+        <input type="date" @bind="_from" @bind:after="ReloadAsync" />
+        <input type="date" @bind="_to" @bind:after="ReloadAsync" />
+    </div>
+
+    @if (_pl is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>Account</th><th class="text-end" style="width:200px">Amount</th></tr></thead>
+                    <tbody>
+                        @Section(_pl.Revenue)
+                        @Section(_pl.Expense)
+                        <tr class="fw-bold"><td>Net Income</td><td class="text-end mono">@_pl.NetIncome.ToString("N0")</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private IncomeStatementDto? _pl;
+    private DateTime _from = new(DateTime.Today.Year, 1, 1);
+    private DateTime _to = DateTime.Today;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+    private async Task LoadAsync() => _pl = await Statements.GetIncomeStatementAsync(_from, _to);
+    private async Task ReloadAsync() => await LoadAsync();
+
+    private RenderFragment Section(StatementSectionDto s) => __builder =>
+    {
+        <tr class="table-light fw-bold"><td colspan="2">@s.Title</td></tr>
+        @foreach (var l in s.Lines)
+        {
+            <tr class="@(l.IsHeader ? "fw-semibold" : "")">
+                <td style="padding-left:@(12 + l.Level * 20)px">@(string.IsNullOrEmpty(l.Code) ? l.Name : $"{l.Code} — {l.Name}")</td>
+                <td class="text-end mono">@l.Amount.ToString("N0")</td>
+            </tr>
+        }
+        <tr class="fw-bold"><td class="text-end">Total @s.Title</td><td class="text-end mono">@s.Total.ToString("N0")</td></tr>
+    };
+
+    private async Task ExportExcel()
+    {
+        var doc = await Statements.BuildIncomeStatementReportAsync(_from, _to);
+        await Download(Exporter.ToExcel(doc), "income-statement.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+    private async Task ExportPdf()
+    {
+        var doc = await Statements.BuildIncomeStatementReportAsync(_from, _to);
+        await Download(await Exporter.ToPdfAsync(doc), "income-statement.pdf", "application/pdf");
+    }
+    private async Task Download(byte[] bytes, string name, string mime) =>
+        await JS.InvokeVoidAsync("saveAsFile", name, Convert.ToBase64String(bytes), mime);
+}

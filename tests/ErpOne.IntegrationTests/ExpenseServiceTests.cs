@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using ErpOne.Application.CashBank;
 using ErpOne.Application.Expenses;
+using ErpOne.Infrastructure.Persistence;
 using FluentValidation;
 using Xunit;
 
@@ -22,6 +24,14 @@ public class ExpenseServiceTests : IClassFixture<CustomWebApplicationFactory>
         var category = await cat.CreateAsync(new CreateExpenseCategoryRequest($"EC{id}", $"Utilities {id}", true));
         var acc = sp.GetRequiredService<ICashBankAccountService>();
         var account = await acc.CreateAsync(new CreateCashBankAccountRequest($"CB{id}", $"Cash {id}", "Cash", "IDR", 5000m, null, null, null, true));
+
+        // Map the category to a GL expense account so auto-posting can build the journal.
+        var db = sp.GetRequiredService<AppDbContext>();
+        var beban = await db.Accounts.Where(a => a.Code == "6900").Select(a => (int?)a.Id).FirstAsync();
+        var entity = await db.ExpenseCategories.FirstAsync(c => c.Id == category.Id);
+        entity.Update(entity.Code, entity.Name, entity.IsActive, beban);
+        await db.SaveChangesAsync();
+
         return (category.Id, account.Id);
     }
 

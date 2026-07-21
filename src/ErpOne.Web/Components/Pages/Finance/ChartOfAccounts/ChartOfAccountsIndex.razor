@@ -1,0 +1,81 @@
+@page "/finance/chart-of-accounts"
+@attribute [Authorize(Policy = "finance.chart-of-accounts.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Accounting
+@using ErpOne.Domain.Entities
+@inject IAccountService Accounts
+
+<PageTitle>Chart of Accounts</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Finance</span><span class="sep">·</span><span class="here">Chart of Accounts</span></nav>
+            <h1>Chart of Accounts</h1>
+            <p>Hierarchical ledger accounts. Only postable (leaf) accounts can be journaled.</p>
+        </div>
+        <AuthorizeView Policy="finance.chart-of-accounts.create">
+            <Authorized>
+                <div class="pi-actions">
+                    <a class="btn btn-primary" href="/finance/chart-of-accounts/new"><i class="bi bi-plus-lg"></i> New account</a>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    @if (_tree is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_tree.Count == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-diagram-3"></i></div><p>No accounts yet.</p></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr><th style="width:170px">Code</th><th>Name</th><th style="width:120px">Type</th><th style="width:110px" class="text-center">Postable</th><th style="width:100px" class="text-center">Status</th><th style="width:70px"></th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var node in _tree)
+                        {
+                            @RenderNode(node, 0)
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<AccountTreeNodeDto>? _tree;
+
+    protected override async Task OnInitializedAsync() => _tree = await Accounts.GetTreeAsync();
+
+    private RenderFragment RenderNode(AccountTreeNodeDto node, int depth) => __builder =>
+    {
+        var a = node.Account;
+        <tr>
+            <td class="code mono" style="padding-left:@(12 + depth * 22)px">@a.Code</td>
+            <td class="nm">@a.Name</td>
+            <td><span class="badge bg-light text-dark">@a.Type</span></td>
+            <td class="text-center">@(a.IsPostable ? "Yes" : "—")</td>
+            <td class="text-center">@(a.IsActive ? "Active" : "Inactive")</td>
+            <td>
+                <AuthorizeView Policy="finance.chart-of-accounts.edit">
+                    <Authorized>
+                        <a class="btn btn-sm btn-outline-secondary" href="/finance/chart-of-accounts/@a.Id"><i class="bi bi-pencil"></i></a>
+                    </Authorized>
+                </AuthorizeView>
+            </td>
+        </tr>
+        @foreach (var child in node.Children)
+        {
+            @RenderNode(child, depth + 1)
+        }
+    };
+}

@@ -1,0 +1,102 @@
+@page "/reports/general-ledger"
+@attribute [Authorize(Policy = "reports.general-ledger.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Accounting
+@using ErpOne.Application.Reports
+@using Microsoft.JSInterop
+@inject ILedgerService Ledger
+@inject IAccountService Accounts
+@inject IReportExporter Exporter
+@inject IJSRuntime JS
+
+<PageTitle>General Ledger</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Reports</span><span class="sep">·</span><span class="here">General Ledger</span></nav>
+            <h1>General Ledger</h1>
+            <p>Posted movements and running balance for one account.</p>
+        </div>
+        <AuthorizeView Policy="reports.general-ledger.export">
+            <Authorized>
+                <div class="pi-actions">
+                    <button class="btn btn-outline-secondary" @onclick="ExportExcel" disabled="@(_accountId == 0)"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                    <button class="btn btn-outline-secondary" @onclick="ExportPdf" disabled="@(_accountId == 0)"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <div class="toolbar">
+        <select @bind="_accountId" @bind:after="ReloadAsync">
+            <option value="0">— select account —</option>
+            @foreach (var a in _accounts) { <option value="@a.Id">@a.Code — @a.Name</option> }
+        </select>
+        <input type="date" @bind="_from" @bind:after="ReloadAsync" />
+        <input type="date" @bind="_to" @bind:after="ReloadAsync" />
+    </div>
+
+    @if (_accountId == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-journals"></i></div><p>Select an account to view its ledger.</p></div>
+    }
+    else if (_result is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th style="width:120px">Date</th><th style="width:150px">Entry</th><th>Description</th><th class="text-end" style="width:140px">Debit</th><th class="text-end" style="width:140px">Credit</th><th class="text-end" style="width:150px">Balance</th></tr></thead>
+                    <tbody>
+                        <tr class="fw-bold table-light"><td colspan="5">Opening balance</td><td class="text-end mono">@_result.OpeningBalance.ToString("N0")</td></tr>
+                        @foreach (var l in _result.Lines)
+                        {
+                            <tr>
+                                <td class="code">@l.EntryDate.ToString("d MMM yyyy")</td>
+                                <td class="code mono">@l.EntryNumber</td>
+                                <td class="nm">@l.Description</td>
+                                <td class="text-end mono">@(l.Debit == 0 ? "—" : l.Debit.ToString("N0"))</td>
+                                <td class="text-end mono">@(l.Credit == 0 ? "—" : l.Credit.ToString("N0"))</td>
+                                <td class="text-end mono">@l.RunningBalance.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold"><td colspan="5" class="text-end">Closing balance</td><td class="text-end mono">@_result.ClosingBalance.ToString("N0")</td></tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<AccountDto> _accounts = [];
+    private GeneralLedgerDto? _result;
+    private int _accountId;
+    private DateTime _from = new(DateTime.Today.Year, 1, 1);
+    private DateTime _to = DateTime.Today;
+
+    protected override async Task OnInitializedAsync() => _accounts = await Accounts.GetPostableAsync();
+
+    private async Task LoadAsync() =>
+        _result = _accountId == 0 ? null : await Ledger.GetGeneralLedgerAsync(_accountId, _from, _to);
+    private async Task ReloadAsync() => await LoadAsync();
+
+    private async Task ExportExcel()
+    {
+        var doc = await Ledger.BuildGeneralLedgerReportAsync(_accountId, _from, _to);
+        await Download(Exporter.ToExcel(doc), "general-ledger.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+    private async Task ExportPdf()
+    {
+        var doc = await Ledger.BuildGeneralLedgerReportAsync(_accountId, _from, _to);
+        await Download(await Exporter.ToPdfAsync(doc), "general-ledger.pdf", "application/pdf");
+    }
+    private async Task Download(byte[] bytes, string name, string mime) =>
+        await JS.InvokeVoidAsync("saveAsFile", name, Convert.ToBase64String(bytes), mime);
+}

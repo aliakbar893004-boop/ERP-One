@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using ErpOne.Application.Accounting;
 using ErpOne.Application.Common;
 using ErpOne.Application.CustomerInvoices;
 using ErpOne.Application.Numbering;
@@ -12,7 +13,8 @@ public class CustomerInvoiceService(
     AppDbContext db,
     IValidator<CreateCustomerInvoiceRequest> createValidator,
     IValidator<UpdateCustomerInvoiceHeaderRequest> updateValidator,
-    IDocumentNumberService docNumbers) : ICustomerInvoiceService
+    IDocumentNumberService docNumbers,
+    IJournalPostingService journalPoster) : ICustomerInvoiceService
 {
     private static readonly SalesOrderStatus[] InvoiceableStatuses =
         [SalesOrderStatus.Confirmed, SalesOrderStatus.PartiallyDelivered, SalesOrderStatus.Delivered, SalesOrderStatus.Closed];
@@ -146,6 +148,9 @@ public class CustomerInvoiceService(
 
         db.CustomerInvoices.Add(invoice);
         await db.SaveChangesAsync(ct);
+
+        await journalPoster.PostCustomerInvoiceAsync(invoice, ct);
+
         await tx.CommitAsync(ct);
 
         return (await GetByIdAsync(invoice.Id, ct))!;
@@ -166,6 +171,7 @@ public class CustomerInvoiceService(
         var inv = await db.CustomerInvoices.FirstOrDefaultAsync(i => i.Id == id, ct)
             ?? throw Fail("Invoice not found.");
         inv.Cancel();
+        await journalPoster.ReverseForAsync("CustomerInvoice", id, DateTime.UtcNow.Date, "Invoice cancelled", ct);
         await db.SaveChangesAsync(ct);
     }
 

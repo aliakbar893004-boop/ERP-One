@@ -1,0 +1,91 @@
+@page "/reports/trial-balance"
+@attribute [Authorize(Policy = "reports.trial-balance.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Accounting
+@using ErpOne.Application.Reports
+@using Microsoft.JSInterop
+@inject ILedgerService Ledger
+@inject IReportExporter Exporter
+@inject IJSRuntime JS
+
+<PageTitle>Trial Balance</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Reports</span><span class="sep">·</span><span class="here">Trial Balance</span></nav>
+            <h1>Trial Balance</h1>
+            <p>Debit/credit balance per account for the selected period.</p>
+        </div>
+        <AuthorizeView Policy="reports.trial-balance.export">
+            <Authorized>
+                <div class="pi-actions">
+                    <button class="btn btn-outline-secondary" @onclick="ExportExcel"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                    <button class="btn btn-outline-secondary" @onclick="ExportPdf"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <div class="toolbar">
+        <input type="date" @bind="_from" @bind:after="ReloadAsync" />
+        <input type="date" @bind="_to" @bind:after="ReloadAsync" />
+    </div>
+
+    @if (_result is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_result.Rows.Count == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-list-columns-reverse"></i></div><p>No posted entries for this period.</p></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th style="width:140px">Code</th><th>Account</th><th style="width:120px">Type</th><th class="text-end" style="width:160px">Debit</th><th class="text-end" style="width:160px">Credit</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in _result.Rows)
+                        {
+                            <tr>
+                                <td class="code mono">@r.Code</td>
+                                <td class="nm">@r.Name</td>
+                                <td><span class="badge bg-light text-dark">@r.Type</span></td>
+                                <td class="text-end mono">@(r.Debit == 0 ? "—" : r.Debit.ToString("N0"))</td>
+                                <td class="text-end mono">@(r.Credit == 0 ? "—" : r.Credit.ToString("N0"))</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold"><td colspan="3" class="text-end">Grand total</td><td class="text-end mono">@_result.TotalDebit.ToString("N0")</td><td class="text-end mono">@_result.TotalCredit.ToString("N0")</td></tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private TrialBalanceDto? _result;
+    private DateTime _from = new(DateTime.Today.Year, 1, 1);
+    private DateTime _to = DateTime.Today;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+    private async Task LoadAsync() => _result = await Ledger.GetTrialBalanceAsync(_from, _to);
+    private async Task ReloadAsync() => await LoadAsync();
+
+    private async Task ExportExcel()
+    {
+        var doc = await Ledger.BuildTrialBalanceReportAsync(_from, _to);
+        await Download(Exporter.ToExcel(doc), "trial-balance.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+    private async Task ExportPdf()
+    {
+        var doc = await Ledger.BuildTrialBalanceReportAsync(_from, _to);
+        await Download(await Exporter.ToPdfAsync(doc), "trial-balance.pdf", "application/pdf");
+    }
+    private async Task Download(byte[] bytes, string name, string mime) =>
+        await JS.InvokeVoidAsync("saveAsFile", name, Convert.ToBase64String(bytes), mime);
+}

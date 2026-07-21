@@ -5,6 +5,7 @@ using ErpOne.Domain.Entities;
 using ErpOne.Infrastructure.Identity;
 using ErpOne.Infrastructure.Persistence;
 using ErpOne.Web.Authorization;
+// AccountingSeeder lives in ErpOne.Infrastructure.Persistence (already imported above).
 
 namespace ErpOne.Web.Infrastructure;
 
@@ -65,6 +66,9 @@ public static class BootstrapSeeder
             db.ApprovalChainSteps.Add(new ApprovalChainStep(ApprovalDocumentType.SupplierPayment, 1, roleName));
             await db.SaveChangesAsync();
         }
+
+        // Seed COA + posting configuration + master GL accounts (idempotent).
+        await AccountingSeeder.SeedAsync(db);
 
         // Buat user admin jika belum ada
         var user = await userManager.FindByNameAsync(userName);

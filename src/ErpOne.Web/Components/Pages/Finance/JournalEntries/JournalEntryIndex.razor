@@ -1,0 +1,101 @@
+@page "/finance/journal-entries"
+@attribute [Authorize(Policy = "finance.journal-entries.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Accounting
+@using ErpOne.Application.Common
+@using ErpOne.Domain.Entities
+@inject IJournalEntryService Journals
+@inject NavigationManager Nav
+
+<PageTitle>Journal Entries</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Finance</span><span class="sep">·</span><span class="here">Journal Entries</span></nav>
+            <h1>Journal Entries</h1>
+            <p>Manual double-entry journals. Draft → Posted → Reversed.</p>
+        </div>
+        <AuthorizeView Policy="finance.journal-entries.create">
+            <Authorized>
+                <div class="pi-actions">
+                    <a class="btn btn-primary" href="/finance/journal-entries/new"><i class="bi bi-plus-lg"></i> New journal</a>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <div class="toolbar">
+        <input type="date" @bind="_from" @bind:after="ReloadAsync" />
+        <input type="date" @bind="_to" @bind:after="ReloadAsync" />
+        <div class="chips">
+            <button class="chip @(_status is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">All</button>
+            @foreach (var s in Enum.GetValues<JournalEntryStatus>())
+            {
+                <button class="chip @(_status == s ? "on" : "")" @onclick="() => SetStatusAsync(s)">@s</button>
+            }
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-journal-plus"></i></div><p>No journal entries for these filters.</p></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr><th style="width:150px">Entry</th><th style="width:120px">Date</th><th>Description</th><th class="text-end" style="width:150px">Amount</th><th style="width:120px" class="text-center">Status</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var j in _page.Items)
+                        {
+                            <tr style="cursor:pointer" @onclick="@(() => Nav.NavigateTo($"/finance/journal-entries/{j.Id}"))">
+                                <td class="code mono">@j.EntryNumber</td>
+                                <td class="code">@j.EntryDate.ToString("d MMM yyyy")</td>
+                                <td class="nm">@j.Description</td>
+                                <td class="text-end mono">@j.TotalDebit.ToString("N2")</td>
+                                <td class="text-center"><span class="badge @StatusClass(j.Status)">@j.Status</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (_page.TotalPages > 1)
+            {
+                <div class="card-foot"><Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" /></div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<JournalEntryListItemDto>? _page;
+    private int _currentPage = 1;
+    private DateTime _from = DateTime.Today.AddMonths(-1);
+    private DateTime _to = DateTime.Today;
+    private JournalEntryStatus? _status;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() =>
+        _page = await Journals.GetPagedAsync(new JournalEntryFilter(_from, _to, _status, null), _currentPage, PageSize);
+
+    private async Task ReloadAsync() { _currentPage = 1; await LoadAsync(); }
+    private async Task SetStatusAsync(JournalEntryStatus? s) { _status = s; _currentPage = 1; await LoadAsync(); }
+    private async Task GoToPageAsync(int page) { _currentPage = page; await LoadAsync(); }
+
+    private static string StatusClass(JournalEntryStatus s) => s switch
+    {
+        JournalEntryStatus.Posted => "bg-success-subtle text-success-emphasis",
+        JournalEntryStatus.Reversed => "bg-secondary-subtle text-secondary-emphasis",
+        _ => "bg-warning-subtle text-warning-emphasis"
+    };
+}

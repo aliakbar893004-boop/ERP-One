@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using ErpOne.Application.Accounting;
 using ErpOne.Application.Common;
 using ErpOne.Application.Numbering;
 using ErpOne.Application.SupplierInvoices;
@@ -12,7 +13,8 @@ public class SupplierInvoiceService(
     AppDbContext db,
     IValidator<CreateSupplierInvoiceRequest> createValidator,
     IValidator<UpdateSupplierInvoiceHeaderRequest> updateValidator,
-    IDocumentNumberService docNumbers) : ISupplierInvoiceService
+    IDocumentNumberService docNumbers,
+    IJournalPostingService journalPoster) : ISupplierInvoiceService
 {
     public async Task<PagedResult<SupplierInvoiceListItemDto>> GetPagedAsync(
         int page, int pageSize, string? search = null, SupplierInvoiceStatus? status = null, CancellationToken ct = default)
@@ -149,6 +151,9 @@ public class SupplierInvoiceService(
 
         db.SupplierInvoices.Add(invoice);
         await db.SaveChangesAsync(ct);
+
+        await journalPoster.PostSupplierInvoiceAsync(invoice, ct);
+
         await tx.CommitAsync(ct);
 
         return (await GetByIdAsync(invoice.Id, ct))!;
@@ -169,6 +174,7 @@ public class SupplierInvoiceService(
         var inv = await db.SupplierInvoices.FirstOrDefaultAsync(i => i.Id == id, ct)
             ?? throw Fail("Invoice not found.");
         inv.Cancel();
+        await journalPoster.ReverseForAsync("SupplierInvoice", id, DateTime.UtcNow.Date, "Invoice cancelled", ct);
         await db.SaveChangesAsync(ct);
     }
 

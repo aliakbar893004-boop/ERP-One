@@ -40,6 +40,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Database.EnsureCreated();
+        AccountingSeeder.SeedAsync(db).GetAwaiter().GetResult();
     }
 
     private static void RemoveDbContextRegistrations(IServiceCollection services)

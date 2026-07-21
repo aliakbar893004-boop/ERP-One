@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using ErpOne.Application.Accounting;
 using ErpOne.Application.Common;
 using ErpOne.Application.DeliveryOrders;
 using ErpOne.Application.Numbering;
@@ -12,7 +13,8 @@ public class DeliveryOrderService(
     AppDbContext db,
     IValidator<CreateDeliveryOrderRequest> createValidator,
     IValidator<UpdateDeliveryOrderRequest> updateValidator,
-    IDocumentNumberService docNumbers) : IDeliveryOrderService
+    IDocumentNumberService docNumbers,
+    IJournalPostingService journalPoster) : IDeliveryOrderService
 {
     public async Task<PagedResult<DeliveryOrderListItemDto>> GetPagedAsync(
         int page, int pageSize, string? search = null, DeliveryOrderStatus? status = null, CancellationToken ct = default)
@@ -261,6 +263,8 @@ public class DeliveryOrderService(
         else so.MarkPartiallyDelivered();
 
         doc.Post();
+
+        await journalPoster.PostDeliveryOrderAsync(doc, ct);
 
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);

@@ -1,0 +1,90 @@
+@page "/settings/posting-config"
+@attribute [Authorize(Policy = "settings.posting-config.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Accounting
+@inject IPostingConfigurationService Config
+@inject IAccountService Accounts
+
+<PageTitle>Posting Configuration</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs"><a href="/">Home</a><i class="bi bi-chevron-right"></i><span>Settings</span><i class="bi bi-chevron-right"></i><span class="here">Posting Configuration</span></div>
+        <h1>Posting Configuration</h1>
+    </div>
+
+    @if (_loading) { <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div> }
+    else
+    {
+        @if (_saved) { <div class="cf-alert ok"><i class="bi bi-check2-circle"></i> Saved.</div> }
+        @if (_error is not null) { <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h"><span class="hd-ic"><i class="bi bi-diagram-3-fill"></i></span><div class="hd-tx"><h2>GL account mapping</h2><p>Accounts used when transactions post to the ledger automatically.</p></div></div>
+                <div class="card-b">
+                    <div class="grid">
+                        @Field("Accounts Receivable", _m.Ar, v => _m.Ar = v)
+                        @Field("Accounts Payable", _m.Ap, v => _m.Ap = v)
+                        @Field("Inventory", _m.Inventory, v => _m.Inventory = v)
+                        @Field("Goods Received Not Invoiced (GR-IR)", _m.GrIr, v => _m.GrIr = v)
+                        @Field("Sales / Revenue", _m.Sales, v => _m.Sales = v)
+                        @Field("Cost of Goods Sold", _m.Cogs, v => _m.Cogs = v)
+                        @Field("Input Tax (PPN Masukan)", _m.InputTax, v => _m.InputTax = v)
+                        @Field("Output Tax (PPN Keluaran)", _m.OutputTax, v => _m.OutputTax = v)
+                        @Field("POS Cash / Default Cash", _m.PosCash, v => _m.PosCash = v)
+                    </div>
+                </div>
+            </section>
+            <div class="pf-footer"><div class="in">
+                <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving"><i class="bi bi-check2"></i> Save</button>
+            </div></div>
+        </div>
+    }
+</div>
+
+@code {
+    private sealed class Model
+    {
+        public int? Ar, Ap, Inventory, GrIr, Sales, Cogs, InputTax, OutputTax, PosCash;
+    }
+    private readonly Model _m = new();
+    private IReadOnlyList<AccountDto> _postable = [];
+    private bool _loading = true, _saving, _saved;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _postable = await Accounts.GetPostableAsync();
+        var c = await Config.GetAsync();
+        _m.Ar = c.ArAccountId; _m.Ap = c.ApAccountId; _m.Inventory = c.InventoryAccountId; _m.GrIr = c.GrIrAccountId;
+        _m.Sales = c.SalesAccountId; _m.Cogs = c.CogsAccountId; _m.InputTax = c.InputTaxAccountId;
+        _m.OutputTax = c.OutputTaxAccountId; _m.PosCash = c.PosCashAccountId;
+        _loading = false;
+    }
+
+    private RenderFragment Field(string label, int? value, Action<int?> setter) => __builder =>
+    {
+        <div class="f c6">
+            <label class="fl">@label</label>
+            <select class="ctl" value="@(value?.ToString() ?? "0")"
+                    @onchange="e => setter(int.TryParse(e.Value?.ToString(), out var v) && v != 0 ? v : null)">
+                <option value="0">— none —</option>
+                @foreach (var a in _postable) { <option value="@a.Id">@a.Code — @a.Name</option> }
+            </select>
+        </div>
+    };
+
+    private async Task SaveAsync()
+    {
+        _error = null; _saved = false; _saving = true;
+        try
+        {
+            await Config.UpdateAsync(new UpdatePostingConfigurationRequest(_m.Ar, _m.Ap, _m.Inventory, _m.GrIr,
+                _m.Sales, _m.Cogs, _m.InputTax, _m.OutputTax, _m.PosCash));
+            _saved = true;
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+}

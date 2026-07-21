@@ -18,7 +18,6 @@ public class ProductService(
     IValidator<UpdateProductRequest> updateValidator) : IProductService
 {
     private const string ImageFolder = "uploads/products";
-    private const int LowStockThreshold = 5;
 
     private IQueryable<Product> ProductGraph() =>
         db.Products
@@ -83,7 +82,7 @@ public class ProductService(
                 throw new ValidationException([new ValidationFailure(nameof(CreateProductRequest.Variants),
                     $"Duplicate variant combination produces SKU '{sku}'.")]);
             var variant = product.AddVariant(sku, v.Barcode, v.Price, v.DiscountPrice, v.CostPrice,
-                v.Weight, v.Dimensions, v.IsActive, v.DiscountPercent);
+                v.Weight, v.Dimensions, v.IsActive, v.DiscountPercent, v.ReorderLevel, v.ReorderQty);
             variant.SetAttributeValues(v.AttributeValueIds);
         }
 
@@ -154,7 +153,7 @@ public class ProductService(
         {
             if (existingBySku.TryGetValue(sku, out var existing))
             {
-                existing.Update(v.Barcode, v.Price, v.DiscountPrice, v.CostPrice, v.Weight, v.Dimensions, v.IsActive, v.DiscountPercent);
+                existing.Update(v.Barcode, v.Price, v.DiscountPrice, v.CostPrice, v.Weight, v.Dimensions, v.IsActive, v.DiscountPercent, v.ReorderLevel, v.ReorderQty);
                 // Only rewrite attribute rows when the combo actually changed (avoid needless DELETE+INSERT churn).
                 var currentIds = existing.Attributes.Select(a => a.AttributeValueId).OrderBy(x => x).ToList();
                 var newIds = v.AttributeValueIds.Distinct().OrderBy(x => x).ToList();
@@ -164,7 +163,7 @@ public class ProductService(
             else
             {
                 var variant = product.AddVariant(sku, v.Barcode, v.Price, v.DiscountPrice, v.CostPrice,
-                    v.Weight, v.Dimensions, v.IsActive, v.DiscountPercent);
+                    v.Weight, v.Dimensions, v.IsActive, v.DiscountPercent, v.ReorderLevel, v.ReorderQty);
                 variant.SetAttributeValues(v.AttributeValueIds);
             }
         }
@@ -415,8 +414,18 @@ public class ProductService(
             .GroupBy(x => x.ProductId)
             .Select(g => new { ProductId = g.Key, Stock = g.Sum(x => x.Quantity) })
             .ToListAsync(ct);
+        // Produk "low" = punya >=1 baris (varian,gudang) dgn ReorderLevel>0 && qty<=ReorderLevel.
+        var lowProductIds = (await db.ProductStocks.AsNoTracking()
+                .Join(db.ProductVariants.AsNoTracking(), s => s.ProductVariantId, v => v.Id,
+                    (s, v) => new { v.ProductId, s.Quantity, v.ReorderLevel })
+                .Where(x => x.ReorderLevel > 0 && x.Quantity <= x.ReorderLevel)
+                .Select(x => x.ProductId)
+                .Distinct()
+                .ToListAsync(ct))
+            .ToHashSet();
+
         var outOfStock = stockByProduct.Count(x => x.Stock == 0);
-        var lowStock = stockByProduct.Count(x => x.Stock > 0 && x.Stock <= LowStockThreshold);
+        var lowStock = stockByProduct.Count(x => x.Stock > 0 && lowProductIds.Contains(x.ProductId));
 
         var byStatus = await db.Products
             .GroupBy(p => p.Status).Select(g => new StatusCount(g.Key, g.Count())).ToListAsync(ct);
@@ -434,7 +443,8 @@ public class ProductService(
             .OrderByDescending(x => x.TotalStock).ToList();
 
         var lowStockProductIds = stockByProduct
-            .Where(x => x.Stock <= LowStockThreshold).OrderBy(x => x.Stock).Take(8).Select(x => x.ProductId).ToList();
+            .Where(x => x.Stock > 0 && lowProductIds.Contains(x.ProductId))
+            .OrderBy(x => x.Stock).Take(8).Select(x => x.ProductId).ToList();
         var lowStockProducts = await db.Products.AsNoTracking()
             .Where(p => lowStockProductIds.Contains(p.Id)).Include(p => p.Images).ToListAsync(ct);
         var lowStockItems = lowStockProducts
@@ -487,6 +497,7 @@ public class ProductService(
         var variants = p.Variants.OrderBy(v => v.Sku).Select(v => new ProductVariantDto(
             v.Id, v.Sku, v.Barcode, v.Price, v.DiscountPrice, v.CostPrice, v.Weight, v.Dimensions,
             stockByVariant.TryGetValue(v.Id, out var q) ? q : 0, v.IsActive, v.DiscountPercent,
+            v.ReorderLevel, v.ReorderQty,
             v.Attributes.Where(a => values.ContainsKey(a.AttributeValueId))
                 .Select(a => { var x = values[a.AttributeValueId]; return new AttributeValueRefDto(a.AttributeValueId, x.AttrName, x.Code, x.Value); })
                 .ToList())).ToList();

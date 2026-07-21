@@ -1,0 +1,163 @@
+@page "/finance/journal-entries/new"
+@page "/finance/journal-entries/{Id:int}/edit"
+@attribute [Authorize(Policy = "finance.journal-entries.create")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Accounting
+@using ErpOne.Domain.Entities
+@using FluentValidation
+@inject IJournalEntryService Journals
+@inject IAccountService Accounts
+@inject NavigationManager Nav
+
+<PageTitle>@Title</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/finance/journal-entries">Finance</a><i class="bi bi-chevron-right"></i>
+            <a href="/finance/journal-entries">Journal Entries</a><i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+        <h1>@Title</h1>
+    </div>
+
+    @if (_loading) { <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div> }
+    else
+    {
+        @if (_error is not null) { <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-journal-plus"></i></span>
+                    <div class="hd-tx"><h2>Journal information</h2><p>Manual double-entry journal.</p></div>
+                </div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c3">
+                            <label class="fl">Date <span class="req">*</span></label>
+                            <input type="date" class="ctl" @bind="_date" />
+                        </div>
+                        <div class="f c9">
+                            <label class="fl">Description <span class="req">*</span></label>
+                            <input class="ctl" @bind="_description" placeholder="e.g. Opening balance" />
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-list-ul"></i></span>
+                    <div class="hd-tx"><h2>Lines</h2><p>Each line is either a debit or a credit. Totals must balance to post.</p></div>
+                </div>
+                <div class="card-b">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                                <tr><th>Account</th><th class="text-end" style="width:160px">Debit</th><th class="text-end" style="width:160px">Credit</th><th>Memo</th><th style="width:44px"></th></tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < _rows.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td>
+                                            <select class="ctl" @bind="_rows[idx].AccountId">
+                                                <option value="0">— select —</option>
+                                                @foreach (var a in _postable) { <option value="@a.Id">@a.Code — @a.Name</option> }
+                                            </select>
+                                        </td>
+                                        <td><input class="ctl mono text-end" type="number" step="0.01" min="0" @bind="_rows[idx].Debit" /></td>
+                                        <td><input class="ctl mono text-end" type="number" step="0.01" min="0" @bind="_rows[idx].Credit" /></td>
+                                        <td><input class="ctl" @bind="_rows[idx].Memo" /></td>
+                                        <td><button type="button" class="btn btn-sm btn-outline-danger" @onclick="@(() => _rows.RemoveAt(idx))"><i class="bi bi-x"></i></button></td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr class="fw-bold">
+                                    <td class="text-end">Totals</td>
+                                    <td class="text-end mono">@TotalDebit.ToString("N2")</td>
+                                    <td class="text-end mono">@TotalCredit.ToString("N2")</td>
+                                    <td colspan="2">
+                                        @if (IsBalanced) { <span class="badge bg-success">Balanced</span> }
+                                        else { <span class="badge bg-warning text-dark">Off by @Math.Abs(TotalDebit - TotalCredit).ToString("N2")</span> }
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="AddRow"><i class="bi bi-plus"></i> Add line</button>
+                </div>
+            </section>
+
+            <div class="pf-footer">
+                <div class="in">
+                    <span class="note"><span class="req">*</span> required fields</span>
+                    <a class="btn btn-ghost" href="/finance/journal-entries"><i class="bi bi-x-lg"></i> Cancel</a>
+                    <button class="btn btn-line" @onclick="@(() => SaveAsync(false))" disabled="@_saving"><i class="bi bi-save"></i> Save draft</button>
+                    <AuthorizeView Policy="finance.journal-entries.post">
+                        <Authorized>
+                            <button class="btn btn-primary" @onclick="@(() => SaveAsync(true))" disabled="@(_saving || !IsBalanced || _rows.Count(r => r.AccountId > 0) < 2)"><i class="bi bi-box-arrow-in-down"></i> Save &amp; post</button>
+                        </Authorized>
+                    </AuthorizeView>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private sealed class Row { public int AccountId { get; set; } public decimal Debit { get; set; } public decimal Credit { get; set; } public string? Memo { get; set; } }
+
+    private IReadOnlyList<AccountDto> _postable = [];
+    private readonly List<Row> _rows = new();
+    private DateTime _date = DateTime.Today;
+    private string _description = "";
+    private string? _error;
+    private bool _loading = true, _saving;
+
+    private string Title => Id is null ? "New Journal Entry" : "Edit Draft";
+    private decimal TotalDebit => _rows.Sum(r => r.Debit);
+    private decimal TotalCredit => _rows.Sum(r => r.Credit);
+    private bool IsBalanced => TotalDebit > 0 && TotalDebit == TotalCredit;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _postable = await Accounts.GetPostableAsync();
+        if (Id is int id && _rows.Count == 0)
+        {
+            var je = await Journals.GetByIdAsync(id);
+            if (je is null || je.Status != JournalEntryStatus.Draft) { Nav.NavigateTo("/finance/journal-entries"); return; }
+            _date = je.EntryDate; _description = je.Description;
+            foreach (var l in je.Lines) _rows.Add(new Row { AccountId = l.AccountId, Debit = l.Debit, Credit = l.Credit, Memo = l.Memo });
+        }
+        if (_rows.Count == 0) { AddRow(); AddRow(); }
+        _loading = false;
+    }
+
+    private void AddRow() => _rows.Add(new Row());
+
+    private async Task SaveAsync(bool post)
+    {
+        _error = null; _saving = true;
+        try
+        {
+            var req = new CreateJournalEntryRequest(_date, _description,
+                _rows.Where(r => r.AccountId > 0 && (r.Debit > 0 || r.Credit > 0))
+                     .Select(r => new JournalEntryLineInput(r.AccountId, r.Debit, r.Credit, r.Memo)).ToList());
+            JournalEntryDto saved = Id is int id
+                ? await Journals.UpdateDraftAsync(id, req)
+                : await Journals.CreateDraftAsync(req);
+            if (post) await Journals.PostAsync(saved.Id);
+            Nav.NavigateTo($"/finance/journal-entries/{saved.Id}");
+        }
+        catch (ValidationException ex) { _error = ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Validation failed."; }
+        catch (InvalidOperationException ex) { _error = ex.Message; }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+}

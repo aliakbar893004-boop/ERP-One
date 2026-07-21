@@ -1,0 +1,96 @@
+@page "/reports/balance-sheet"
+@attribute [Authorize(Policy = "reports.balance-sheet.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Accounting
+@using ErpOne.Application.Reports
+@using Microsoft.JSInterop
+@inject IFinancialStatementService Statements
+@inject IReportExporter Exporter
+@inject IJSRuntime JS
+
+<PageTitle>Balance Sheet</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Reports</span><span class="sep">·</span><span class="here">Balance Sheet</span></nav>
+            <h1>Balance Sheet</h1>
+            <p>Assets, liabilities and equity as of a chosen date.</p>
+        </div>
+        <AuthorizeView Policy="reports.balance-sheet.export">
+            <Authorized>
+                <div class="pi-actions">
+                    <button class="btn btn-outline-secondary" @onclick="ExportExcel"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+                    <button class="btn btn-outline-secondary" @onclick="ExportPdf"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <div class="toolbar">
+        <input type="date" @bind="_asOf" @bind:after="ReloadAsync" />
+        @if (_bs is not null)
+        {
+            <span class="badge @(_bs.IsBalanced ? "bg-success" : "bg-danger")">
+                @(_bs.IsBalanced ? "Balanced" : "Not balanced")
+            </span>
+        }
+    </div>
+
+    @if (_bs is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>Account</th><th class="text-end" style="width:200px">Amount</th></tr></thead>
+                    <tbody>
+                        @Section(_bs.Assets)
+                        <tr class="fw-bold"><td>Total Assets</td><td class="text-end mono">@_bs.TotalAssets.ToString("N0")</td></tr>
+                        @Section(_bs.Liabilities)
+                        @Section(_bs.Equity)
+                        <tr class="fw-bold"><td>Total Liabilities &amp; Equity</td><td class="text-end mono">@_bs.TotalLiabilitiesAndEquity.ToString("N0")</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private BalanceSheetDto? _bs;
+    private DateTime _asOf = DateTime.Today;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+    private async Task LoadAsync() => _bs = await Statements.GetBalanceSheetAsync(_asOf);
+    private async Task ReloadAsync() => await LoadAsync();
+
+    private RenderFragment Section(StatementSectionDto s) => __builder =>
+    {
+        <tr class="table-light fw-bold"><td colspan="2">@s.Title</td></tr>
+        @foreach (var l in s.Lines)
+        {
+            <tr class="@(l.IsHeader ? "fw-semibold" : "")">
+                <td style="padding-left:@(12 + l.Level * 20)px">@(string.IsNullOrEmpty(l.Code) ? l.Name : $"{l.Code} — {l.Name}")</td>
+                <td class="text-end mono">@l.Amount.ToString("N0")</td>
+            </tr>
+        }
+        <tr class="fw-bold"><td class="text-end">Total @s.Title</td><td class="text-end mono">@s.Total.ToString("N0")</td></tr>
+    };
+
+    private async Task ExportExcel()
+    {
+        var doc = await Statements.BuildBalanceSheetReportAsync(_asOf);
+        await Download(Exporter.ToExcel(doc), "balance-sheet.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
+    private async Task ExportPdf()
+    {
+        var doc = await Statements.BuildBalanceSheetReportAsync(_asOf);
+        await Download(await Exporter.ToPdfAsync(doc), "balance-sheet.pdf", "application/pdf");
+    }
+    private async Task Download(byte[] bytes, string name, string mime) =>
+        await JS.InvokeVoidAsync("saveAsFile", name, Convert.ToBase64String(bytes), mime);
+}

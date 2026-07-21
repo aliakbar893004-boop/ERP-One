@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using ErpOne.Application.Accounting;
 using ErpOne.Application.Common;
 using ErpOne.Application.Expenses;
 using ErpOne.Application.Numbering;
@@ -11,7 +12,8 @@ namespace ErpOne.Infrastructure.Services;
 public class ExpenseService(
     AppDbContext db,
     IValidator<CreateExpenseRequest> createValidator,
-    IDocumentNumberService docNumbers) : IExpenseService
+    IDocumentNumberService docNumbers,
+    IJournalPostingService journalPoster) : IExpenseService
 {
     public async Task<PagedResult<ExpenseListItemDto>> GetPagedAsync(
         int page, int pageSize, string? search = null, ExpenseStatus? status = null, CancellationToken ct = default)
@@ -72,6 +74,8 @@ public class ExpenseService(
         db.CashBankMovements.Add(new CashBankMovement(expense.CashBankAccountId, expense.ExpenseDate,
             CashBankMovementDirection.Out, expense.Amount, "Expense", expense.Id, expense.ExpenseNumber));
 
+        await journalPoster.PostExpenseAsync(expense, ct);
+
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return (await GetByIdAsync(expense.Id, ct))!;
@@ -88,6 +92,8 @@ public class ExpenseService(
             : $"Void {expense.ExpenseNumber} authorized by {authorizedBy}";
         db.CashBankMovements.Add(new CashBankMovement(expense.CashBankAccountId, DateTime.UtcNow.Date,
             CashBankMovementDirection.In, expense.Amount, "ExpenseVoid", expense.Id, note));
+
+        await journalPoster.ReverseForAsync("Expense", id, DateTime.UtcNow.Date, "Expense voided", ct);
 
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);

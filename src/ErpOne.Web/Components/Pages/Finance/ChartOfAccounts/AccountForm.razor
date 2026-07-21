@@ -1,0 +1,132 @@
+@page "/finance/chart-of-accounts/new"
+@page "/finance/chart-of-accounts/{Id:int}"
+@attribute [Authorize(Policy = "finance.chart-of-accounts.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Accounting
+@using ErpOne.Domain.Entities
+@using FluentValidation
+@inject IAccountService Accounts
+@inject NavigationManager Nav
+
+<PageTitle>@Title</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/finance/chart-of-accounts">Finance</a><i class="bi bi-chevron-right"></i>
+            <a href="/finance/chart-of-accounts">Chart of Accounts</a><i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+        <h1>@Title</h1>
+    </div>
+
+    @if (_loading) { <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div> }
+    else
+    {
+        @if (_error is not null) { <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-diagram-3"></i></span>
+                    <div class="hd-tx"><h2>Account</h2><p>A ledger account in the chart of accounts.</p></div>
+                </div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c3">
+                            <label class="fl">Code <span class="req">*</span></label>
+                            <input class="ctl mono" @bind="_code" disabled="@(Id is not null)" placeholder="e.g. 1110" />
+                        </div>
+                        <div class="f c3">
+                            <label class="fl">Type <span class="req">*</span></label>
+                            <select class="ctl" @bind="_type">
+                                @foreach (var t in Enum.GetValues<AccountType>()) { <option value="@t">@t</option> }
+                            </select>
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Name <span class="req">*</span></label>
+                            <input class="ctl" @bind="_name" placeholder="Account name" />
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Parent account</label>
+                            <select class="ctl" @bind="_parentId">
+                                <option value="0">(none — top level)</option>
+                                @foreach (var a in _allAccounts.Where(a => Id is null || a.Id != Id))
+                                { <option value="@a.Id">@a.Code — @a.Name</option> }
+                            </select>
+                        </div>
+                        <div class="f c6">
+                            <label class="fl">Postable</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="postSw" @bind="_isPostable" />
+                                <label class="form-check-label" for="postSw">Allow journaling (leaf account)</label>
+                            </div>
+                        </div>
+                        <div class="f c12">
+                            <label class="fl">Description</label>
+                            <input class="ctl" @bind="_description" placeholder="Optional" />
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="pf-footer">
+                <div class="in">
+                    <span class="note"><span class="req">*</span> required fields</span>
+                    <a class="btn btn-ghost" href="/finance/chart-of-accounts"><i class="bi bi-x-lg"></i> Cancel</a>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                        @if (_saving) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> }
+                        else { <i class="bi bi-check2"></i> }
+                        Save account
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private IReadOnlyList<AccountDto> _allAccounts = [];
+    private string _code = "";
+    private string _name = "";
+    private AccountType _type = AccountType.Asset;
+    private int _parentId;
+    private bool _isPostable = true;
+    private string? _description;
+    private string? _error;
+    private bool _loading = true, _saving;
+
+    private string Title => Id is null ? "New Account" : "Edit Account";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _allAccounts = await Accounts.GetAllAsync();
+        if (Id is int id)
+        {
+            var a = await Accounts.GetByIdAsync(id);
+            if (a is null) { Nav.NavigateTo("/finance/chart-of-accounts"); return; }
+            _code = a.Code; _name = a.Name; _type = a.Type;
+            _parentId = a.ParentId ?? 0; _isPostable = a.IsPostable; _description = a.Description;
+        }
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null; _saving = true;
+        try
+        {
+            int? parent = _parentId == 0 ? null : _parentId;
+            if (Id is int id)
+                await Accounts.UpdateAsync(id, new UpdateAccountRequest(_name, _type, parent, _isPostable, _description));
+            else
+                await Accounts.CreateAsync(new CreateAccountRequest(_code, _name, _type, parent, _isPostable, _description));
+            Nav.NavigateTo("/finance/chart-of-accounts");
+        }
+        catch (ValidationException ex) { _error = ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Validation failed."; }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+}

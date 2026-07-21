@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using ErpOne.Application.Accounting;
 using ErpOne.Application.Common;
 using ErpOne.Application.Numbering;
 using ErpOne.Application.PosSales;
@@ -11,7 +12,8 @@ namespace ErpOne.Infrastructure.Services;
 public class PosSaleService(
     AppDbContext db,
     IValidator<CreatePosSaleRequest> validator,
-    IDocumentNumberService docNumbers) : IPosSaleService
+    IDocumentNumberService docNumbers,
+    IJournalPostingService journalPoster) : IPosSaleService
 {
     public async Task<IReadOnlyList<PosProductOptionDto>> SearchProductsAsync(int warehouseId, string? term, CancellationToken ct = default)
     {
@@ -105,6 +107,9 @@ public class PosSaleService(
 
         db.PosSales.Add(sale);
         await db.SaveChangesAsync(ct);
+
+        await journalPoster.PostPosSaleAsync(sale, ct);
+
         await tx.CommitAsync(ct);
         return (await GetByIdAsync(sale.Id, ct))!;
     }

@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using ErpOne.Application.Accounting;
 using ErpOne.Application.Common;
 using ErpOne.Application.GoodsReceipts;
 using ErpOne.Application.Numbering;
@@ -14,7 +15,8 @@ public class GoodsReceiptService(
     IValidator<CreateGoodsReceiptRequest> createValidator,
     IValidator<UpdateGoodsReceiptRequest> updateValidator,
     IOptions<GoodsReceiptOptions> options,
-    IDocumentNumberService docNumbers) : IGoodsReceiptService
+    IDocumentNumberService docNumbers,
+    IJournalPostingService journalPoster) : IGoodsReceiptService
 {
     private int Tolerance => Math.Max(0, options.Value.OverReceiptTolerancePercent);
 
@@ -254,6 +256,8 @@ public class GoodsReceiptService(
         else po.MarkPartiallyReceived();
 
         grn.Post();
+
+        await journalPoster.PostGoodsReceiptAsync(grn, ct);
 
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);

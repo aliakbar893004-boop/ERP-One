@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using ErpOne.Application.Accounting;
 using ErpOne.Application.Approvals;
 using ErpOne.Application.Common;
 using ErpOne.Application.Numbering;
@@ -14,7 +15,8 @@ public class SupplierPaymentService(
     IApprovalService approval,
     IValidator<CreateSupplierPaymentRequest> createValidator,
     IValidator<UpdateSupplierPaymentRequest> updateValidator,
-    IDocumentNumberService docNumbers) : ISupplierPaymentService
+    IDocumentNumberService docNumbers,
+    IJournalPostingService journalPoster) : ISupplierPaymentService
 {
     private const ApprovalDocumentType DocType = ApprovalDocumentType.SupplierPayment;
 
@@ -185,6 +187,7 @@ public class SupplierPaymentService(
         }
 
         await approval.ResetAsync(DocType, payment.Id, ct);
+        await journalPoster.ReverseForAsync("SupplierPayment", id, DateTime.UtcNow.Date, "Payment voided", ct);
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
     }
@@ -202,6 +205,7 @@ public class SupplierPaymentService(
             inv.ApplyPayment(a.Amount);
         }
         payment.MarkPosted();
+        await journalPoster.PostSupplierPaymentAsync(payment, ct);
     }
 
     // Validates supplier/account/allocations; returns the payment currency (invoice currency).

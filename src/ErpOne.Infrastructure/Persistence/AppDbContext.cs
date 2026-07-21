@@ -54,6 +54,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
     public DbSet<CustomerReceiptAllocation> CustomerReceiptAllocations => Set<CustomerReceiptAllocation>();
     public DbSet<ExpenseCategory> ExpenseCategories => Set<ExpenseCategory>();
     public DbSet<Expense> Expenses => Set<Expense>();
+    public DbSet<Account> Accounts => Set<Account>();
+    public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
+    public DbSet<JournalEntryLine> JournalEntryLines => Set<JournalEntryLine>();
+    public DbSet<PostingConfiguration> PostingConfigurations => Set<PostingConfiguration>();
     public DbSet<ApprovalChainStep> ApprovalChainSteps => Set<ApprovalChainStep>();
     public DbSet<ApprovalStep> ApprovalSteps => Set<ApprovalStep>();
     public DbSet<ProductAttribute> ProductAttributes => Set<ProductAttribute>();
@@ -239,7 +243,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
                 new { Id = 8, Code = "SupplierPayment", Prefix = "APP", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
                 new { Id = 9, Code = "CustomerInvoice", Prefix = "ARV", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
                 new { Id = 10, Code = "CustomerReceipt", Prefix = "ARR", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
-                new { Id = 11, Code = "Expense", Prefix = "EXP", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" }
+                new { Id = 11, Code = "Expense", Prefix = "EXP", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
+                new { Id = 12, Code = "JournalEntry", Prefix = "JV", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" }
             );
         });
 
@@ -286,6 +291,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             e.Property(x => x.BankName).HasMaxLength(100);
             e.Property(x => x.AccountNumber).HasMaxLength(50);
             e.Property(x => x.AccountHolder).HasMaxLength(100);
+            e.HasOne<Account>().WithMany().HasForeignKey(x => x.GlAccountId).OnDelete(DeleteBehavior.Restrict);
 
             e.HasData(new
             {
@@ -738,6 +744,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             e.Property(x => x.Code).HasMaxLength(20).IsRequired();
             e.HasIndex(x => x.Code).IsUnique();
             e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            e.HasOne<Account>().WithMany().HasForeignKey(x => x.GlAccountId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Expense>(e =>
@@ -753,6 +760,71 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
             e.HasOne<CashBankAccount>().WithMany().HasForeignKey(x => x.CashBankAccountId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<ExpenseCategory>().WithMany().HasForeignKey(x => x.ExpenseCategoryId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Account>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            e.HasIndex(x => x.Code).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(150).IsRequired();
+            e.Property(x => x.Type).HasConversion<string>().HasMaxLength(20).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(300);
+            e.Ignore(x => x.NormalBalance);
+            e.HasOne<Account>().WithMany().HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<JournalEntry>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.EntryNumber).HasMaxLength(30).IsRequired();
+            e.HasIndex(x => x.EntryNumber).IsUnique();
+            e.Property(x => x.Description).HasMaxLength(300).IsRequired();
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            e.Property(x => x.Source).HasConversion<string>().HasMaxLength(20).IsRequired();
+            e.Property(x => x.SourceType).HasMaxLength(40);
+            e.Property(x => x.TotalDebit).HasPrecision(18, 2);
+            e.Property(x => x.TotalCredit).HasPrecision(18, 2);
+            e.HasIndex(x => x.EntryDate);
+            e.HasIndex(x => new { x.SourceType, x.SourceId });
+
+            e.HasMany(x => x.Lines)
+                .WithOne()
+                .HasForeignKey(l => l.JournalEntryId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.Metadata.FindNavigation(nameof(JournalEntry.Lines))!
+                .SetPropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<JournalEntryLine>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Debit).HasPrecision(18, 2);
+            e.Property(x => x.Credit).HasPrecision(18, 2);
+            e.Property(x => x.Memo).HasMaxLength(300);
+            e.HasOne<Account>().WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => x.AccountId);
+        });
+
+        modelBuilder.Entity<PostingConfiguration>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasOne<Account>().WithMany().HasForeignKey(x => x.ArAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Account>().WithMany().HasForeignKey(x => x.ApAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Account>().WithMany().HasForeignKey(x => x.InventoryAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Account>().WithMany().HasForeignKey(x => x.GrIrAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Account>().WithMany().HasForeignKey(x => x.SalesAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Account>().WithMany().HasForeignKey(x => x.CogsAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Account>().WithMany().HasForeignKey(x => x.InputTaxAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Account>().WithMany().HasForeignKey(x => x.OutputTaxAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Account>().WithMany().HasForeignKey(x => x.PosCashAccountId).OnDelete(DeleteBehavior.Restrict);
+
+            e.HasData(new
+            {
+                Id = 1,
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                CreatedBy = (string?)"system"
+            });
         });
 
         modelBuilder.Entity<ApprovalChainStep>(e =>
@@ -842,6 +914,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             [nameof(Brand)] = "M_",
             [nameof(Currency)] = "M_",
             [nameof(ExpenseCategory)] = "M_",
+            [nameof(Account)] = "M_",
+            [nameof(PostingConfiguration)] = "M_",
             [nameof(NumberSequence)] = "M_",
             [nameof(NumberSequenceCounter)] = "M_",
             [nameof(CompanySetting)] = "M_",
@@ -866,6 +940,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             [nameof(CustomerReceipt)] = "T_",
             [nameof(CustomerReceiptAllocation)] = "T_",
             [nameof(Expense)] = "T_",
+            [nameof(JournalEntry)] = "T_",
+            [nameof(JournalEntryLine)] = "T_",
             [nameof(SalesOrder)] = "T_",
             [nameof(SalesOrderLine)] = "T_",
             [nameof(DeliveryOrder)] = "T_",

@@ -1,0 +1,135 @@
+@page "/finance/journal-entries/{Id:int}"
+@attribute [Authorize(Policy = "finance.journal-entries.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Accounting
+@using ErpOne.Domain.Entities
+@inject IJournalEntryService Journals
+@inject NavigationManager Nav
+@inject SwalService Swal
+
+<PageTitle>@(_je?.EntryNumber ?? "Journal")</PageTitle>
+
+@if (_je is null)
+{
+    <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+}
+else
+{
+    <div class="pf pf-detail">
+        <div class="pf-top">
+            <div class="crumbs">
+                <a href="/finance/journal-entries">Journal Entries</a><i class="bi bi-chevron-right"></i>
+                <span class="here">@_je.EntryNumber</span>
+            </div>
+        </div>
+
+        <div class="pd-head">
+            <h1>@_je.EntryNumber</h1>
+            <span class="badge @StatusClass(_je.Status)">@_je.Status</span>
+            <div class="actions">
+                @if (_je.Status == JournalEntryStatus.Draft)
+                {
+                    <AuthorizeView Policy="finance.journal-entries.edit">
+                        <Authorized>
+                            <a class="btn btn-line btn-sm" href="@($"/finance/journal-entries/{_je.Id}/edit")"><i class="bi bi-pencil"></i> Edit</a>
+                        </Authorized>
+                    </AuthorizeView>
+                    <AuthorizeView Policy="finance.journal-entries.post">
+                        <Authorized>
+                            <button class="btn btn-primary btn-sm" @onclick="PostAsync" disabled="@_busy"><i class="bi bi-box-arrow-in-down"></i> Post</button>
+                        </Authorized>
+                    </AuthorizeView>
+                }
+                else if (_je.Status == JournalEntryStatus.Posted)
+                {
+                    <AuthorizeView Policy="finance.journal-entries.post">
+                        <Authorized>
+                            <button class="btn btn-danger btn-sm" @onclick="ReverseAsync" disabled="@_busy"><i class="bi bi-arrow-counterclockwise"></i> Reverse</button>
+                        </Authorized>
+                    </AuthorizeView>
+                }
+            </div>
+        </div>
+
+        <section class="card">
+            <div class="card-h"><span class="hd-ic"><i class="bi bi-journal-text"></i></span><h2>Journal</h2></div>
+            <div class="card-b">
+                <div class="info-grid">
+                    <div class="info-cell"><span class="k"><i class="bi bi-calendar3"></i> Date</span><span class="v">@_je.EntryDate.ToString("d MMM yyyy")</span></div>
+                    <div class="info-cell"><span class="k"><i class="bi bi-flag"></i> Status</span><span class="v">@_je.Status</span></div>
+                    <div class="info-cell wide"><span class="k"><i class="bi bi-sticky"></i> Description</span><span class="v">@_je.Description</span></div>
+                    @if (_je.ReversalOfEntryId is not null)
+                    {
+                        <div class="info-cell"><span class="k"><i class="bi bi-arrow-counterclockwise"></i> Reversal of</span><span class="v">#@_je.ReversalOfEntryId</span></div>
+                    }
+                    @if (_je.ReversedByEntryId is not null)
+                    {
+                        <div class="info-cell"><span class="k"><i class="bi bi-arrow-return-right"></i> Reversed by</span><span class="v">#@_je.ReversedByEntryId</span></div>
+                    }
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-h"><span class="hd-ic"><i class="bi bi-list-ul"></i></span><h2>Lines</h2></div>
+            <div class="card-b">
+                <table class="items">
+                    <thead>
+                        <tr><th>Account</th><th class="r">Debit</th><th class="r">Credit</th><th>Memo</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var l in _je.Lines)
+                        {
+                            <tr>
+                                <td><div class="prod"><span class="pn">@l.AccountName</span><span class="sku">@l.AccountCode</span></div></td>
+                                <td class="r mono">@(l.Debit == 0 ? "—" : l.Debit.ToString("N2"))</td>
+                                <td class="r mono">@(l.Credit == 0 ? "—" : l.Credit.ToString("N2"))</td>
+                                <td>@l.Memo</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr><td class="r gt-l">Totals</td><td class="r grand">@_je.TotalDebit.ToString("N2")</td><td class="r grand">@_je.TotalCredit.ToString("N2")</td><td></td></tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private JournalEntryDto? _je;
+    private bool _busy;
+
+    protected override async Task OnParametersSetAsync() => _je = await Journals.GetByIdAsync(Id);
+
+    private async Task PostAsync()
+    {
+        if (!await Swal.ConfirmAsync("Post this journal?", "Once posted it can only be corrected by a reversal.")) return;
+        _busy = true;
+        try { await Journals.PostAsync(Id); await Swal.ToastAsync("success", "Journal posted"); _je = await Journals.GetByIdAsync(Id); }
+        catch (Exception ex) { await Swal.ToastAsync("error", ex.Message); }
+        finally { _busy = false; }
+    }
+
+    private async Task ReverseAsync()
+    {
+        if (!await Swal.ConfirmAsync("Reverse this journal?", "A mirror entry will be created and posted.")) return;
+        _busy = true;
+        try
+        {
+            var rev = await Journals.ReverseAsync(Id, DateTime.Today, null);
+            await Swal.ToastAsync("success", "Journal reversed");
+            Nav.NavigateTo($"/finance/journal-entries/{rev.Id}");
+        }
+        catch (Exception ex) { await Swal.ToastAsync("error", ex.Message); _busy = false; }
+    }
+
+    private static string StatusClass(JournalEntryStatus s) => s switch
+    {
+        JournalEntryStatus.Posted => "b-done",
+        JournalEntryStatus.Reversed => "b-cancel",
+        _ => "b-draft"
+    };
+}

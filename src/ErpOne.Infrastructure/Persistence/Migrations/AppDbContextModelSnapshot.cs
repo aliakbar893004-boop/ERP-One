@@ -22,6 +22,66 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("ErpOne.Domain.Entities.Account", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPostable")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("ParentId");
+
+                    b.ToTable("M_Accounts");
+                });
+
             modelBuilder.Entity("ErpOne.Domain.Entities.ApprovalChainStep", b =>
                 {
                     b.Property<int>("Id")
@@ -253,6 +313,9 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("nvarchar(3)");
 
+                    b.Property<int?>("GlAccountId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -281,6 +344,8 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("GlAccountId");
 
                     b.ToTable("M_CashBankAccounts");
 
@@ -1101,6 +1166,9 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<int?>("GlAccountId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -1120,6 +1188,8 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("GlAccountId");
 
                     b.ToTable("M_ExpenseCategories");
                 });
@@ -1209,6 +1279,119 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                     b.HasIndex("PurchaseOrderLineId");
 
                     b.ToTable("T_GoodsReceiptLines");
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.JournalEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("EntryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EntryNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int?>("ReversalOfEntryId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ReversedByEntryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("SourceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceType")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal>("TotalCredit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalDebit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EntryDate");
+
+                    b.HasIndex("EntryNumber")
+                        .IsUnique();
+
+                    b.HasIndex("SourceType", "SourceId");
+
+                    b.ToTable("T_JournalEntries");
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.JournalEntryLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Credit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Debit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("JournalEntryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Memo")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("JournalEntryId");
+
+                    b.ToTable("T_JournalEntryLines");
                 });
 
             modelBuilder.Entity("ErpOne.Domain.Entities.NumberSequence", b =>
@@ -1398,6 +1581,18 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                             DateFormat = "yyyyMM",
                             Padding = 4,
                             Prefix = "EXP",
+                            ResetPeriod = "Monthly",
+                            Separator = "-"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Code = "JournalEntry",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "system",
+                            DateFormat = "yyyyMM",
+                            Padding = 4,
+                            Prefix = "JV",
                             ResetPeriod = "Monthly",
                             Separator = "-"
                         });
@@ -1645,6 +1840,86 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                     b.HasIndex("ProductVariantId");
 
                     b.ToTable("T_PosSaleLines");
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.PostingConfiguration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ApAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ArAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("CogsAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int?>("GrIrAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("InputTaxAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("InventoryAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int?>("OutputTaxAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PosCashAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SalesAccountId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApAccountId");
+
+                    b.HasIndex("ArAccountId");
+
+                    b.HasIndex("CogsAccountId");
+
+                    b.HasIndex("GrIrAccountId");
+
+                    b.HasIndex("InputTaxAccountId");
+
+                    b.HasIndex("InventoryAccountId");
+
+                    b.HasIndex("OutputTaxAccountId");
+
+                    b.HasIndex("PosCashAccountId");
+
+                    b.HasIndex("SalesAccountId");
+
+                    b.ToTable("M_PostingConfigurations");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "system"
+                        });
                 });
 
             modelBuilder.Entity("ErpOne.Domain.Entities.Product", b =>
@@ -1935,6 +2210,12 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReorderLevel")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReorderQty")
                         .HasColumnType("int");
 
                     b.Property<string>("Sku")
@@ -3088,6 +3369,14 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("ErpOne.Domain.Entities.Account", b =>
+                {
+                    b.HasOne("ErpOne.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("ErpOne.Domain.Entities.AttributeValue", b =>
                 {
                     b.HasOne("ErpOne.Domain.Entities.ProductAttribute", null)
@@ -3095,6 +3384,14 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                         .HasForeignKey("AttributeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.CashBankAccount", b =>
+                {
+                    b.HasOne("ErpOne.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("GlAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("ErpOne.Domain.Entities.CashBankMovement", b =>
@@ -3235,6 +3532,14 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ErpOne.Domain.Entities.ExpenseCategory", b =>
+                {
+                    b.HasOne("ErpOne.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("GlAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("ErpOne.Domain.Entities.GoodsReceipt", b =>
                 {
                     b.HasOne("ErpOne.Domain.Entities.PurchaseOrder", null)
@@ -3262,6 +3567,21 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("PurchaseOrderLineId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.JournalEntryLine", b =>
+                {
+                    b.HasOne("ErpOne.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ErpOne.Domain.Entities.JournalEntry", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("JournalEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -3304,6 +3624,54 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ProductVariantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.PostingConfiguration", b =>
+                {
+                    b.HasOne("ErpOne.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("ApAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ErpOne.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("ArAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ErpOne.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("CogsAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ErpOne.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("GrIrAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ErpOne.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("InputTaxAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ErpOne.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("InventoryAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ErpOne.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("OutputTaxAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ErpOne.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("PosCashAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ErpOne.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("SalesAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("ErpOne.Domain.Entities.Product", b =>
@@ -3596,6 +3964,11 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("ErpOne.Domain.Entities.GoodsReceipt", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.JournalEntry", b =>
                 {
                     b.Navigation("Lines");
                 });

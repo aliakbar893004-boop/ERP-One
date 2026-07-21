@@ -31,6 +31,7 @@ public static class AppMenus
     private static AppAction[] CashierShiftActions => [ActIndex, ActCreate, ActClose];
     private static AppAction[] PosActions => [ActIndex, ActCreate];
     private static AppAction[] SupplierPaymentActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActApprove, ActVoid];
+    private static AppAction[] JournalEntryActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActPost];
     private static AppAction[] ReportActions => [ActIndex, ActExport];
 
     public static readonly IReadOnlyList<ResourceGroup> Groups =
@@ -58,6 +59,7 @@ public static class AppMenus
         [
             new("inventory.stock-levels", "Stock Levels",     "bi-boxes",                 ViewOnly),
             new("inventory.adjustments",  "Stock Adjustment", "bi-clipboard2-check-fill", ViewCreate),
+            new("inventory.low-stock",    "Low Stock",        "bi-exclamation-triangle", ViewOnly),
         ]),
         new("Transaksi",
         [
@@ -81,6 +83,8 @@ public static class AppMenus
             new("finance.ar-receipts", "Customer Receipts", "bi-cash-stack", [ActIndex, ActCreate, ActVoid]),
             new("finance.expense-categories", "Expense Categories", "bi-tags", CRUD),
             new("finance.expenses", "Expenses", "bi-wallet2", [ActIndex, ActCreate, ActVoid]),
+            new("finance.chart-of-accounts", "Chart of Accounts", "bi-diagram-3", CRUD),
+            new("finance.journal-entries", "Journal Entries", "bi-journal-plus", JournalEntryActions),
         ]),
         new("Reports",
         [
@@ -92,6 +96,10 @@ public static class AppMenus
             new("reports.ar-aging", "AR Aging", "bi-hourglass-split", ReportActions),
             new("reports.ap-aging", "AP Aging", "bi-hourglass-bottom", ReportActions),
             new("reports.cashier-shifts", "Cashier Shifts", "bi-cash-stack", ReportActions),
+            new("reports.general-ledger", "General Ledger", "bi-journals", ReportActions),
+            new("reports.trial-balance", "Trial Balance", "bi-list-columns-reverse", ReportActions),
+            new("reports.balance-sheet", "Balance Sheet", "bi-clipboard-data", ReportActions),
+            new("reports.income-statement", "Income Statement", "bi-graph-up", ReportActions),
         ]),
         new("Settings",
         [
@@ -100,6 +108,7 @@ public static class AppMenus
             new("settings.company",         "Company Profile", "bi-building-fill-gear",       [ActIndex, ActEdit]),
             new("settings.approval-chains", "Approval Chain", "bi-diagram-3-fill",            CRUD),
             new("settings.document-numbering", "Document Numbering", "bi-123",                [ActIndex, ActEdit]),
+            new("settings.posting-config", "Posting Configuration", "bi-diagram-3-fill",       [ActIndex, ActEdit]),
             new("settings.errorlog",        "Error Log",      "bi-exclamation-triangle-fill", ViewOnly),
         ]),
     ];

@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using ErpOne.Application.Accounting;
 using ErpOne.Application.Common;
 using ErpOne.Application.CustomerReceipts;
 using ErpOne.Application.Numbering;
@@ -11,7 +12,8 @@ namespace ErpOne.Infrastructure.Services;
 public class CustomerReceiptService(
     AppDbContext db,
     IValidator<CreateCustomerReceiptRequest> createValidator,
-    IDocumentNumberService docNumbers) : ICustomerReceiptService
+    IDocumentNumberService docNumbers,
+    IJournalPostingService journalPoster) : ICustomerReceiptService
 {
     public async Task<PagedResult<CustomerReceiptListItemDto>> GetPagedAsync(
         int page, int pageSize, string? search = null, CustomerReceiptStatus? status = null, CancellationToken ct = default)
@@ -96,6 +98,8 @@ public class CustomerReceiptService(
             inv.ApplyPayment(a.Amount);
         }
 
+        await journalPoster.PostCustomerReceiptAsync(receipt, ct);
+
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return (await GetByIdAsync(receipt.Id, ct))!;
@@ -119,6 +123,8 @@ public class CustomerReceiptService(
             var inv = await db.CustomerInvoices.FirstOrDefaultAsync(i => i.Id == a.CustomerInvoiceId, ct);
             inv?.ReversePayment(a.Amount);
         }
+
+        await journalPoster.ReverseForAsync("CustomerReceipt", id, DateTime.UtcNow.Date, "Receipt voided", ct);
 
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
