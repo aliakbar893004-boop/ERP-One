@@ -113,7 +113,7 @@ public static class AppMenus
             new("settings.approval-chains", "Approval Chain", "bi-diagram-3-fill",            CRUD),
             new("settings.document-numbering", "Document Numbering", "bi-123",                [ActIndex, ActEdit]),
             new("settings.posting-config", "Posting Configuration", "bi-diagram-3-fill",       [ActIndex, ActEdit]),
-            new("settings.costing",         "Costing Method",  "bi-calculator-fill",           ViewOnly),
+            new("settings.costing",         "Costing Method",  "bi-calculator-fill",           [ActIndex, ActEdit]),
             new("settings.errorlog",        "Error Log",      "bi-exclamation-triangle-fill", ViewOnly),
         ]),
     ];

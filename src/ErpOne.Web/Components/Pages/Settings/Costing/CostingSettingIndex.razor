@@ -2,6 +2,7 @@
 @attribute [Authorize(Policy = "settings.costing.index")]
 @rendermode InteractiveServer
 @using ErpOne.Application.Costing
+@using ErpOne.Domain.Entities
 @inject ICostingSettingService Costing
 
 <PageTitle>Costing Method</PageTitle>
@@ -15,6 +16,9 @@
     @if (_loading) { <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div> }
     else
     {
+        @if (_saved) { <div class="cf-alert ok"><i class="bi bi-check2-circle"></i> Tersimpan.</div> }
+        @if (_error is not null) { <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+
         <div class="cf-wrap">
             <section class="card">
                 <div class="card-h">
@@ -25,28 +29,59 @@
                     </div>
                 </div>
                 <div class="card-b">
-                    <p class="mb-3"><strong>Metode aktif:</strong> Moving Average</p>
-                    @if (_dto.Locked)
+                    <div class="f c6">
+                        <label class="fl">Metode</label>
+                        <select class="ctl" value="@((int)_method)" disabled="@_locked"
+                                @onchange="e => _method = (CostingMethod)int.Parse(e.Value!.ToString()!)">
+                            <option value="@((int)CostingMethod.MovingAverage)">Moving Average</option>
+                            <option value="@((int)CostingMethod.StandardCost)">Standard Cost</option>
+                        </select>
+                    </div>
+                    @if (_locked)
                     {
                         <div class="cf-alert ok"><i class="bi bi-lock-fill"></i> Terkunci — sudah ada transaksi stok; metode tidak dapat diubah.</div>
                     }
                     else
                     {
-                        <div class="cf-alert ok"><i class="bi bi-unlock"></i> Belum ada transaksi stok; metode masih dapat diubah (metode lain menyusul di tahap berikutnya).</div>
+                        <p class="cf-hint">Belum ada transaksi stok — metode masih dapat diubah. Standard Cost: HPP di-set manual per varian; selisih harga beli diposting ke akun "Selisih Harga Beli".</p>
                     }
                 </div>
+                @if (!_locked)
+                {
+                    <div class="pf-footer"><div class="in">
+                        <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving"><i class="bi bi-check2"></i> Save</button>
+                    </div></div>
+                }
             </section>
         </div>
     }
 </div>
 
 @code {
-    private bool _loading = true;
-    private CostingSettingDto _dto = new(CostingMethod.MovingAverage, false);
+    private bool _loading = true, _saving, _saved, _locked;
+    private string? _error;
+    private CostingMethod _method = CostingMethod.MovingAverage;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
     {
-        _dto = await Costing.GetAsync();
+        var dto = await Costing.GetAsync();
+        _method = dto.Method;
+        _locked = dto.Locked;
         _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null; _saved = false; _saving = true;
+        try
+        {
+            await Costing.UpdateMethodAsync(_method);
+            _saved = true;
+            await LoadAsync();
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
     }
 }

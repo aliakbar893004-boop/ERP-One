@@ -1,13 +1,15 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using ErpOne.Application.Accounting;
+using ErpOne.Application.Costing;
 using ErpOne.Application.Numbering;
 using ErpOne.Domain.Entities;
 using ErpOne.Infrastructure.Persistence;
 
 namespace ErpOne.Infrastructure.Services;
 
-public class JournalPostingService(AppDbContext db, IDocumentNumberService docNumbers) : IJournalPostingService
+public class JournalPostingService(AppDbContext db, IDocumentNumberService docNumbers,
+    ICostingSettingService costingSettings) : IJournalPostingService
 {
     private static decimal Round(decimal v) => Math.Round(v, 2, MidpointRounding.AwayFromZero);
 
@@ -40,9 +42,30 @@ public class JournalPostingService(AppDbContext db, IDocumentNumberService docNu
         var cfg = await ConfigAsync(ct);
         var inventory = RequireAccount(cfg.InventoryAccountId, "Inventory");
         var grIr = RequireAccount(cfg.GrIrAccountId, "GR-IR");
-        var value = grn.Lines.Sum(l => Round(l.QuantityReceived * l.UnitCost));
+        var grValue = grn.Lines.Sum(l => Round(l.QuantityReceived * l.UnitCost)); // actual
+
+        var method = await costingSettings.GetMethodAsync(ct);
+        if (method != CostingMethod.StandardCost)
+        {
+            await PostBalancedAsync(grn.ReceiptDate, $"GRN {grn.GrnNumber}", "GoodsReceipt", grn.Id,
+                [(inventory, grValue, 0m, "Inventory received"), (grIr, 0m, grValue, "Goods received not invoiced")], ct);
+            return;
+        }
+
+        // Standard costing: inventory at standard (variant.CostPrice), GR-IR at actual, balance via PPV.
+        var ppv = RequireAccount(cfg.PurchasePriceVarianceAccountId, "Purchase Price Variance");
+        var variantIds = grn.Lines.Select(l => l.ProductVariantId).Distinct().ToList();
+        var standardByVariant = await db.ProductVariants.Where(v => variantIds.Contains(v.Id))
+            .ToDictionaryAsync(v => v.Id, v => v.CostPrice, ct);
+        var invValue = grn.Lines.Sum(l => Round(l.QuantityReceived * standardByVariant[l.ProductVariantId]));
+        var d = grValue - invValue;
+
         await PostBalancedAsync(grn.ReceiptDate, $"GRN {grn.GrnNumber}", "GoodsReceipt", grn.Id,
-            [(inventory, value, 0m, "Inventory received"), (grIr, 0m, value, "Goods received not invoiced")], ct);
+        [
+            (inventory, invValue, 0m, "Inventory received @ standard"),
+            (grIr, 0m, grValue, "Goods received not invoiced"),
+            (ppv, Math.Max(d, 0m), Math.Max(-d, 0m), "Purchase price variance"),
+        ], ct);
     }
 
     public async Task PostSupplierInvoiceAsync(SupplierInvoice inv, CancellationToken ct = default)

@@ -21,7 +21,7 @@ public class CostingSettingService(AppDbContext db) : ICostingSettingService
 
     public async Task UpdateMethodAsync(CostingMethod method, CancellationToken ct = default)
     {
-        if (method != CostingMethod.MovingAverage)
+        if (method is not (CostingMethod.MovingAverage or CostingMethod.StandardCost))
             throw new ValidationException([new ValidationFailure("Method", "Metode belum didukung.")]);
 
         if (await db.StockMovements.AnyAsync(ct))

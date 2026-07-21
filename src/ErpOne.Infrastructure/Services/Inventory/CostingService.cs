@@ -20,8 +20,10 @@ public class CostingService(AppDbContext db, ICostingSettingService settings) : 
                 var totalBefore = totalAfter - quantity;
                 variant.ApplyMovingAverage(totalBefore, quantity, unitCost);
                 return;
+            case CostingMethod.StandardCost:
+                return; // biaya standar tetap; mutasi masuk tak mengubah CostPrice
             default:
-                throw new NotSupportedException($"Costing method {method} is not supported in Tahap 1.");
+                throw new NotSupportedException($"Costing method {method} is not supported.");
         }
     }
 
@@ -31,7 +33,8 @@ public class CostingService(AppDbContext db, ICostingSettingService settings) : 
         return method switch
         {
             CostingMethod.MovingAverage => await CurrentCostPriceAsync(variantId, ct),
-            _ => throw new NotSupportedException($"Costing method {method} is not supported in Tahap 1.")
+            CostingMethod.StandardCost => await CurrentCostPriceAsync(variantId, ct),
+            _ => throw new NotSupportedException($"Costing method {method} is not supported.")
         };
     }
 

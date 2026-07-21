@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using ErpOne.Application.Costing;
 using ErpOne.Domain.Entities;
@@ -55,5 +56,23 @@ public class CostingSettingServiceTests : IClassFixture<CustomWebApplicationFact
         var ex = await Assert.ThrowsAsync<ValidationException>(
             () => Svc(scope).UpdateMethodAsync(CostingMethod.MovingAverage));
         Assert.Contains("terkunci", ex.Message);
+    }
+
+    [Fact]
+    public async Task UpdateMethodAsync_accepts_standard_cost_when_unlocked()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        // Order-independent: ensure unlocked (another test in this class may have added movements).
+        db.StockMovements.RemoveRange(db.StockMovements);
+        await db.SaveChangesAsync();
+
+        await Svc(scope).UpdateMethodAsync(CostingMethod.StandardCost);
+        Assert.Equal(CostingMethod.StandardCost, await Svc(scope).GetMethodAsync());
+
+        // Restore default so sibling tests in this shared-DB class stay order-independent.
+        var cs = await db.CostingSettings.FirstAsync();
+        cs.SetMethod(CostingMethod.MovingAverage);
+        await db.SaveChangesAsync();
     }
 }
