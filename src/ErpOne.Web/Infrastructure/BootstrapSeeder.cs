@@ -67,6 +67,27 @@ public static class BootstrapSeeder
             await db.SaveChangesAsync();
         }
 
+        // Seed rantai approval default untuk Stock Transfer (idempotent), mengikuti pola PO/SO.
+        if (!await db.ApprovalChainSteps.AnyAsync(c => c.DocumentType == ApprovalDocumentType.StockTransfer))
+        {
+            db.ApprovalChainSteps.Add(new ApprovalChainStep(ApprovalDocumentType.StockTransfer, 1, roleName));
+            await db.SaveChangesAsync();
+        }
+
+        // Seed rantai approval default untuk Stock Opname (idempotent), mengikuti pola Stock Transfer.
+        if (!await db.ApprovalChainSteps.AnyAsync(c => c.DocumentType == ApprovalDocumentType.StockOpname))
+        {
+            db.ApprovalChainSteps.Add(new ApprovalChainStep(ApprovalDocumentType.StockOpname, 1, roleName));
+            await db.SaveChangesAsync();
+        }
+
+        // Seed rantai approval default untuk POS Void (idempotent).
+        if (!await db.ApprovalChainSteps.AnyAsync(c => c.DocumentType == ApprovalDocumentType.PosSaleVoid))
+        {
+            db.ApprovalChainSteps.Add(new ApprovalChainStep(ApprovalDocumentType.PosSaleVoid, 1, roleName));
+            await db.SaveChangesAsync();
+        }
+
         // Seed COA + posting configuration + master GL accounts (idempotent).
         await AccountingSeeder.SeedAsync(db);
 

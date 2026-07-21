@@ -1,0 +1,116 @@
+@page "/inventory/transfers/new"
+@page "/inventory/transfers/{Id:int}/edit"
+@attribute [Authorize(Policy = "inventory.transfers.create")]
+@rendermode InteractiveServer
+@using ErpOne.Application.StockTransfers
+@using ErpOne.Application.Warehouses
+@using ErpOne.Application.Products
+@using FluentValidation
+@inject IStockTransferService Transfers
+@inject IWarehouseService WarehouseService
+@inject IProductService ProductService
+@inject NavigationManager Nav
+
+<PageTitle>@Title</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs"><a href="/inventory/transfers">Stock Transfer</a><i class="bi bi-chevron-right"></i><span class="here">@(Id is null ? "New" : "Edit")</span></div>
+        <h1>@Title</h1>
+    </div>
+
+    @if (_loading) { <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div> }
+    else
+    {
+        @if (_error is not null) { <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h"><span class="hd-ic"><i class="bi bi-arrow-left-right"></i></span><div class="hd-tx"><h2>Transfer</h2><p>Move stock between warehouses.</p></div></div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c4"><label class="fl">Date <span class="req">*</span></label><input type="date" class="ctl" @bind="_date" /></div>
+                        <div class="f c4"><label class="fl">From warehouse <span class="req">*</span></label>
+                            <select class="ctl" @bind="_sourceId"><option value="0">— select —</option>@foreach (var w in _warehouses) { <option value="@w.Id">@w.Name</option> }</select></div>
+                        <div class="f c4"><label class="fl">To warehouse <span class="req">*</span></label>
+                            <select class="ctl" @bind="_destId"><option value="0">— select —</option>@foreach (var w in _warehouses) { <option value="@w.Id">@w.Name</option> }</select></div>
+                        <div class="f c12"><label class="fl">Notes</label><input class="ctl" @bind="_notes" placeholder="Optional" /></div>
+                    </div>
+
+                    <table class="table align-middle mt-3">
+                        <thead class="table-light"><tr><th>Product / Variant</th><th class="text-end" style="width:160px">Quantity</th><th style="width:44px"></th></tr></thead>
+                        <tbody>
+                            @for (int i = 0; i < _lines.Count; i++)
+                            {
+                                var idx = i;
+                                <tr>
+                                    <td><select class="ctl" @bind="_lines[idx].VariantId"><option value="0">— select —</option>@foreach (var v in _variants) { <option value="@v.Id">@v.Label</option> }</select></td>
+                                    <td><input class="ctl mono text-end" type="number" min="1" step="1" @bind="_lines[idx].Quantity" /></td>
+                                    <td><button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => _lines.RemoveAt(idx)"><i class="bi bi-x"></i></button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="() => _lines.Add(new())"><i class="bi bi-plus"></i> Add line</button>
+                </div>
+            </section>
+            <div class="pf-footer"><div class="in">
+                <span class="note"><span class="req">*</span> required</span>
+                <a class="btn btn-ghost" href="/inventory/transfers"><i class="bi bi-x-lg"></i> Cancel</a>
+                <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving"><i class="bi bi-check2"></i> Save draft</button>
+            </div></div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private sealed class Line { public int VariantId { get; set; } public int Quantity { get; set; } = 1; }
+    private sealed record VariantOption(int Id, string Label);
+
+    private IReadOnlyList<WarehouseDto> _warehouses = [];
+    private List<VariantOption> _variants = [];
+    private readonly List<Line> _lines = [new()];
+    private DateTime _date = DateTime.Today;
+    private int _sourceId, _destId;
+    private string? _notes, _error;
+    private bool _loading = true, _saving;
+
+    private string Title => Id is null ? "New Stock Transfer" : "Edit Stock Transfer";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _warehouses = await WarehouseService.GetAllAsync();
+        // Align with StockAdjustmentForm: flatten products → variants.
+        var products = await ProductService.GetAllAsync();
+        _variants = products
+            .SelectMany(p => p.Variants.Select(v => new VariantOption(v.Id, $"{p.Name} · {v.Sku}")))
+            .OrderBy(v => v.Label).ToList();
+
+        if (Id is int id)
+        {
+            var t = await Transfers.GetByIdAsync(id);
+            if (t is null || t.Status != "Draft") { Nav.NavigateTo("/inventory/transfers"); return; }
+            _date = t.TransferDate; _sourceId = t.SourceWarehouseId; _destId = t.DestinationWarehouseId; _notes = t.Notes;
+            _lines.Clear();
+            foreach (var l in t.Lines) _lines.Add(new Line { VariantId = l.ProductVariantId, Quantity = l.Quantity });
+            if (_lines.Count == 0) _lines.Add(new());
+        }
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null; _saving = true;
+        try
+        {
+            var req = new CreateStockTransferRequest(_date, _sourceId, _destId, _notes,
+                _lines.Where(l => l.VariantId > 0 && l.Quantity > 0).Select(l => new StockTransferLineInput(l.VariantId, l.Quantity)).ToList());
+            var saved = Id is int id ? await Transfers.UpdateAsync(id, req) : await Transfers.CreateAsync(req);
+            Nav.NavigateTo($"/inventory/transfers/{saved.Id}");
+        }
+        catch (ValidationException ex) { _error = ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Validation failed."; }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+}

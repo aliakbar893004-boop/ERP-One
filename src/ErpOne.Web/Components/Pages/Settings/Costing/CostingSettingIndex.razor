@@ -1,0 +1,52 @@
+@page "/settings/costing"
+@attribute [Authorize(Policy = "settings.costing.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Costing
+@inject ICostingSettingService Costing
+
+<PageTitle>Costing Method</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs"><a href="/">Home</a><i class="bi bi-chevron-right"></i><span>Settings</span><i class="bi bi-chevron-right"></i><span class="here">Costing Method</span></div>
+        <h1>Costing Method</h1>
+    </div>
+
+    @if (_loading) { <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div> }
+    else
+    {
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-calculator-fill"></i></span>
+                    <div class="hd-tx">
+                        <h2>Inventory costing method</h2>
+                        <p>Metode penilaian HPP (Harga Pokok) yang dipakai seluruh transaksi stok — global, company-wide.</p>
+                    </div>
+                </div>
+                <div class="card-b">
+                    <p class="mb-3"><strong>Metode aktif:</strong> Moving Average</p>
+                    @if (_dto.Locked)
+                    {
+                        <div class="cf-alert ok"><i class="bi bi-lock-fill"></i> Terkunci — sudah ada transaksi stok; metode tidak dapat diubah.</div>
+                    }
+                    else
+                    {
+                        <div class="cf-alert ok"><i class="bi bi-unlock"></i> Belum ada transaksi stok; metode masih dapat diubah (metode lain menyusul di tahap berikutnya).</div>
+                    }
+                </div>
+            </section>
+        </div>
+    }
+</div>
+
+@code {
+    private bool _loading = true;
+    private CostingSettingDto _dto = new(CostingMethod.MovingAverage, false);
+
+    protected override async Task OnInitializedAsync()
+    {
+        _dto = await Costing.GetAsync();
+        _loading = false;
+    }
+}

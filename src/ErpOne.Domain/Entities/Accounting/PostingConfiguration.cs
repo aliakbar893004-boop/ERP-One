@@ -15,11 +15,12 @@ public class PostingConfiguration : AuditableEntity
     public int? InputTaxAccountId { get; private set; }
     public int? OutputTaxAccountId { get; private set; }
     public int? PosCashAccountId { get; private set; }
+    public int? PurchasePriceVarianceAccountId { get; private set; }
 
     private PostingConfiguration() { } // EF Core; single row seeded via HasData
 
     public void Update(int? ar, int? ap, int? inventory, int? grIr, int? sales, int? cogs,
-        int? inputTax, int? outputTax, int? posCash)
+        int? inputTax, int? outputTax, int? posCash, int? purchasePriceVariance)
     {
         ArAccountId = ar;
         ApAccountId = ap;
@@ -30,5 +31,6 @@ public class PostingConfiguration : AuditableEntity
         InputTaxAccountId = inputTax;
         OutputTaxAccountId = outputTax;
         PosCashAccountId = posCash;
+        PurchasePriceVarianceAccountId = purchasePriceVariance;
     }
 }

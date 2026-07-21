@@ -94,7 +94,7 @@ public class IdentityAndServiceTests : IClassFixture<CustomWebApplicationFactory
         await products.CreateAsync(new CreateProductRequest("In stock", null, categoryId, null, null, null, ProductStatus.Aktif,
             new[] { new VariantInput(null, 100m, null, 100m, null, null, 50, true, Array.Empty<int>()) }));
         await products.CreateAsync(new CreateProductRequest("Low stock", null, categoryId, null, null, null, ProductStatus.Aktif,
-            new[] { new VariantInput(null, 200m, null, 200m, null, null, 3, true, Array.Empty<int>()) }));
+            new[] { new VariantInput(null, 200m, null, 200m, null, null, 3, true, Array.Empty<int>(), null, 5) })); // ReorderLevel 5, qty 3 → low
         await products.CreateAsync(new CreateProductRequest("No stock", null, categoryId, null, null, null, ProductStatus.Habis,
             new[] { new VariantInput(null, 300m, null, 0m, null, null, 0, true, Array.Empty<int>()) }));
 
@@ -106,7 +106,7 @@ public class IdentityAndServiceTests : IClassFixture<CustomWebApplicationFactory
         Assert.True(d.InventoryValue >= 100m * 50 + 200m * 3);
         Assert.True(d.LowStockCount >= 1);
         Assert.Contains(d.ByCategory, c => c.CategoryName == "Dashboard");
-        // "Low stock" product has qty 3 which is <= LowStockThreshold (5), so it must appear in
+        // "Low stock" product has qty 3 <= its variant's ReorderLevel (5), so it must appear in
         // the low-stock list. "No stock" has no ProductStock row (opening stock 0 is never
         // recorded) so it does not appear in the stock-based low-stock list.
         Assert.Contains(d.LowStock, i => i.Name == "Low stock");

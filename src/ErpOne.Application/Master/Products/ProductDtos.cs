@@ -9,6 +9,7 @@ public record AttributeValueRefDto(int AttributeValueId, string AttributeName, s
 public record ProductVariantDto(
     int Id, string Sku, string? Barcode, decimal Price, decimal? DiscountPrice, decimal CostPrice,
     decimal? Weight, string? Dimensions, int Stock, bool IsActive, decimal? DiscountPercent,
+    int ReorderLevel, int ReorderQty,
     IReadOnlyList<AttributeValueRefDto> Attributes);
 
 public record ProductDto(
@@ -40,7 +41,8 @@ public record ProductDto(
 public record VariantInput(
     string? Barcode, decimal Price, decimal? DiscountPrice, decimal CostPrice,
     decimal? Weight, string? Dimensions, int OpeningStock, bool IsActive,
-    IReadOnlyList<int> AttributeValueIds, decimal? DiscountPercent = null);
+    IReadOnlyList<int> AttributeValueIds, decimal? DiscountPercent = null,
+    int ReorderLevel = 0, int ReorderQty = 0);
 
 public record CreateProductRequest(
     string Name, string? Description, int CategoryId,

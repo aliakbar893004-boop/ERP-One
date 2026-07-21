@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ERP_One — Login & Reset Concepts</title>
+<style>
+  :root {
+    --bg: #F4F7F5;
+    --surface: #FFFFFF;
+    --surface-2: #FBFDFC;
+    --ink: #0F1B17;
+    --muted: #5B6B64;
+    --faint: #8A9891;
+    --line: #E4EAE6;
+    --accent: #0E9F6E;
+    --accent-deep: #077E57;
+    --accent-mint: #34D39A;
+    --accent-soft: #E7F6EF;
+    --shadow: 0 30px 60px -34px rgba(4, 35, 26, 0.45);
+    --radius: 22px;
+    --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --font-mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0A0F0D;
+      --surface: #111815;
+      --surface-2: #0E1412;
+      --ink: #EAF2EE;
+      --muted: #9AAAA2;
+      --faint: #6C7D75;
+      --line: #1E2823;
+      --accent: #2FB985;
+      --accent-deep: #0E9F6E;
+      --accent-soft: #12241C;
+      --shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0A0F0D; --surface: #111815; --surface-2: #0E1412; --ink: #EAF2EE;
+    --muted: #9AAAA2; --faint: #6C7D75; --line: #1E2823;
+    --accent: #2FB985; --accent-deep: #0E9F6E; --accent-soft: #12241C;
+    --shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.7);
+  }
+  :root[data-theme="light"] {
+    --bg: #F4F7F5; --surface: #FFFFFF; --surface-2: #FBFDFC; --ink: #0F1B17;
+    --muted: #5B6B64; --faint: #8A9891; --line: #E4EAE6;
+    --accent: #0E9F6E; --accent-deep: #077E57; --accent-soft: #E7F6EF;
+    --shadow: 0 30px 60px -34px rgba(4, 35, 26, 0.45);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .page {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    min-height: 100vh;
+    padding: clamp(20px, 4vw, 56px) clamp(16px, 4vw, 40px) 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+
+  /* ── Gallery header ── */
+  .masthead { margin-bottom: 46px; max-width: 720px; }
+  .eyebrow {
+    font: 600 12px/1 var(--font-mono);
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--accent-deep); display: inline-flex; align-items: center; gap: 9px;
+    margin-bottom: 18px;
+  }
+  .eyebrow::before { content: ""; width: 26px; height: 2px; background: var(--accent); border-radius: 2px; }
+  .masthead h1 {
+    font-size: clamp(28px, 4.4vw, 44px); font-weight: 700; letter-spacing: -0.025em;
+    line-height: 1.05; margin: 0 0 16px; text-wrap: balance;
+  }
+  .masthead h1 em { font-style: normal; color: var(--accent-deep); }
+  .lead { font-size: clamp(15px, 1.6vw, 17px); line-height: 1.6; color: var(--muted); margin: 0; max-width: 60ch; }
+  .note {
+    margin-top: 20px; font-size: 13px; color: var(--faint);
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 13px;
+    border: 1px dashed var(--line); border-radius: 999px;
+  }
+  .note b { color: var(--muted); font-weight: 600; }
+
+  /* ── Concept block ── */
+  .concept { margin-top: 52px; }
+  .concept-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 20px; flex-wrap: wrap; margin-bottom: 18px;
+  }
+  .concept-title { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .concept-mark {
+    font: 700 13px/1 var(--font-mono); color: var(--accent-deep);
+    border: 1.5px solid var(--accent); border-radius: 8px; padding: 6px 9px;
+    letter-spacing: 0.04em;
+  }
+  .concept-title h2 { font-size: clamp(20px, 2.6vw, 26px); font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+  .concept-title p { margin: 0; color: var(--muted); font-size: 14px; }
+  .concept-desc { color: var(--muted); font-size: 14px; line-height: 1.55; max-width: 46ch; margin: 6px 0 0; }
+
+  /* Toggle */
+  .toggle {
+    display: inline-flex; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 999px; padding: 4px; gap: 2px;
+  }
+  .toggle button {
+    font: 600 13px var(--font-ui); color: var(--muted); background: transparent;
+    border: 0; border-radius: 999px; padding: 8px 16px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px; transition: color .15s;
+  }
+  .toggle button svg { width: 15px; height: 15px; }
+  .toggle button[aria-pressed="true"] { background: var(--accent); color: #fff; box-shadow: 0 6px 14px -7px var(--accent-deep); }
+  .toggle button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Device frame */
+  .frame {
+    border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
+    box-shadow: var(--shadow); background: var(--surface);
+    height: min(620px, 88vh); min-height: 520px;
+  }
+  .frame .view { display: none; height: 100%; }
+  .frame[data-view="login"] .view-login { display: block; }
+  .frame[data-view="reset"] .view-reset { display: block; }
+  .frame[data-view="change"] .view-change { display: block; }
+
+  /* ── Shared mock primitives ── */
+  .scr { height: 100%; display: flex; }
+  .brandmark { display: inline-flex; align-items: center; gap: 10px; }
+  .brandmark .glyph {
+    width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+    color: #fff; background: linear-gradient(135deg, var(--accent-mint), var(--accent-deep));
+  }
+  .brandmark .glyph svg { width: 18px; height: 18px; }
+  .brandmark .word { font-weight: 700; letter-spacing: -0.01em; font-size: 17px; }
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field label { font-size: 12.5px; font-weight: 600; letter-spacing: 0.01em; }
+  .field .inp {
+    display: flex; align-items: center; gap: 9px; border-radius: 11px;
+    padding: 0 12px; height: 46px; font-size: 14px;
+  }
+  .field .inp svg { width: 16px; height: 16px; flex: none; opacity: .6; }
+  .field .inp span { color: var(--faint); }
+  .btn {
+    height: 47px; border-radius: 11px; border: 0; cursor: pointer;
+    font: 600 14.5px var(--font-ui); display: inline-flex; align-items: center;
+    justify-content: center; gap: 8px; width: 100%;
+  }
+  .btn svg { width: 16px; height: 16px; }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .linkrow { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+  .muted-link { color: var(--muted); text-decoration: none; }
+  .muted-link:hover { color: var(--accent-deep); }
+
+  /* ================= A · AURORA (premium split) ================= */
+  .aurora .scr { flex-direction: row; }
+  .aurora .promo {
+    flex: 0 0 46%; position: relative; overflow: hidden; color: #EAFBF3;
+    background: linear-gradient(160deg, #04231A 0%, #075B41 52%, #0E9F6E 118%);
+    padding: 34px 34px 30px; display: flex; flex-direction: column;
+  }
+  .aurora .blob { position: absolute; border-radius: 50%; filter: blur(26px); pointer-events: none; }
+  .aurora .b1 { width: 260px; height: 260px; top: -70px; right: -60px; background: radial-gradient(circle, rgba(52,211,153,.55), transparent 70%); }
+  .aurora .b2 { width: 220px; height: 220px; bottom: -60px; left: -50px; background: radial-gradient(circle, rgba(16,185,129,.45), transparent 70%); }
+  @media (prefers-reduced-motion: no-preference) {
+    .aurora .b1 { animation: drift 13s ease-in-out infinite alternate; }
+    .aurora .b2 { animation: drift 16s ease-in-out infinite alternate-reverse; }
+  }
+  @keyframes drift { to { transform: translate3d(18px, 22px, 0) scale(1.12); } }
+  .aurora .promo > * { position: relative; z-index: 1; }
+  .aurora .brandmark .glyph { background: rgba(255,255,255,.16); backdrop-filter: blur(6px); }
+  .aurora .promo .word { color: #fff; }
+  .aurora .promo h3 { font-size: 25px; line-height: 1.22; letter-spacing: -0.02em; margin: auto 0 14px; font-weight: 700; text-wrap: balance; }
+  .aurora .promo p { margin: 0 0 22px; font-size: 13.5px; line-height: 1.6; color: rgba(234,251,243,.72); }
+  .aurora .stats { display: flex; gap: 10px; }
+  .aurora .stat { flex: 1; background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.14); border-radius: 13px; padding: 12px 12px 11px; backdrop-filter: blur(6px); }
+  .aurora .stat b { display: block; font-size: 18px; font-weight: 700; }
+  .aurora .stat span { font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; color: rgba(234,251,243,.7); }
+  .aurora .panel { flex: 1; background: var(--surface); display: flex; align-items: center; justify-content: center; padding: 30px; }
+  .aurora .card { width: 100%; max-width: 340px; }
+  .aurora .card .kicker { font: 600 11.5px var(--font-mono); letter-spacing: .18em; text-transform: uppercase; color: var(--accent-deep); }
+  .aurora .card h4 { font-size: 24px; letter-spacing: -0.02em; margin: 8px 0 4px; }
+  .aurora .card .sub { color: var(--muted); font-size: 13.5px; margin: 0 0 22px; }
+  .aurora .form { display: flex; flex-direction: column; gap: 15px; }
+  .aurora .inp { background: var(--surface-2); border: 1.5px solid var(--line); color: var(--ink); }
+  .aurora .inp:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .aurora .btn { background: linear-gradient(135deg, var(--accent), var(--accent-deep)); color: #fff; box-shadow: 0 12px 22px -12px var(--accent-deep); }
+  .aurora .foot { text-align: center; font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .aurora .foot a { color: var(--accent-deep); text-decoration: none; font-weight: 600; }
+
+  /* ================= B · FOCUS (calm centered minimal) ================= */
+  .focus .scr {
+    align-items: center; justify-content: center; padding: 30px;
+    background:
+      radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0) 0 0 / 22px 22px,
+      var(--surface-2);
+  }
+  .focus .card {
+    width: 100%; max-width: 372px; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 18px; padding: 34px 32px 30px;
+    box-shadow: 0 20px 50px -34px rgba(4,35,26,.4);
+  }
+  .focus .top { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; margin-bottom: 24px; }
+  .focus .badge { width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, var(--accent-mint), var(--accent-deep)); box-shadow: 0 12px 24px -12px var(--accent-deep); }
+  .focus .badge svg { width: 24px; height: 24px; }
+  .focus h4 { font-size: 22px; letter-spacing: -0.02em; margin: 4px 0 3px; }
+  .focus .sub { color: var(--muted); font-size: 13.5px; margin: 0; line-height: 1.5; }
+  .focus .form { display: flex; flex-direction: column; gap: 16px; }
+  .focus .inp { background: var(--surface-2); border: 1.5px solid var(--line); color: var(--ink); }
+  .focus .inp:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .focus .btn { background: var(--accent); color: #fff; box-shadow: 0 10px 20px -12px var(--accent-deep); }
+  .focus .btn:hover { background: var(--accent-deep); }
+  .focus .divider { display: flex; align-items: center; gap: 12px; color: var(--faint); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; margin: 4px 0; }
+  .focus .divider::before, .focus .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .focus .ghost { height: 44px; border-radius: 11px; border: 1.5px solid var(--line); background: transparent; color: var(--ink); font: 600 13.5px var(--font-ui); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .focus .ghost svg { width: 16px; height: 16px; }
+  .focus .foot { text-align: center; font-size: 13px; color: var(--muted); margin-top: 20px; }
+  .focus .foot a { color: var(--accent-deep); text-decoration: none; font-weight: 600; }
+  .focus .hint { background: var(--accent-soft); border-radius: 11px; padding: 12px 14px; font-size: 12.5px; color: var(--accent-deep); display: flex; gap: 9px; line-height: 1.45; }
+  .focus .hint svg { width: 16px; height: 16px; flex: none; margin-top: 1px; }
+
+  /* ================= C · SIGNAL (bold editorial dark, single-theme) ================= */
+  .signal .scr {
+    background: #0A0E0C; color: #E9F3EE; flex-direction: row;
+    --sig-accent: #46E5A6; --sig-line: #223029; --sig-muted: #7E938A; --sig-field: #10160F;
+  }
+  .signal .left { flex: 0 0 50%; padding: 36px 36px 30px; display: flex; flex-direction: column; border-right: 1px solid var(--sig-line); }
+  .signal .step { font: 600 11px var(--font-mono); letter-spacing: .22em; color: var(--sig-accent); margin-bottom: auto; }
+  .signal .brandmark { margin-bottom: 34px; }
+  .signal .brandmark .glyph { background: var(--sig-accent); color: #06120C; border-radius: 9px; }
+  .signal .brandmark .word { color: #fff; }
+  .signal .left h4 { font-family: var(--font-serif); font-weight: 700; font-size: 30px; line-height: 1.08; letter-spacing: -0.01em; margin: 0 0 8px; }
+  .signal .left h4 em { font-style: italic; color: var(--sig-accent); }
+  .signal .left .sub { color: var(--sig-muted); font-size: 13.5px; line-height: 1.55; margin: 0 0 26px; max-width: 32ch; }
+  .signal .form { display: flex; flex-direction: column; gap: 20px; }
+  .signal .field label { color: var(--sig-muted); text-transform: uppercase; letter-spacing: .12em; font: 600 10.5px var(--font-mono); }
+  .signal .uinp { display: flex; align-items: center; gap: 10px; border: 0; border-bottom: 1.5px solid var(--sig-line); padding: 9px 2px; font-size: 15px; color: var(--sig-muted); }
+  .signal .uinp svg { width: 16px; height: 16px; opacity: .7; }
+  .signal .field:focus-within .uinp { border-color: var(--sig-accent); }
+  .signal .btn { background: var(--sig-accent); color: #06120C; border-radius: 8px; font-weight: 700; margin-top: 6px; }
+  .signal .btn:hover { background: #6BF0BC; }
+  .signal .altrow { font: 500 12.5px var(--font-mono); color: var(--sig-muted); }
+  .signal .altrow a { color: var(--sig-accent); text-decoration: none; }
+  .signal .right { flex: 1; position: relative; overflow: hidden; display: flex; align-items: flex-end; padding: 36px; }
+  .signal .right .huge { font-family: var(--font-serif); font-weight: 700; font-size: clamp(46px, 8vw, 82px); line-height: .92; letter-spacing: -0.03em; color: #101915; }
+  .signal .right .huge em { font-style: italic; color: #16221C; }
+  .signal .grid-deco { position: absolute; inset: 0; background-image: linear-gradient(var(--sig-line) 1px, transparent 1px), linear-gradient(90deg, var(--sig-line) 1px, transparent 1px); background-size: 44px 44px; opacity: .5; -webkit-mask-image: radial-gradient(circle at 70% 30%, #000, transparent 72%); mask-image: radial-gradient(circle at 70% 30%, #000, transparent 72%); }
+  .signal .dot { position: absolute; top: 34px; right: 34px; font: 600 10.5px var(--font-mono); letter-spacing: .16em; color: var(--sig-accent); display: flex; align-items: center; gap: 7px; }
+  .signal .dot::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--sig-accent); box-shadow: 0 0 0 4px rgba(70,229,166,.2); }
+
+  /* ── Change-password (in-app) shared ── */
+  .pw { position: relative; }
+  .pw .inp, .pw .uinp { padding-right: 42px; }
+  .pw .eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border: 0; background: transparent; border-radius: 8px; display: grid; place-items: center; cursor: pointer; color: var(--faint); }
+  .pw .eye:hover { color: var(--accent-deep); }
+  .pw .eye svg { width: 16px; height: 16px; }
+  .cp-actions { display: flex; gap: 10px; }
+  .cp-actions .btn { flex: 1; }
+  .cp-ghost { flex: 1; height: 47px; border-radius: 11px; border: 1.5px solid var(--line); background: transparent; color: var(--ink); font: 600 14px var(--font-ui); cursor: pointer; }
+  .cp-ghost:hover { border-color: var(--accent); color: var(--accent-deep); }
+  .signal .pw .eye { color: var(--sig-muted); }
+  .signal .pw .eye:hover { color: var(--sig-accent); }
+  .signal .cp-ghost { border-color: var(--sig-line); color: #E9F3EE; }
+  .signal .cp-ghost:hover { border-color: var(--sig-accent); color: var(--sig-accent); }
+
+  /* ── Responsive ── */
+  @media (max-width: 760px) {
+    .frame { height: auto; min-height: 0; }
+    .aurora .scr, .signal .scr { flex-direction: column; }
+    .aurora .promo { flex: none; }
+    .aurora .promo h3 { margin-top: 26px; }
+    .signal .left { flex: none; border-right: 0; border-bottom: 1px solid var(--sig-line); }
+    .signal .right { min-height: 160px; }
+    .aurora .panel, .focus .scr { padding: 26px 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="wrap">
+    <header class="masthead">
+      <div class="eyebrow">ERP_One · Auth concepts</div>
+      <h1>Three fresh directions for <em>Login</em> &amp; <em>Reset&nbsp;Password</em></h1>
+      <p class="lead">Pick a direction — or mix elements across them. Each frame has a toggle so you can compare the Sign&nbsp;in and Reset&nbsp;password screens side by side. All three share the emerald brand but treat it differently.</p>
+      <div class="note"><b>Note:</b> visual mockups only — no working auth. Swap the theme with the viewer toggle to see light &amp; dark.</div>
+    </header>
+
+    <!-- ============ A · AURORA ============ -->
+    <section class="concept">
+      <div class="concept-head">
+        <div>
+          <div class="concept-title">
+            <span class="concept-mark">A</span>
+            <h2>Aurora</h2>
+            <p>premium split-screen</p>
+          </div>
+          <p class="concept-desc">A confident brand panel with a living emerald gradient beside a clean form. Reads as a modern, trustworthy SaaS product.</p>
+        </div>
+        <div class="toggle" data-target="frame-a">
+          <button type="button" data-view="login" aria-pressed="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            Sign in
+          </button>
+          <button type="button" data-view="reset" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.7 9.7 0 0 0-6.7 2.8L3 8"/><path d="M3 3v5h5"/></svg>
+            Reset password
+          </button>
+          <button type="button" data-view="change" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><line x1="10.85" y1="12.15" x2="19" y2="4"/><line x1="18" y1="5" x2="20" y2="7"/><line x1="15" y1="8" x2="17" y2="10"/></svg>
+            Change password
+          </button>
+        </div>
+      </div>
+
+      <div class="frame aurora" id="frame-a" data-view="login">
+        <!-- LOGIN -->
+        <div class="view view-login">
+          <div class="scr">
+            <aside class="promo">
+              <span class="blob b1"></span><span class="blob b2"></span>
+              <div class="brandmark"><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="word">ERP_One</span></div>
+              <h3>Run every part of your business from one place.</h3>
+              <p>Inventory, sales, finance and reports — live, accurate, together.</p>
+              <div class="stats">
+                <div class="stat"><b>1,284</b><span>Orders today</span></div>
+                <div class="stat"><b>98.6%</b><span>Stock accuracy</span></div>
+                <div class="stat"><b>12</b><span>Warehouses</span></div>
+              </div>
+            </aside>
+            <div class="panel">
+              <div class="card">
+                <div class="kicker">Welcome back</div>
+                <h4>Sign in</h4>
+                <p class="sub">Enter your credentials to continue.</p>
+                <div class="form">
+                  <div class="field"><label>Username</label>
+                    <div class="inp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>you@erpone.co</span></div>
+                  </div>
+                  <div class="field"><label>Password</label>
+                    <div class="inp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>••••••••</span></div>
+                  </div>
+                  <div class="linkrow"><label style="display:flex;gap:7px;align-items:center;color:var(--muted);font-weight:500"><input type="checkbox" checked style="accent-color:var(--accent)"> Remember me</label><a class="muted-link" href="#">Forgot?</a></div>
+                  <button type="button" class="btn">Sign in
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- RESET -->
+        <div class="view view-reset">
+          <div class="scr">
+            <aside class="promo">
+              <span class="blob b1"></span><span class="blob b2"></span>
+              <div class="brandmark"><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="word">ERP_One</span></div>
+              <h3>Forgot it? Happens to the best of us.</h3>
+              <p>We'll email you a secure link to set a new password.</p>
+              <div class="stats">
+                <div class="stat"><b>&lt;1m</b><span>To reset</span></div>
+                <div class="stat"><b>256-bit</b><span>Encrypted</span></div>
+                <div class="stat"><b>24/7</b><span>Support</span></div>
+              </div>
+            </aside>
+            <div class="panel">
+              <div class="card">
+                <div class="kicker">Account recovery</div>
+                <h4>Reset password</h4>
+                <p class="sub">Enter your email and we'll send a reset link.</p>
+                <div class="form">
+                  <div class="field"><label>Email address</label>
+                    <div class="inp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><span>you@erpone.co</span></div>
+                  </div>
+                  <button type="button" class="btn">Send reset link
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  </button>
+                  <p class="foot">Remembered it? <a href="#">Back to sign in</a></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- CHANGE PASSWORD -->
+        <div class="view view-change">
+          <div class="scr" style="flex-direction:column; align-items:center; justify-content:center; background:var(--surface-2); padding:30px;">
+            <div class="card">
+              <div class="kicker">Security</div>
+              <h4>Change password</h4>
+              <p class="sub">Use something memorable but hard to guess.</p>
+              <div class="form">
+                <div class="field"><label>Current password</label>
+                  <div class="pw"><div class="inp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>••••••••</span></div><button class="eye" type="button" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+                </div>
+                <div class="field"><label>New password</label>
+                  <div class="pw"><div class="inp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>at least 6 characters</span></div><button class="eye" type="button" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+                </div>
+                <div class="field"><label>Confirm new password</label>
+                  <div class="pw"><div class="inp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>••••••••</span></div><button class="eye" type="button" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+                </div>
+                <div class="cp-actions">
+                  <button type="button" class="cp-ghost">Cancel</button>
+                  <button type="button" class="btn">Save changes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ B · FOCUS ============ -->
+    <section class="concept">
+      <div class="concept-head">
+        <div>
+          <div class="concept-title">
+            <span class="concept-mark">B</span>
+            <h2>Focus</h2>
+            <p>calm centered minimal</p>
+          </div>
+          <p class="concept-desc">A single elevated card on a soft dotted ground. Nothing competes for attention — quiet, friendly, and fast to scan.</p>
+        </div>
+        <div class="toggle" data-target="frame-b">
+          <button type="button" data-view="login" aria-pressed="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            Sign in
+          </button>
+          <button type="button" data-view="reset" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.7 9.7 0 0 0-6.7 2.8L3 8"/><path d="M3 3v5h5"/></svg>
+            Reset password
+          </button>
+          <button type="button" data-view="change" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><line x1="10.85" y1="12.15" x2="19" y2="4"/><line x1="18" y1="5" x2="20" y2="7"/><line x1="15" y1="8" x2="17" y2="10"/></svg>
+            Change password
+          </button>
+        </div>
+      </div>
+
+      <div class="frame focus" id="frame-b" data-view="login">
+        <!-- LOGIN -->
+        <div class="view view-login">
+          <div class="scr">
+            <div class="card">
+              <div class="top">
+                <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                <div><h4>Welcome back</h4><p class="sub">Sign in to your ERP_One workspace</p></div>
+              </div>
+              <div class="form">
+                <div class="field"><label>Username</label>
+                  <div class="inp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>your username</span></div>
+                </div>
+                <div class="field"><label>Password</label>
+                  <div class="inp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>••••••••</span></div>
+                </div>
+                <button type="button" class="btn">Sign in</button>
+                <p class="foot"><a href="#">Forgot your password?</a></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- RESET -->
+        <div class="view view-reset">
+          <div class="scr">
+            <div class="card">
+              <div class="top">
+                <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.7 9.7 0 0 0-6.7 2.8L3 8"/><path d="M3 3v5h5"/></svg></span>
+                <div><h4>Reset password</h4><p class="sub">We'll send a link to your email</p></div>
+              </div>
+              <div class="form">
+                <div class="hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span>Enter the email tied to your account and check your inbox for the reset link.</span></div>
+                <div class="field"><label>Email address</label>
+                  <div class="inp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><span>you@erpone.co</span></div>
+                </div>
+                <button type="button" class="btn">Send reset link</button>
+                <button type="button" class="ghost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Back to sign in</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- CHANGE PASSWORD -->
+        <div class="view view-change">
+          <div class="scr">
+            <div class="card">
+              <div class="top">
+                <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><line x1="10.85" y1="12.15" x2="19" y2="4"/><line x1="18" y1="5" x2="20" y2="7"/><line x1="15" y1="8" x2="17" y2="10"/></svg></span>
+                <div><h4>Change password</h4><p class="sub">Keep your account secure</p></div>
+              </div>
+              <div class="form">
+                <div class="field"><label>Current password</label>
+                  <div class="pw"><div class="inp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>••••••••</span></div><button class="eye" type="button" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+                </div>
+                <div class="field"><label>New password</label>
+                  <div class="pw"><div class="inp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>at least 6 characters</span></div><button class="eye" type="button" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+                </div>
+                <div class="field"><label>Confirm new password</label>
+                  <div class="pw"><div class="inp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>••••••••</span></div><button class="eye" type="button" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+                </div>
+                <div class="cp-actions">
+                  <button type="button" class="cp-ghost">Cancel</button>
+                  <button type="button" class="btn">Save changes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ C · SIGNAL ============ -->
+    <section class="concept">
+      <div class="concept-head">
+        <div>
+          <div class="concept-title">
+            <span class="concept-mark">C</span>
+            <h2>Signal</h2>
+            <p>bold editorial · dark</p>
+          </div>
+          <p class="concept-desc">A committed dark theme with an italic serif voice, monospace labels and a bright signal-green. Distinctive and memorable — for a product with attitude.</p>
+        </div>
+        <div class="toggle" data-target="frame-c">
+          <button type="button" data-view="login" aria-pressed="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            Sign in
+          </button>
+          <button type="button" data-view="reset" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.7 9.7 0 0 0-6.7 2.8L3 8"/><path d="M3 3v5h5"/></svg>
+            Reset password
+          </button>
+          <button type="button" data-view="change" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><line x1="10.85" y1="12.15" x2="19" y2="4"/><line x1="18" y1="5" x2="20" y2="7"/><line x1="15" y1="8" x2="17" y2="10"/></svg>
+            Change password
+          </button>
+        </div>
+      </div>
+
+      <div class="frame signal" id="frame-c" data-view="login">
+        <!-- LOGIN -->
+        <div class="view view-login">
+          <div class="scr">
+            <div class="left">
+              <div class="step">01 / SIGN IN</div>
+              <div class="brandmark"><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="word">ERP_One</span></div>
+              <h4>Welcome <em>back.</em></h4>
+              <p class="sub">Your operations are waiting. Let's get you in.</p>
+              <div class="form">
+                <div class="field"><label>Username</label>
+                  <div class="uinp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>admin</span></div>
+                </div>
+                <div class="field"><label>Password</label>
+                  <div class="uinp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>••••••••••</span></div>
+                </div>
+                <button type="button" class="btn">Enter workspace →</button>
+                <div class="altrow">forgot? <a href="#">reset access</a></div>
+              </div>
+            </div>
+            <div class="right">
+              <div class="grid-deco"></div>
+              <div class="dot">SYSTEM ONLINE</div>
+              <div class="huge">Every<br>number,<br><em>in sync.</em></div>
+            </div>
+          </div>
+        </div>
+        <!-- RESET -->
+        <div class="view view-reset">
+          <div class="scr">
+            <div class="left">
+              <div class="step">— / RESET ACCESS</div>
+              <div class="brandmark"><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="word">ERP_One</span></div>
+              <h4>Lost the <em>key?</em></h4>
+              <p class="sub">Give us the email on file — a reset link is on its way.</p>
+              <div class="form">
+                <div class="field"><label>Email</label>
+                  <div class="uinp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg><span>you@erpone.co</span></div>
+                </div>
+                <button type="button" class="btn">Send reset link →</button>
+                <div class="altrow">go back to <a href="#">sign in</a></div>
+              </div>
+            </div>
+            <div class="right">
+              <div class="grid-deco"></div>
+              <div class="dot">SECURE CHANNEL</div>
+              <div class="huge">Back in,<br><em>in&nbsp;seconds.</em></div>
+            </div>
+          </div>
+        </div>
+        <!-- CHANGE PASSWORD -->
+        <div class="view view-change">
+          <div class="scr" style="justify-content:center; align-items:center;">
+            <div class="left" style="flex:0 0 auto; width:100%; max-width:430px; border:1px solid var(--sig-line); border-radius:16px;">
+              <div class="step" style="margin-bottom:20px;">— / CHANGE PASSWORD</div>
+              <div class="brandmark"><span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span class="word">ERP_One</span></div>
+              <h4>New <em>key.</em></h4>
+              <p class="sub">Update your password. Make it strong.</p>
+              <div class="form">
+                <div class="field"><label>Current password</label>
+                  <div class="pw"><div class="uinp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>••••••••••</span></div><button class="eye" type="button" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+                </div>
+                <div class="field"><label>New password</label>
+                  <div class="pw"><div class="uinp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>new secret</span></div><button class="eye" type="button" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+                </div>
+                <div class="field"><label>Confirm new password</label>
+                  <div class="pw"><div class="uinp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>repeat it</span></div><button class="eye" type="button" aria-label="Show password"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+                </div>
+                <div class="cp-actions">
+                  <button type="button" class="cp-ghost">Cancel</button>
+                  <button type="button" class="btn">Save changes →</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.toggle').forEach(function (tog) {
+    var frame = document.getElementById(tog.dataset.target);
+    tog.querySelectorAll('button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        frame.dataset.view = btn.dataset.view;
+        tog.querySelectorAll('button').forEach(function (b) {
+          b.setAttribute('aria-pressed', String(b === btn));
+        });
+      });
+    });
+  });
+</script>
+</body>
+</html>

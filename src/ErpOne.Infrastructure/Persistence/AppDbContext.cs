@@ -37,10 +37,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
     public DbSet<SalesOrderLine> SalesOrderLines => Set<SalesOrderLine>();
     public DbSet<DeliveryOrder> DeliveryOrders => Set<DeliveryOrder>();
     public DbSet<DeliveryOrderLine> DeliveryOrderLines => Set<DeliveryOrderLine>();
+    public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
+    public DbSet<StockTransferLine> StockTransferLines => Set<StockTransferLine>();
+    public DbSet<StockOpname> StockOpnames => Set<StockOpname>();
+    public DbSet<StockOpnameLine> StockOpnameLines => Set<StockOpnameLine>();
     public DbSet<CashierShift> CashierShifts => Set<CashierShift>();
     public DbSet<CashierShiftTotal> CashierShiftTotals => Set<CashierShiftTotal>();
     public DbSet<PosSale> PosSales => Set<PosSale>();
     public DbSet<PosSaleLine> PosSaleLines => Set<PosSaleLine>();
+    public DbSet<PosRefund> PosRefunds => Set<PosRefund>();
+    public DbSet<PosRefundLine> PosRefundLines => Set<PosRefundLine>();
     public DbSet<GoodsReceipt> GoodsReceipts => Set<GoodsReceipt>();
     public DbSet<GoodsReceiptLine> GoodsReceiptLines => Set<GoodsReceiptLine>();
     public DbSet<SupplierInvoice> SupplierInvoices => Set<SupplierInvoice>();
@@ -58,6 +64,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
     public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
     public DbSet<JournalEntryLine> JournalEntryLines => Set<JournalEntryLine>();
     public DbSet<PostingConfiguration> PostingConfigurations => Set<PostingConfiguration>();
+    public DbSet<CostingSetting> CostingSettings => Set<CostingSetting>();
     public DbSet<ApprovalChainStep> ApprovalChainSteps => Set<ApprovalChainStep>();
     public DbSet<ApprovalStep> ApprovalSteps => Set<ApprovalStep>();
     public DbSet<ProductAttribute> ProductAttributes => Set<ProductAttribute>();
@@ -244,7 +251,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
                 new { Id = 9, Code = "CustomerInvoice", Prefix = "ARV", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
                 new { Id = 10, Code = "CustomerReceipt", Prefix = "ARR", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
                 new { Id = 11, Code = "Expense", Prefix = "EXP", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
-                new { Id = 12, Code = "JournalEntry", Prefix = "JV", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" }
+                new { Id = 12, Code = "JournalEntry", Prefix = "JV", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
+                new { Id = 13, Code = "StockTransfer", Prefix = "TRF", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
+                new { Id = 14, Code = "StockOpname", Prefix = "OPN", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
+                new { Id = 15, Code = "PosRefund", Prefix = "RFN", DateFormat = "yyyyMMdd", Padding = 4, ResetPeriod = ResetPeriod.Daily, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" }
             );
         });
 
@@ -483,6 +493,97 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             e.Property(x => x.UnitCost).HasPrecision(18, 2);
             e.HasOne<ProductVariant>().WithMany().HasForeignKey(x => x.ProductVariantId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<SalesOrderLine>().WithMany().HasForeignKey(x => x.SalesOrderLineId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockTransfer>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.TransferNumber).HasMaxLength(30).IsRequired();
+            e.HasIndex(x => x.TransferNumber).IsUnique();
+            e.Property(x => x.Notes).HasMaxLength(500);
+            e.Property(x => x.RejectionNote).HasMaxLength(500);
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+
+            e.HasOne<Warehouse>().WithMany().HasForeignKey(x => x.SourceWarehouseId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Warehouse>().WithMany().HasForeignKey(x => x.DestinationWarehouseId).OnDelete(DeleteBehavior.Restrict);
+
+            e.HasMany(x => x.Lines)
+                .WithOne()
+                .HasForeignKey(l => l.StockTransferId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.Metadata.FindNavigation(nameof(StockTransfer.Lines))!
+                .SetPropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<StockTransferLine>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasOne<ProductVariant>().WithMany().HasForeignKey(x => x.ProductVariantId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockOpname>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.OpnameNumber).HasMaxLength(30).IsRequired();
+            e.HasIndex(x => x.OpnameNumber).IsUnique();
+            e.Property(x => x.Notes).HasMaxLength(500);
+            e.Property(x => x.RejectionNote).HasMaxLength(500);
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+
+            e.HasOne<Warehouse>().WithMany().HasForeignKey(x => x.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+
+            e.HasMany(x => x.Lines)
+                .WithOne()
+                .HasForeignKey(l => l.StockOpnameId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.Metadata.FindNavigation(nameof(StockOpname.Lines))!
+                .SetPropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<StockOpnameLine>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasOne<ProductVariant>().WithMany().HasForeignKey(x => x.ProductVariantId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PosRefund>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.RefundNumber).HasMaxLength(30).IsRequired();
+            e.HasIndex(x => x.RefundNumber).IsUnique();
+            e.Property(x => x.Reason).HasMaxLength(500).IsRequired();
+            e.Property(x => x.AuthorizedBy).HasMaxLength(256);
+            e.Property(x => x.CashierUserId).HasMaxLength(450).IsRequired();
+            e.Property(x => x.CashierName).HasMaxLength(256).IsRequired();
+            e.Property(x => x.Subtotal).HasPrecision(18, 2);
+            e.Property(x => x.TransactionDiscount).HasPrecision(18, 2);
+            e.Property(x => x.TaxTotal).HasPrecision(18, 2);
+            e.Property(x => x.GrandTotal).HasPrecision(18, 2);
+            e.Property(x => x.CogsTotal).HasPrecision(18, 2);
+
+            e.HasOne<PosSale>().WithMany().HasForeignKey(x => x.PosSaleId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<CashierShift>().WithMany().HasForeignKey(x => x.CashierShiftId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<PaymentMethod>().WithMany().HasForeignKey(x => x.PaymentMethodId).OnDelete(DeleteBehavior.Restrict);
+
+            e.HasMany(x => x.Lines)
+                .WithOne()
+                .HasForeignKey(l => l.PosRefundId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.Metadata.FindNavigation(nameof(PosRefund.Lines))!
+                .SetPropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<PosRefundLine>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.VariantSku).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ProductName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.UnitPrice).HasPrecision(18, 2);
+            e.Property(x => x.DiscountPercent).HasPrecision(18, 2);
+            e.Property(x => x.UnitCost).HasPrecision(18, 2);
+            e.Property(x => x.LineTotal).HasPrecision(18, 2);
+            e.HasOne<PosSaleLine>().WithMany().HasForeignKey(x => x.PosSaleLineId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ProductVariant>().WithMany().HasForeignKey(x => x.ProductVariantId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<CashierShift>(e =>
@@ -818,10 +919,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             e.HasOne<Account>().WithMany().HasForeignKey(x => x.InputTaxAccountId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Account>().WithMany().HasForeignKey(x => x.OutputTaxAccountId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Account>().WithMany().HasForeignKey(x => x.PosCashAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Account>().WithMany().HasForeignKey(x => x.PurchasePriceVarianceAccountId).OnDelete(DeleteBehavior.Restrict);
 
             e.HasData(new
             {
                 Id = 1,
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                CreatedBy = (string?)"system"
+            });
+        });
+
+        modelBuilder.Entity<CostingSetting>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Method).HasConversion<string>().HasMaxLength(20).IsRequired();
+
+            e.HasData(new
+            {
+                Id = 1,
+                Method = CostingMethod.MovingAverage,
                 CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 CreatedBy = (string?)"system"
             });
@@ -916,6 +1032,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             [nameof(ExpenseCategory)] = "M_",
             [nameof(Account)] = "M_",
             [nameof(PostingConfiguration)] = "M_",
+            [nameof(CostingSetting)] = "M_",
             [nameof(NumberSequence)] = "M_",
             [nameof(NumberSequenceCounter)] = "M_",
             [nameof(CompanySetting)] = "M_",
@@ -946,6 +1063,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             [nameof(SalesOrderLine)] = "T_",
             [nameof(DeliveryOrder)] = "T_",
             [nameof(DeliveryOrderLine)] = "T_",
+            [nameof(StockTransfer)] = "T_",
+            [nameof(StockTransferLine)] = "T_",
+            [nameof(StockOpname)] = "T_",
+            [nameof(StockOpnameLine)] = "T_",
+            [nameof(PosRefund)] = "T_",
+            [nameof(PosRefundLine)] = "T_",
             [nameof(CashierShift)] = "T_",
             [nameof(CashierShiftTotal)] = "T_",
             [nameof(PosSale)] = "T_",

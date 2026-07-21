@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using ErpOne.Application.Accounting;
 using ErpOne.Application.Common;
+using ErpOne.Application.Costing;
 using ErpOne.Application.Numbering;
 using ErpOne.Application.PosSales;
 using ErpOne.Domain.Entities;
@@ -13,7 +14,8 @@ public class PosSaleService(
     AppDbContext db,
     IValidator<CreatePosSaleRequest> validator,
     IDocumentNumberService docNumbers,
-    IJournalPostingService journalPoster) : IPosSaleService
+    IJournalPostingService journalPoster,
+    ICostingService costing) : IPosSaleService
 {
     public async Task<IReadOnlyList<PosProductOptionDto>> SearchProductsAsync(int warehouseId, string? term, CancellationToken ct = default)
     {
@@ -93,10 +95,11 @@ public class PosSaleService(
                 ?? throw Fail($"Varian {line.ProductVariantId} tidak ditemukan.");
             var name = await db.Products.Where(p => p.Id == v.ProductId).Select(p => p.Name).FirstOrDefaultAsync(ct) ?? "—";
 
-            sale.AddLine(v.Id, v.Sku, name, line.Quantity, line.UnitPrice, line.DiscountPercent, v.CostPrice);
+            var unitCost = await costing.GetOutboundUnitCostAsync(v.Id, whId, line.Quantity, ct);
+            sale.AddLine(v.Id, v.Sku, name, line.Quantity, line.UnitPrice, line.DiscountPercent, unitCost);
 
             db.StockMovements.Add(new StockMovement(v.Id, whId, MovementType.Out,
-                -line.Quantity, v.CostPrice, now, refType: "POS", refId: null, note: sale.SaleNumber));
+                -line.Quantity, unitCost, now, refType: "POS", refId: null, note: sale.SaleNumber));
             await db.UpsertStockAsync(v.Id, whId, -line.Quantity, ct);
         }
 

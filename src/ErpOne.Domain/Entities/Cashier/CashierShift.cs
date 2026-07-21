@@ -75,6 +75,23 @@ public class CashierShift : AuditableEntity
         if (isCash) CashSalesTotal += amount;
     }
 
+    /// <summary>Catat refund: kurangi total metode + kas (bila tunai). Hanya shift Open.</summary>
+    public void RecordRefund(int paymentMethodId, bool isCash, decimal amount)
+    {
+        if (Status != CashierShiftStatus.Open)
+            throw new InvalidOperationException("Cannot record a refund on a closed shift.");
+        if (paymentMethodId <= 0)
+            throw new ArgumentException("PaymentMethodId must be > 0.", nameof(paymentMethodId));
+        if (amount <= 0)
+            throw new ArgumentException("Amount must be > 0.", nameof(amount));
+
+        var total = _totals.FirstOrDefault(t => t.PaymentMethodId == paymentMethodId)
+            ?? throw new InvalidOperationException("No sales recorded for this payment method in the shift.");
+        total.SubtractRefund(amount);
+
+        if (isCash) CashSalesTotal -= amount;
+    }
+
     /// <summary>Tutup shift; hitung selisih kas fisik vs sistem.</summary>
     public void Close(decimal countedCash, string? note, DateTime closedAt)
     {

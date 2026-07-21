@@ -56,9 +56,10 @@ public class Product : AuditableEntity
     }
 
     public ProductVariant AddVariant(string sku, string? barcode, decimal price, decimal? discountPrice,
-        decimal costPrice, decimal? weight, string? dimensions, bool isActive, decimal? discountPercent = null)
+        decimal costPrice, decimal? weight, string? dimensions, bool isActive, decimal? discountPercent = null,
+        int reorderLevel = 0, int reorderQty = 0)
     {
-        var v = new ProductVariant(sku, barcode, price, discountPrice, costPrice, weight, dimensions, isActive, discountPercent);
+        var v = new ProductVariant(sku, barcode, price, discountPrice, costPrice, weight, dimensions, isActive, discountPercent, reorderLevel, reorderQty);
         _variants.Add(v);
         return v;
     }

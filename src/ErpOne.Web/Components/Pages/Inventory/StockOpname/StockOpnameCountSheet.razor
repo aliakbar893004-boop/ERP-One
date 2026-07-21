@@ -1,0 +1,91 @@
+@page "/inventory/stock-opname/{Id:int}/edit"
+@attribute [Authorize(Policy = "inventory.stock-opname.edit")]
+@rendermode InteractiveServer
+@using ErpOne.Application.StockOpnames
+@using FluentValidation
+@inject IStockOpnameService Opnames
+@inject NavigationManager Nav
+
+<PageTitle>Count Sheet</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs"><a href="/inventory/stock-opname">Stock Opname</a><i class="bi bi-chevron-right"></i><span class="here">Count sheet</span></div>
+        <h1>@(_o?.OpnameNumber ?? "Count Sheet")</h1>
+    </div>
+
+    @if (_loading) { <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div> }
+    else if (_o is null) { <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> Opname not found or not editable.</div> }
+    else
+    {
+        @if (_error is not null) { <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h"><span class="hd-ic"><i class="bi bi-clipboard-data"></i></span><div class="hd-tx"><h2>@_o.WarehouseName</h2><p>Enter counted quantities. Variance = Physical − System.</p></div></div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c4"><label class="fl">Date</label><input type="date" class="ctl" @bind="_date" /></div>
+                        <div class="f c8"><label class="fl">Notes</label><input class="ctl" @bind="_notes" placeholder="Optional" /></div>
+                    </div>
+                    <table class="table align-middle mt-3">
+                        <thead class="table-light"><tr><th>Product / Variant</th><th class="text-end" style="width:110px">System</th><th class="text-end" style="width:150px">Physical</th><th class="text-end" style="width:110px">Variance</th></tr></thead>
+                        <tbody>
+                            @for (int i = 0; i < _rows.Count; i++)
+                            {
+                                var idx = i;
+                                var variance = _rows[idx].Physical - _rows[idx].SystemQty;
+                                <tr>
+                                    <td><div class="prod"><span class="pn">@_rows[idx].ProductName</span> <span class="sku">@_rows[idx].Sku</span></div></td>
+                                    <td class="text-end mono">@_rows[idx].SystemQty</td>
+                                    <td><input class="ctl mono text-end" type="number" min="0" step="1" @bind="_rows[idx].Physical" /></td>
+                                    <td class="text-end mono">@(variance > 0 ? "+" : "")@variance</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            <div class="pf-footer"><div class="in">
+                <a class="btn btn-ghost" href="@($"/inventory/stock-opname/{Id}")"><i class="bi bi-x-lg"></i> Cancel</a>
+                <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving"><i class="bi bi-check2"></i> Save counts</button>
+            </div></div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private sealed class Row { public int LineId; public string Sku = ""; public string ProductName = ""; public int SystemQty; public int Physical; }
+
+    private StockOpnameDto? _o;
+    private readonly List<Row> _rows = [];
+    private DateTime _date = DateTime.Today;
+    private string? _notes, _error;
+    private bool _loading = true, _saving;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var o = await Opnames.GetByIdAsync(Id);
+        if (o is null || o.Status != "Draft") { Nav.NavigateTo("/inventory/stock-opname"); return; }
+        _o = o; _date = o.OpnameDate; _notes = o.Notes;
+        _rows.Clear();
+        foreach (var l in o.Lines)
+            _rows.Add(new Row { LineId = l.Id, Sku = l.Sku, ProductName = l.ProductName, SystemQty = l.SystemQty, Physical = l.PhysicalQty });
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null; _saving = true;
+        try
+        {
+            var counts = _rows.Select(r => new StockOpnameCountInput(r.LineId, r.Physical)).ToList();
+            await Opnames.UpdateAsync(Id, new UpdateStockOpnameRequest(_date, _notes, counts));
+            Nav.NavigateTo($"/inventory/stock-opname/{Id}");
+        }
+        catch (ValidationException ex) { _error = ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Validation failed."; }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+}

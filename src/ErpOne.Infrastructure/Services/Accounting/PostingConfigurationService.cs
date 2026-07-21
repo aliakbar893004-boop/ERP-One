@@ -11,7 +11,8 @@ public class PostingConfigurationService(AppDbContext db) : IPostingConfiguratio
         var c = await db.PostingConfigurations.AsNoTracking().FirstOrDefaultAsync(ct)
             ?? throw new InvalidOperationException("PostingConfiguration seed row (Id=1) is missing.");
         return new PostingConfigurationDto(c.ArAccountId, c.ApAccountId, c.InventoryAccountId, c.GrIrAccountId,
-            c.SalesAccountId, c.CogsAccountId, c.InputTaxAccountId, c.OutputTaxAccountId, c.PosCashAccountId);
+            c.SalesAccountId, c.CogsAccountId, c.InputTaxAccountId, c.OutputTaxAccountId, c.PosCashAccountId,
+            c.PurchasePriceVarianceAccountId);
     }
 
     public async Task UpdateAsync(UpdatePostingConfigurationRequest r, CancellationToken ct = default)
@@ -19,7 +20,8 @@ public class PostingConfigurationService(AppDbContext db) : IPostingConfiguratio
         var c = await db.PostingConfigurations.FirstOrDefaultAsync(ct)
             ?? throw new InvalidOperationException("PostingConfiguration seed row (Id=1) is missing.");
         c.Update(r.ArAccountId, r.ApAccountId, r.InventoryAccountId, r.GrIrAccountId,
-            r.SalesAccountId, r.CogsAccountId, r.InputTaxAccountId, r.OutputTaxAccountId, r.PosCashAccountId);
+            r.SalesAccountId, r.CogsAccountId, r.InputTaxAccountId, r.OutputTaxAccountId, r.PosCashAccountId,
+            r.PurchasePriceVarianceAccountId);
         await db.SaveChangesAsync(ct);
     }
 }

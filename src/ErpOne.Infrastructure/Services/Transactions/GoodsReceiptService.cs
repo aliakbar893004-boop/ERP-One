@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using ErpOne.Application.Accounting;
 using ErpOne.Application.Common;
+using ErpOne.Application.Costing;
 using ErpOne.Application.GoodsReceipts;
 using ErpOne.Application.Numbering;
 using ErpOne.Domain.Entities;
@@ -16,7 +17,8 @@ public class GoodsReceiptService(
     IValidator<UpdateGoodsReceiptRequest> updateValidator,
     IOptions<GoodsReceiptOptions> options,
     IDocumentNumberService docNumbers,
-    IJournalPostingService journalPoster) : IGoodsReceiptService
+    IJournalPostingService journalPoster,
+    ICostingService costing) : IGoodsReceiptService
 {
     private int Tolerance => Math.Max(0, options.Value.OverReceiptTolerancePercent);
 
@@ -223,33 +225,18 @@ public class GoodsReceiptService(
             ?? throw Fail("Purchase order not found.");
         if (!po.CanReceive) throw Fail("Only a confirmed or partially-received purchase order can be received.");
 
-        // Akumulasi qty masuk per varian DALAM post ini: ProductStock upsert hanya mengubah entitas
-        // di memori (tanpa flush), jadi totalBefore dari DB akan basi untuk baris ke-2 dgn varian sama.
-        var addedPerVariant = new Dictionary<int, int>();
-
         foreach (var line in grn.Lines)
         {
             var poLine = po.Lines.FirstOrDefault(l => l.Id == line.PurchaseOrderLineId)
                 ?? throw Fail($"PO line {line.PurchaseOrderLineId} not found on PO {po.PoNumber}.");
-
-            var variant = await db.ProductVariants.FirstOrDefaultAsync(v => v.Id == line.ProductVariantId, ct)
-                ?? throw Fail($"Variant {line.ProductVariantId} not found.");
-
-            var dbTotal = await db.ProductStocks
-                .Where(s => s.ProductVariantId == line.ProductVariantId)
-                .SumAsync(s => (int?)s.Quantity, ct) ?? 0;
-            var totalBefore = dbTotal + (addedPerVariant.TryGetValue(line.ProductVariantId, out var added) ? added : 0);
 
             db.StockMovements.Add(new StockMovement(line.ProductVariantId, po.WarehouseId, MovementType.In,
                 line.QuantityReceived, line.UnitCost, grn.ReceiptDate, refType: "GRN", refId: grn.Id,
                 note: grn.GrnNumber));
 
             await db.UpsertStockAsync(line.ProductVariantId, po.WarehouseId, line.QuantityReceived, ct);
-            variant.ApplyMovingAverage(totalBefore, line.QuantityReceived, line.UnitCost);
+            await costing.OnInboundAsync(line.ProductVariantId, po.WarehouseId, line.QuantityReceived, line.UnitCost, ct);
             poLine.ApplyReceipt(line.QuantityReceived, Tolerance);
-
-            addedPerVariant[line.ProductVariantId] =
-                (addedPerVariant.TryGetValue(line.ProductVariantId, out var prev) ? prev : 0) + line.QuantityReceived;
         }
 
         if (po.Lines.All(l => l.IsFullyReceived)) po.MarkReceived();

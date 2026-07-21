@@ -139,6 +139,29 @@ public class JournalPostingService(AppDbContext db, IDocumentNumberService docNu
         await PostBalancedAsync(sale.SaleDate, $"POS {sale.SaleNumber}", "PosSale", sale.Id, lines, ct);
     }
 
+    public async Task PostPosRefundAsync(PosRefund refund, CancellationToken ct = default)
+    {
+        var cfg = await ConfigAsync(ct);
+        var posCash = RequireAccount(cfg.PosCashAccountId, "POS Cash");
+        var sales = RequireAccount(cfg.SalesAccountId, "Sales");
+        var cogs = RequireAccount(cfg.CogsAccountId, "COGS");
+        var inventory = RequireAccount(cfg.InventoryAccountId, "Inventory");
+        var net = refund.GrandTotal - refund.TaxTotal;
+        var lines = new List<(int, decimal, decimal, string?)>
+        {
+            (sales, net, 0m, "POS refund revenue"),
+            (posCash, 0m, refund.GrandTotal, "POS cash out (refund)"),
+        };
+        if (refund.TaxTotal > 0m)
+            lines.Insert(1, (RequireAccount(cfg.OutputTaxAccountId, "Output Tax"), refund.TaxTotal, 0m, "Output VAT reversed"));
+        if (refund.CogsTotal > 0m)
+        {
+            lines.Add((inventory, refund.CogsTotal, 0m, "Inventory returned"));
+            lines.Add((cogs, 0m, refund.CogsTotal, "COGS reversed"));
+        }
+        await PostBalancedAsync(refund.RefundDate, $"POS Refund {refund.RefundNumber}", "PosRefund", refund.Id, lines, ct);
+    }
+
     public async Task ReverseForAsync(string sourceType, int sourceId, DateTime date, string? note, CancellationToken ct = default)
     {
         var original = await db.JournalEntries.Include(x => x.Lines)

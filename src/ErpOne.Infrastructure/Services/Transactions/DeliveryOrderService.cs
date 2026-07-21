@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using ErpOne.Application.Accounting;
 using ErpOne.Application.Common;
+using ErpOne.Application.Costing;
 using ErpOne.Application.DeliveryOrders;
 using ErpOne.Application.Numbering;
 using ErpOne.Domain.Entities;
@@ -14,7 +15,8 @@ public class DeliveryOrderService(
     IValidator<CreateDeliveryOrderRequest> createValidator,
     IValidator<UpdateDeliveryOrderRequest> updateValidator,
     IDocumentNumberService docNumbers,
-    IJournalPostingService journalPoster) : IDeliveryOrderService
+    IJournalPostingService journalPoster,
+    ICostingService costing) : IDeliveryOrderService
 {
     public async Task<PagedResult<DeliveryOrderListItemDto>> GetPagedAsync(
         int page, int pageSize, string? search = null, DeliveryOrderStatus? status = null, CancellationToken ct = default)
@@ -247,15 +249,14 @@ public class DeliveryOrderService(
             var soLine = so.Lines.FirstOrDefault(l => l.Id == line.SalesOrderLineId)
                 ?? throw Fail($"SO line {line.SalesOrderLineId} not found on SO {so.SoNumber}.");
 
-            var variant = await db.ProductVariants.FirstOrDefaultAsync(v => v.Id == line.ProductVariantId, ct)
-                ?? throw Fail($"Variant {line.ProductVariantId} not found.");
+            var unitCost = await costing.GetOutboundUnitCostAsync(line.ProductVariantId, so.WarehouseId, line.QuantityDelivered, ct);
 
             db.StockMovements.Add(new StockMovement(line.ProductVariantId, so.WarehouseId, MovementType.Out,
-                -line.QuantityDelivered, variant.CostPrice, doc.DeliveryDate, refType: "DO", refId: doc.Id,
+                -line.QuantityDelivered, unitCost, doc.DeliveryDate, refType: "DO", refId: doc.Id,
                 note: doc.DoNumber));
 
             await db.UpsertStockAsync(line.ProductVariantId, so.WarehouseId, -line.QuantityDelivered, ct);
-            line.SetUnitCost(variant.CostPrice); // COGS snapshot; MA TIDAK diubah
+            line.SetUnitCost(unitCost); // COGS snapshot; MA TIDAK diubah
             soLine.ApplyDelivery(line.QuantityDelivered);
         }
 

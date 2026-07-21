@@ -8,5 +8,8 @@ public enum ApprovalDocumentType
     SupplierPayment,
     SupplierPaymentVoid,
     CustomerReceiptVoid,
-    ExpenseVoid
+    ExpenseVoid,
+    StockTransfer,
+    StockOpname,
+    PosSaleVoid
 }

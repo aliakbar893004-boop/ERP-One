@@ -24,4 +24,12 @@ public class CashierShiftTotal
         TotalAmount += amount;
         TransactionCount += 1;
     }
+
+    /// <summary>Kurangi total karena refund; TransactionCount TIDAK berubah (refund bukan sale baru).</summary>
+    public void SubtractRefund(decimal amount)
+    {
+        if (amount <= 0) throw new ArgumentException("Amount must be > 0.", nameof(amount));
+        if (amount > TotalAmount) throw new InvalidOperationException("Refund amount exceeds recorded sales for this method.");
+        TotalAmount -= amount;
+    }
 }

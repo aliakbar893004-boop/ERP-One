@@ -15,4 +15,7 @@ public static class DocumentTypes
     public const string CustomerReceipt = "CustomerReceipt";
     public const string Expense = "Expense";
     public const string JournalEntry = "JournalEntry";
+    public const string StockTransfer = "StockTransfer";
+    public const string StockOpname   = "StockOpname";
+    public const string PosRefund     = "PosRefund";
 }

@@ -1,0 +1,79 @@
+@page "/inventory/transfers"
+@attribute [Authorize(Policy = "inventory.transfers.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Common
+@using ErpOne.Application.StockTransfers
+@using ErpOne.Domain.Entities
+@inject IStockTransferService Transfers
+@inject NavigationManager Nav
+
+<PageTitle>Stock Transfer</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Inventory</span><span class="sep">·</span><span class="here">Stock Transfer</span></nav>
+            <h1>Stock Transfer</h1>
+            <p>Move inventory between warehouses (approval required before posting).</p>
+        </div>
+        <AuthorizeView Policy="inventory.transfers.create">
+            <Authorized>
+                <div class="pi-actions"><a class="btn btn-primary" href="/inventory/transfers/new"><i class="bi bi-plus-lg"></i> New transfer</a></div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <div class="toolbar">
+        <div class="chips">
+            <button class="chip @(_status is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">All</button>
+            @foreach (var s in Enum.GetValues<StockTransferStatus>())
+            { <button class="chip @(_status == s ? "on" : "")" @onclick="() => SetStatusAsync(s)">@s</button> }
+        </div>
+    </div>
+
+    @if (_page is null) { <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div> }
+    else if (_page.Total == 0) { <div class="empty"><div class="empty-ic"><i class="bi bi-arrow-left-right"></i></div><p>No transfers yet.</p></div> }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th style="width:150px">Transfer</th><th style="width:110px">Date</th><th>From</th><th>To</th><th class="text-end" style="width:90px">Qty</th><th style="width:130px" class="text-center">Status</th></tr></thead>
+                    <tbody>
+                        @foreach (var t in _page.Items)
+                        {
+                            <tr style="cursor:pointer" @onclick="@(() => Nav.NavigateTo($"/inventory/transfers/{t.Id}"))">
+                                <td class="code mono">@t.TransferNumber</td>
+                                <td class="code">@t.TransferDate.ToString("d MMM yyyy")</td>
+                                <td>@t.SourceWarehouseName</td>
+                                <td>@t.DestinationWarehouseName</td>
+                                <td class="text-end mono">@t.TotalQuantity</td>
+                                <td class="text-center"><span class="badge @StatusClass(t.Status)">@t.Status</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (_page.TotalPages > 1) { <div class="card-foot"><Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" /></div> }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<StockTransferListItemDto>? _page;
+    private int _currentPage = 1;
+    private StockTransferStatus? _status;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+    private async Task LoadAsync() => _page = await Transfers.GetPagedAsync(_currentPage, PageSize, null, _status);
+    private async Task SetStatusAsync(StockTransferStatus? s) { _status = s; _currentPage = 1; await LoadAsync(); }
+    private async Task GoToPageAsync(int p) { _currentPage = p; await LoadAsync(); }
+
+    private static string StatusClass(string s) => s switch
+    {
+        "Posted" => "bg-success-subtle text-success-emphasis",
+        "PendingApproval" => "bg-warning-subtle text-warning-emphasis",
+        _ => "bg-secondary-subtle text-secondary-emphasis"
+    };
+}

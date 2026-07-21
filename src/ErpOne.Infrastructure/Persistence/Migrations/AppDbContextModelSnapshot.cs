@@ -602,6 +602,47 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ErpOne.Domain.Entities.CostingSetting", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("M_CostingSettings");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "system",
+                            Method = "MovingAverage"
+                        });
+                });
+
             modelBuilder.Entity("ErpOne.Domain.Entities.Currency", b =>
                 {
                     b.Property<int>("Id")
@@ -1595,6 +1636,42 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                             Prefix = "JV",
                             ResetPeriod = "Monthly",
                             Separator = "-"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Code = "StockTransfer",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "system",
+                            DateFormat = "yyyyMM",
+                            Padding = 4,
+                            Prefix = "TRF",
+                            ResetPeriod = "Monthly",
+                            Separator = "-"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Code = "StockOpname",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "system",
+                            DateFormat = "yyyyMM",
+                            Padding = 4,
+                            Prefix = "OPN",
+                            ResetPeriod = "Monthly",
+                            Separator = "-"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Code = "PosRefund",
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "system",
+                            DateFormat = "yyyyMMdd",
+                            Padding = 4,
+                            Prefix = "RFN",
+                            ResetPeriod = "Daily",
+                            Separator = "-"
                         });
                 });
 
@@ -1677,6 +1754,158 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("M_PaymentMethods");
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.PosRefund", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AuthorizedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("CashierName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("CashierShiftId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CashierUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("CogsTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<decimal>("GrandTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsCashPayment")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("PaymentMethodId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PosSaleId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("RefundDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RefundNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TransactionDiscount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashierShiftId");
+
+                    b.HasIndex("PaymentMethodId");
+
+                    b.HasIndex("PosSaleId");
+
+                    b.HasIndex("RefundNumber")
+                        .IsUnique();
+
+                    b.ToTable("T_PosRefunds");
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.PosRefundLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("DiscountPercent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("PosRefundId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PosSaleLineId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("ProductVariantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("VariantSku")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PosRefundId");
+
+                    b.HasIndex("PosSaleLineId");
+
+                    b.HasIndex("ProductVariantId");
+
+                    b.ToTable("T_PosRefundLines");
                 });
 
             modelBuilder.Entity("ErpOne.Domain.Entities.PosSale", b =>
@@ -1888,6 +2117,9 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                     b.Property<int?>("PosCashAccountId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("PurchasePriceVarianceAccountId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("SalesAccountId")
                         .HasColumnType("int");
 
@@ -1908,6 +2140,8 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                     b.HasIndex("OutputTaxAccountId");
 
                     b.HasIndex("PosCashAccountId");
+
+                    b.HasIndex("PurchasePriceVarianceAccountId");
 
                     b.HasIndex("SalesAccountId");
 
@@ -2615,6 +2849,178 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                     b.HasIndex("ProductVariantId", "WarehouseId");
 
                     b.ToTable("S_StockMovements");
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.StockOpname", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("OpnameDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OpnameNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("RejectionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("WarehouseId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OpnameNumber")
+                        .IsUnique();
+
+                    b.HasIndex("WarehouseId");
+
+                    b.ToTable("T_StockOpnames");
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.StockOpnameLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("PhysicalQty")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductVariantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StockOpnameId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SystemQty")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductVariantId");
+
+                    b.HasIndex("StockOpnameId");
+
+                    b.ToTable("T_StockOpnameLines");
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.StockTransfer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("DestinationWarehouseId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("RejectionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("SourceWarehouseId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("TransferDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TransferNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DestinationWarehouseId");
+
+                    b.HasIndex("SourceWarehouseId");
+
+                    b.HasIndex("TransferNumber")
+                        .IsUnique();
+
+                    b.ToTable("T_StockTransfers");
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.StockTransferLine", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ProductVariantId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StockTransferId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductVariantId");
+
+                    b.HasIndex("StockTransferId");
+
+                    b.ToTable("T_StockTransferLines");
                 });
 
             modelBuilder.Entity("ErpOne.Domain.Entities.Supplier", b =>
@@ -3585,6 +3991,48 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ErpOne.Domain.Entities.PosRefund", b =>
+                {
+                    b.HasOne("ErpOne.Domain.Entities.CashierShift", null)
+                        .WithMany()
+                        .HasForeignKey("CashierShiftId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ErpOne.Domain.Entities.PaymentMethod", null)
+                        .WithMany()
+                        .HasForeignKey("PaymentMethodId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ErpOne.Domain.Entities.PosSale", null)
+                        .WithMany()
+                        .HasForeignKey("PosSaleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.PosRefundLine", b =>
+                {
+                    b.HasOne("ErpOne.Domain.Entities.PosRefund", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("PosRefundId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ErpOne.Domain.Entities.PosSaleLine", null)
+                        .WithMany()
+                        .HasForeignKey("PosSaleLineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ErpOne.Domain.Entities.ProductVariant", null)
+                        .WithMany()
+                        .HasForeignKey("ProductVariantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ErpOne.Domain.Entities.PosSale", b =>
                 {
                     b.HasOne("ErpOne.Domain.Entities.CashierShift", null)
@@ -3666,6 +4114,11 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                     b.HasOne("ErpOne.Domain.Entities.Account", null)
                         .WithMany()
                         .HasForeignKey("PosCashAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ErpOne.Domain.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("PurchasePriceVarianceAccountId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("ErpOne.Domain.Entities.Account", null)
@@ -3832,6 +4285,60 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ErpOne.Domain.Entities.StockOpname", b =>
+                {
+                    b.HasOne("ErpOne.Domain.Entities.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.StockOpnameLine", b =>
+                {
+                    b.HasOne("ErpOne.Domain.Entities.ProductVariant", null)
+                        .WithMany()
+                        .HasForeignKey("ProductVariantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ErpOne.Domain.Entities.StockOpname", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("StockOpnameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.StockTransfer", b =>
+                {
+                    b.HasOne("ErpOne.Domain.Entities.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("DestinationWarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ErpOne.Domain.Entities.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("SourceWarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.StockTransferLine", b =>
+                {
+                    b.HasOne("ErpOne.Domain.Entities.ProductVariant", null)
+                        .WithMany()
+                        .HasForeignKey("ProductVariantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ErpOne.Domain.Entities.StockTransfer", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("StockTransferId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ErpOne.Domain.Entities.SupplierInvoice", b =>
                 {
                     b.HasOne("ErpOne.Domain.Entities.Supplier", null)
@@ -3973,6 +4480,11 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                     b.Navigation("Lines");
                 });
 
+            modelBuilder.Entity("ErpOne.Domain.Entities.PosRefund", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
             modelBuilder.Entity("ErpOne.Domain.Entities.PosSale", b =>
                 {
                     b.Navigation("Lines");
@@ -4001,6 +4513,16 @@ namespace ErpOne.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("ErpOne.Domain.Entities.SalesOrder", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.StockOpname", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("ErpOne.Domain.Entities.StockTransfer", b =>
                 {
                     b.Navigation("Lines");
                 });

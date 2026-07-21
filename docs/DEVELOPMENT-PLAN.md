@@ -83,9 +83,9 @@ Cepat, memuluskan fase berikutnya.
 - Reuse mekanisme Stock Adjustment yang ada (jadikan hasil opname sumber adjustment).
 - Permissions: `inventory.stock-opname`.
 
-### 1c. Reorder Level & Alert Stok Minim
-- Tambah `ReorderLevel`/`MinStock` di Product/Variant per gudang.
-- Widget "stok menipis" di dashboard + halaman daftar.
+### 1c. Reorder Level & Alert Stok Minim ✅ SELESAI
+- `ReorderLevel` + `ReorderQty` per varian (SKU) di `ProductVariant`; alert dievaluasi per (SKU × gudang) `qty <= ReorderLevel`.
+- Widget "stok menipis" dashboard pakai reorder level (bukan konstanta) + halaman `/inventory/low-stock` (filter gudang, badge Low/Out, saran pesan).
 
 ---
 

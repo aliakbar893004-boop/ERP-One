@@ -38,6 +38,8 @@ public class VariantInputValidator : AbstractValidator<VariantInput>
             .WithMessage("Discount price must not exceed the selling price.");
         RuleFor(v => v.DiscountPercent).InclusiveBetween(0, 100).When(v => v.DiscountPercent.HasValue);
         RuleFor(v => v.OpeningStock).GreaterThanOrEqualTo(0);
+        RuleFor(v => v.ReorderLevel).GreaterThanOrEqualTo(0);
+        RuleFor(v => v.ReorderQty).GreaterThanOrEqualTo(0);
         RuleFor(v => v.Weight).GreaterThanOrEqualTo(0).When(v => v.Weight.HasValue);
         RuleFor(v => v.Dimensions).MaximumLength(100);
         RuleFor(v => v.Barcode).MaximumLength(50);

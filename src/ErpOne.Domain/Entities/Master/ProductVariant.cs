@@ -18,13 +18,16 @@ public class ProductVariant : AuditableEntity
     public decimal? Weight { get; private set; }
     public string? Dimensions { get; private set; }
     public bool IsActive { get; private set; }
+    public int ReorderLevel { get; private set; }
+    public int ReorderQty { get; private set; }
 
     public IReadOnlyList<ProductVariantAttribute> Attributes => _attributes;
 
     private ProductVariant() { } // EF Core
 
     public ProductVariant(string sku, string? barcode, decimal price, decimal? discountPrice,
-        decimal costPrice, decimal? weight, string? dimensions, bool isActive, decimal? discountPercent = null)
+        decimal costPrice, decimal? weight, string? dimensions, bool isActive, decimal? discountPercent = null,
+        int reorderLevel = 0, int reorderQty = 0)
     {
         SetSku(sku);
         Barcode = Trim(barcode);
@@ -35,11 +38,13 @@ public class ProductVariant : AuditableEntity
         SetWeight(weight);
         Dimensions = Trim(dimensions);
         IsActive = isActive;
+        SetReorder(reorderLevel, reorderQty);
     }
 
     /// <summary>Perbarui; SKU sengaja tidak diubah (dikunci). Stok TIDAK diubah di sini (lewat StockMovement).</summary>
     public void Update(string? barcode, decimal price, decimal? discountPrice,
-        decimal costPrice, decimal? weight, string? dimensions, bool isActive, decimal? discountPercent = null)
+        decimal costPrice, decimal? weight, string? dimensions, bool isActive, decimal? discountPercent = null,
+        int reorderLevel = 0, int reorderQty = 0)
     {
         Barcode = Trim(barcode);
         SetPrice(price);
@@ -49,6 +54,7 @@ public class ProductVariant : AuditableEntity
         SetWeight(weight);
         Dimensions = Trim(dimensions);
         IsActive = isActive;
+        SetReorder(reorderLevel, reorderQty);
     }
 
     public void SetAttributeValues(IEnumerable<int> attributeValueIds)
@@ -104,6 +110,13 @@ public class ProductVariant : AuditableEntity
     {
         if (weight is < 0) throw new ArgumentException("Weight must be >= 0.", nameof(weight));
         Weight = weight;
+    }
+    private void SetReorder(int reorderLevel, int reorderQty)
+    {
+        if (reorderLevel < 0) throw new ArgumentException("ReorderLevel must be >= 0.", nameof(reorderLevel));
+        if (reorderQty < 0) throw new ArgumentException("ReorderQty must be >= 0.", nameof(reorderQty));
+        ReorderLevel = reorderLevel;
+        ReorderQty = reorderQty;
     }
     private static string? Trim(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 }

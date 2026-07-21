@@ -1,0 +1,70 @@
+@page "/inventory/stock-opname/new"
+@attribute [Authorize(Policy = "inventory.stock-opname.create")]
+@rendermode InteractiveServer
+@using ErpOne.Application.StockOpnames
+@using ErpOne.Application.Warehouses
+@using FluentValidation
+@inject IStockOpnameService Opnames
+@inject IWarehouseService WarehouseService
+@inject NavigationManager Nav
+
+<PageTitle>New Stock Opname</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs"><a href="/inventory/stock-opname">Stock Opname</a><i class="bi bi-chevron-right"></i><span class="here">New</span></div>
+        <h1>New Stock Opname</h1>
+    </div>
+
+    @if (_loading) { <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div> }
+    else
+    {
+        @if (_error is not null) { <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h"><span class="hd-ic"><i class="bi bi-clipboard-data"></i></span><div class="hd-tx"><h2>Opname</h2><p>Pick a warehouse; the count sheet is generated from its current stock.</p></div></div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c4"><label class="fl">Date <span class="req">*</span></label><input type="date" class="ctl" @bind="_date" /></div>
+                        <div class="f c4"><label class="fl">Warehouse <span class="req">*</span></label>
+                            <select class="ctl" @bind="_warehouseId"><option value="0">— select —</option>@foreach (var w in _warehouses) { <option value="@w.Id">@w.Name</option> }</select></div>
+                        <div class="f c12"><label class="fl">Notes</label><input class="ctl" @bind="_notes" placeholder="Optional" /></div>
+                    </div>
+                    <p class="text-muted mt-2"><i class="bi bi-info-circle"></i> All variants with stock in the selected warehouse will be added to the count sheet.</p>
+                </div>
+            </section>
+            <div class="pf-footer"><div class="in">
+                <span class="note"><span class="req">*</span> required</span>
+                <a class="btn btn-ghost" href="/inventory/stock-opname"><i class="bi bi-x-lg"></i> Cancel</a>
+                <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving"><i class="bi bi-check2"></i> Create & count</button>
+            </div></div>
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<WarehouseDto> _warehouses = [];
+    private DateTime _date = DateTime.Today;
+    private int _warehouseId;
+    private string? _notes, _error;
+    private bool _loading = true, _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _warehouses = await WarehouseService.GetAllAsync();
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null; _saving = true;
+        try
+        {
+            var saved = await Opnames.CreateAsync(new CreateStockOpnameRequest(_date, _warehouseId, _notes));
+            Nav.NavigateTo($"/inventory/stock-opname/{saved.Id}/edit");
+        }
+        catch (ValidationException ex) { _error = ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Validation failed."; }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+}

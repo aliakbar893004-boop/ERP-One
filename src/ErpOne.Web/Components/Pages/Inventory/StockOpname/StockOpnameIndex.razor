@@ -1,0 +1,79 @@
+@page "/inventory/stock-opname"
+@attribute [Authorize(Policy = "inventory.stock-opname.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Common
+@using ErpOne.Application.StockOpnames
+@using ErpOne.Domain.Entities
+@inject IStockOpnameService Opnames
+@inject NavigationManager Nav
+
+<PageTitle>Stock Opname</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Inventory</span><span class="sep">·</span><span class="here">Stock Opname</span></nav>
+            <h1>Stock Opname</h1>
+            <p>Formal physical count per warehouse (approval required before posting).</p>
+        </div>
+        <AuthorizeView Policy="inventory.stock-opname.create">
+            <Authorized>
+                <div class="pi-actions"><a class="btn btn-primary" href="/inventory/stock-opname/new"><i class="bi bi-plus-lg"></i> New opname</a></div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <div class="toolbar">
+        <div class="chips">
+            <button class="chip @(_status is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">All</button>
+            @foreach (var s in Enum.GetValues<StockOpnameStatus>())
+            { <button class="chip @(_status == s ? "on" : "")" @onclick="() => SetStatusAsync(s)">@s</button> }
+        </div>
+    </div>
+
+    @if (_page is null) { <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div> }
+    else if (_page.Total == 0) { <div class="empty"><div class="empty-ic"><i class="bi bi-clipboard-data"></i></div><p>No opname documents yet.</p></div> }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th style="width:150px">Opname</th><th style="width:110px">Date</th><th>Warehouse</th><th class="text-end" style="width:80px">Lines</th><th class="text-end" style="width:110px">Variance</th><th style="width:130px" class="text-center">Status</th></tr></thead>
+                    <tbody>
+                        @foreach (var o in _page.Items)
+                        {
+                            <tr style="cursor:pointer" @onclick="@(() => Nav.NavigateTo($"/inventory/stock-opname/{o.Id}"))">
+                                <td class="code mono">@o.OpnameNumber</td>
+                                <td class="code">@o.OpnameDate.ToString("d MMM yyyy")</td>
+                                <td>@o.WarehouseName</td>
+                                <td class="text-end mono">@o.LineCount</td>
+                                <td class="text-end mono">@(o.TotalVariance > 0 ? "+" : "")@o.TotalVariance</td>
+                                <td class="text-center"><span class="badge @StatusClass(o.Status)">@o.Status</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (_page.TotalPages > 1) { <div class="card-foot"><Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" /></div> }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<StockOpnameListItemDto>? _page;
+    private int _currentPage = 1;
+    private StockOpnameStatus? _status;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+    private async Task LoadAsync() => _page = await Opnames.GetPagedAsync(_currentPage, PageSize, null, _status);
+    private async Task SetStatusAsync(StockOpnameStatus? s) { _status = s; _currentPage = 1; await LoadAsync(); }
+    private async Task GoToPageAsync(int p) { _currentPage = p; await LoadAsync(); }
+
+    private static string StatusClass(string s) => s switch
+    {
+        "Posted" => "bg-success-subtle text-success-emphasis",
+        "PendingApproval" => "bg-warning-subtle text-warning-emphasis",
+        _ => "bg-secondary-subtle text-secondary-emphasis"
+    };
+}

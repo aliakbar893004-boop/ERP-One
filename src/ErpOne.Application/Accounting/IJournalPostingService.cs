@@ -13,5 +13,6 @@ public interface IJournalPostingService
     Task PostCustomerReceiptAsync(CustomerReceipt rec, CancellationToken ct = default);
     Task PostExpenseAsync(Expense exp, CancellationToken ct = default);
     Task PostPosSaleAsync(PosSale sale, CancellationToken ct = default);
+    Task PostPosRefundAsync(PosRefund refund, CancellationToken ct = default);
     Task ReverseForAsync(string sourceType, int sourceId, DateTime date, string? note, CancellationToken ct = default);
 }

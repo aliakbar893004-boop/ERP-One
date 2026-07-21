@@ -313,6 +313,16 @@
                                     <input class="ctl mono" type="number" step="0.001" min="0" placeholder="0"
                                            @bind="_weight" @bind:event="oninput" />
                                 </div>
+                                <div class="c6">
+                                    <label class="fl">Reorder Level</label>
+                                    <input class="ctl mono" type="number" step="1" min="0" placeholder="0"
+                                           @bind="_reorderLevel" @bind:event="oninput" />
+                                </div>
+                                <div class="c6">
+                                    <label class="fl">Reorder Qty</label>
+                                    <input class="ctl mono" type="number" step="1" min="0" placeholder="0"
+                                           @bind="_reorderQty" @bind:event="oninput" />
+                                </div>
                                 <div class="c12">
                                     <label class="fl">Dimensions (P x L x T)</label>
                                     <input class="ctl" placeholder="e.g. 20 x 15 x 5 cm"
@@ -460,6 +470,14 @@
                                                                     <label class="form-label-sm">Weight (gram)</label>
                                                                     <input class="ctl ctl-sm mono text-end" type="number" step="0.001" min="0" placeholder="0" @bind="_rows[idx].Weight" />
                                                                 </div>
+                                                                <div>
+                                                                    <label class="form-label-sm">Reorder Level</label>
+                                                                    <input class="ctl ctl-sm mono text-end" type="number" step="1" min="0" placeholder="0" @bind="_rows[idx].ReorderLevel" />
+                                                                </div>
+                                                                <div>
+                                                                    <label class="form-label-sm">Reorder Qty</label>
+                                                                    <input class="ctl ctl-sm mono text-end" type="number" step="1" min="0" placeholder="0" @bind="_rows[idx].ReorderQty" />
+                                                                </div>
                                                                 <div class="vr-detail-dim">
                                                                     <label class="form-label-sm">Dimensions (P x L x T)</label>
                                                                     <input class="ctl ctl-sm" maxlength="100" placeholder="e.g. 20 x 15 x 5 cm" @bind="_rows[idx].Dimensions" />
@@ -537,6 +555,8 @@
     private int _stock;
     private decimal? _weight;
     private string? _dimensions;
+    private int _reorderLevel;
+    private int _reorderQty;
 
     // Multi-variant state
     private readonly HashSet<int> _selectedAttributes = new();
@@ -638,6 +658,8 @@
             _stock = v.Stock;
             _weight = v.Weight;
             _dimensions = v.Dimensions;
+            _reorderLevel = v.ReorderLevel;
+            _reorderQty = v.ReorderQty;
             return;
         }
 
@@ -662,6 +684,8 @@
                 Barcode = v.Barcode,
                 Weight = v.Weight,
                 Dimensions = v.Dimensions,
+                ReorderLevel = v.ReorderLevel,
+                ReorderQty = v.ReorderQty,
                 Stock = v.Stock,
                 IsActive = v.IsActive
             });
@@ -873,11 +897,11 @@
         if (!_hasVariants)
             return new()
             {
-                new VariantInput(_barcode, _price, _discountPrice, _cost, _weight, _dimensions, Id is null ? _stock : 0, true, Array.Empty<int>(), _discountPercent)
+                new VariantInput(_barcode, _price, _discountPrice, _cost, _weight, _dimensions, Id is null ? _stock : 0, true, Array.Empty<int>(), _discountPercent, _reorderLevel, _reorderQty)
             };
 
         return _rows
-            .Select(r => new VariantInput(r.Barcode, r.Price, r.Discount, r.Cost, r.Weight, r.Dimensions, Id is null ? r.Stock : 0, r.IsActive, r.AttributeValueIds, r.DiscountPercent))
+            .Select(r => new VariantInput(r.Barcode, r.Price, r.Discount, r.Cost, r.Weight, r.Dimensions, Id is null ? r.Stock : 0, r.IsActive, r.AttributeValueIds, r.DiscountPercent, r.ReorderLevel, r.ReorderQty))
             .ToList();
     }
 
@@ -926,6 +950,8 @@
         public decimal Cost { get; set; }
         public string? Barcode { get; set; }
         public decimal? Weight { get; set; }
+        public int ReorderLevel { get; set; }
+        public int ReorderQty { get; set; }
         public string? Dimensions { get; set; }
         public int Stock { get; set; }
         public bool IsActive { get; set; } = true;

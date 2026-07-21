@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using ErpOne.Application.Common;
+using ErpOne.Application.Costing;
 using ErpOne.Application.Stock;
 using ErpOne.Domain.Entities;
 using ErpOne.Infrastructure.Persistence;
@@ -9,7 +10,8 @@ namespace ErpOne.Infrastructure.Services;
 
 public class StockService(
     AppDbContext db,
-    IValidator<StockAdjustmentRequest> adjustmentValidator) : IStockService
+    IValidator<StockAdjustmentRequest> adjustmentValidator,
+    ICostingService costing) : IStockService
 {
     public async Task<IReadOnlyList<StockLevelDto>> GetLevelsByVariantAsync(int variantId, CancellationToken ct = default) =>
         await BuildLevelQuery(db.ProductStocks.AsNoTracking().Where(s => s.ProductVariantId == variantId))
@@ -92,15 +94,14 @@ public class StockService(
         if (quantity == 0) return;
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
-        var variant = await db.ProductVariants.FirstOrDefaultAsync(v => v.Id == variantId, ct)
-            ?? throw new InvalidOperationException($"Variant {variantId} not found.");
-        var totalBefore = await db.ProductStocks.Where(s => s.ProductVariantId == variantId).SumAsync(s => (int?)s.Quantity, ct) ?? 0;
+        if (!await db.ProductVariants.AnyAsync(v => v.Id == variantId, ct))
+            throw new InvalidOperationException($"Variant {variantId} not found.");
 
         db.StockMovements.Add(new StockMovement(variantId, warehouseId, MovementType.Adjustment,
             quantity, unitCost, DateTime.UtcNow, refType: "Opening", note: "Saldo awal"));
 
         await db.UpsertStockAsync(variantId, warehouseId, quantity, ct);
-        if (quantity > 0) variant.ApplyMovingAverage(totalBefore, quantity, unitCost);
+        if (quantity > 0) await costing.OnInboundAsync(variantId, warehouseId, quantity, unitCost, ct);
 
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
@@ -119,21 +120,21 @@ public class StockService(
 
         foreach (var line in request.Lines)
         {
-            var variant = await db.ProductVariants.FirstOrDefaultAsync(v => v.Id == line.VariantId, ct)
-                ?? throw new ValidationException([new FluentValidation.Results.ValidationFailure(
+            if (!await db.ProductVariants.AnyAsync(v => v.Id == line.VariantId, ct))
+                throw new ValidationException([new FluentValidation.Results.ValidationFailure(
                     "Lines", $"Variant {line.VariantId} not found.")]);
 
-            var totalBefore = await db.ProductStocks
-                .Where(s => s.ProductVariantId == line.VariantId).SumAsync(s => (int?)s.Quantity, ct) ?? 0;
-
             // Mutasi masuk pakai UnitCost input; mutasi keluar pakai HPP saat ini (COGS), MA tidak berubah.
-            var unitCost = line.DeltaQuantity > 0 ? line.UnitCost : variant.CostPrice;
+            var unitCost = line.DeltaQuantity > 0
+                ? line.UnitCost
+                : await costing.GetOutboundUnitCostAsync(line.VariantId, request.WarehouseId, -line.DeltaQuantity, ct);
 
             db.StockMovements.Add(new StockMovement(line.VariantId, request.WarehouseId, MovementType.Adjustment,
                 line.DeltaQuantity, unitCost, request.Date, refType: "Opname", note: line.Reason ?? request.Note));
 
             await db.UpsertStockAsync(line.VariantId, request.WarehouseId, line.DeltaQuantity, ct);
-            if (line.DeltaQuantity > 0) variant.ApplyMovingAverage(totalBefore, line.DeltaQuantity, line.UnitCost);
+            if (line.DeltaQuantity > 0)
+                await costing.OnInboundAsync(line.VariantId, request.WarehouseId, line.DeltaQuantity, line.UnitCost, ct);
         }
 
         await db.SaveChangesAsync(ct);

@@ -1,0 +1,187 @@
+@page "/inventory/transfers/{Id:int}"
+@attribute [Authorize(Policy = "inventory.transfers.index")]
+@rendermode InteractiveServer
+@using FluentValidation
+@using ErpOne.Application.Approvals
+@using ErpOne.Application.StockTransfers
+@inject IStockTransferService Transfers
+@inject IAuthorizationService Auth
+@inject SwalService Swal
+
+<PageTitle>@(_t?.TransferNumber ?? "Transfer")</PageTitle>
+
+@if (_loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+}
+else if (_t is null)
+{
+    <div class="pf pf-detail"><div class="pf-alert err"><i class="bi bi-exclamation-octagon"></i> Transfer not found.</div></div>
+}
+else
+{
+    <div class="pf pf-detail">
+        <div class="pf-top">
+            <div class="crumbs"><a href="/inventory/transfers">Stock Transfer</a><i class="bi bi-chevron-right"></i><span class="here">@_t.TransferNumber</span></div>
+        </div>
+        <div class="pd-head">
+            <h1>@_t.TransferNumber</h1>
+            <span class="badge @StatusClass(_t.Status)">@_t.Status</span>
+            <div class="actions">
+                @if (_t.Status == "Draft")
+                {
+                    <AuthorizeView Policy="inventory.transfers.edit"><Authorized>
+                        <a class="btn btn-line btn-sm" href="@($"/inventory/transfers/{_t.Id}/edit")"><i class="bi bi-pencil"></i> Edit</a>
+                    </Authorized></AuthorizeView>
+                    <AuthorizeView Policy="inventory.transfers.post"><Authorized>
+                        <button class="btn btn-primary btn-sm" @onclick="SubmitAsync" disabled="@_busy"><i class="bi bi-send"></i> Submit</button>
+                    </Authorized></AuthorizeView>
+                }
+                @if (_t.Status == "PendingApproval" && _canApprove)
+                {
+                    <button class="btn btn-ok btn-sm" @onclick="ApproveAsync" disabled="@_busy"><i class="bi bi-check2-circle"></i> Approve</button>
+                    <button class="btn btn-danger btn-sm" @onclick="@(() => _showReject = true)" disabled="@_busy"><i class="bi bi-x-circle"></i> Reject</button>
+                }
+            </div>
+        </div>
+
+        @if (_error is not null) { <div class="pf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+
+        @if (_showReject)
+        {
+            <section class="card danger">
+                <div class="card-b">
+                    <textarea class="ctl" rows="2" placeholder="Rejection reason" @bind="_rejectReason"></textarea>
+                    <div class="row-end">
+                        <button class="btn btn-ghost btn-sm" @onclick="@(() => _showReject = false)">Cancel</button>
+                        <button class="btn btn-danger btn-sm" @onclick="RejectAsync" disabled="@_busy">Reject transfer</button>
+                    </div>
+                </div>
+            </section>
+        }
+
+        <section class="card">
+            <div class="card-h"><span class="hd-ic"><i class="bi bi-arrow-left-right"></i></span><h2>Transfer</h2></div>
+            <div class="card-b">
+                <div class="info-grid">
+                    <div class="info-cell"><span class="k"><i class="bi bi-calendar3"></i> Date</span><span class="v">@_t.TransferDate.ToString("d MMM yyyy")</span></div>
+                    <div class="info-cell"><span class="k"><i class="bi bi-box-arrow-up"></i> From</span><span class="v">@_t.SourceWarehouseName</span></div>
+                    <div class="info-cell"><span class="k"><i class="bi bi-box-arrow-in-down"></i> To</span><span class="v">@_t.DestinationWarehouseName</span></div>
+                    @if (!string.IsNullOrWhiteSpace(_t.Notes)) { <div class="info-cell wide"><span class="k"><i class="bi bi-sticky"></i> Notes</span><span class="v">@_t.Notes</span></div> }
+                    @if (!string.IsNullOrWhiteSpace(_t.RejectionNote)) { <div class="info-cell wide reject"><span class="k"><i class="bi bi-exclamation-triangle"></i> Rejection note</span><span class="v">@_t.RejectionNote</span></div> }
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-h"><span class="hd-ic"><i class="bi bi-list-ul"></i></span><h2>Lines</h2></div>
+            <div class="card-b">
+                <table class="items">
+                    <thead><tr><th>Product</th><th class="r">Qty</th><th class="r">On hand (source)</th></tr></thead>
+                    <tbody>
+                        @foreach (var l in _t.Lines)
+                        {
+                            <tr>
+                                <td><div class="prod"><span class="pn">@l.ProductName</span><span class="sku">@l.Sku</span></div></td>
+                                <td class="r mono">@l.Quantity</td>
+                                <td class="r mono">@l.OnHandSource</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        @if (_steps.Count > 0)
+        {
+            <section class="card">
+                <div class="card-h"><span class="hd-ic"><i class="bi bi-diagram-3"></i></span><h2>Approval</h2></div>
+                <div class="card-b">
+                    <ul class="tl">
+                        @foreach (var s in _steps)
+                        {
+                            <li>
+                                <span class="dot @StepDot(s.Status)"><i class="bi @StepIcon(s.Status)"></i></span>
+                                <div>
+                                    <div class="ti">Step @s.StepOrder · @s.RoleName</div>
+                                    <div class="meta">@s.Status@(s.ActedByName is null ? "" : $" · {s.ActedByName}")</div>
+                                    @if (!string.IsNullOrWhiteSpace(s.Note)) { <div class="note">@s.Note</div> }
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </section>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private StockTransferDto? _t;
+    private IReadOnlyList<ApprovalStepDto> _steps = [];
+    private bool _loading = true, _busy, _canApprove, _showReject;
+    private string _rejectReason = string.Empty;
+    private string? _error;
+    private System.Security.Claims.ClaimsPrincipal _user = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user = (await AuthStateTask).User;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _t = await Transfers.GetByIdAsync(Id);
+        _steps = _t?.ApprovalSteps ?? [];
+        _canApprove = await EvaluateCanApproveAsync();
+        _loading = false;
+    }
+
+    private async Task<bool> EvaluateCanApproveAsync()
+    {
+        if (_t is null || _t.Status != "PendingApproval") return false;
+        if (!(await Auth.AuthorizeAsync(_user, "inventory.transfers.approve")).Succeeded) return false;
+        if (string.Equals(_t.CreatedBy, _user.Identity?.Name, StringComparison.OrdinalIgnoreCase)) return false;
+        var current = _steps.FirstOrDefault(s => s.Status == "Pending");
+        return current is not null && _user.IsInRole(current.RoleName);
+    }
+
+    private async Task SubmitAsync() => await RunAsync(() => Transfers.SubmitAsync(Id), "Transfer submitted");
+    private async Task ApproveAsync() =>
+        await RunAsync(() => Transfers.ApproveAsync(Id, _user.Identity?.Name ?? "", _user.IsInRole), "Transfer approved & posted");
+
+    private async Task RejectAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_rejectReason)) { _error = "Rejection reason is required."; return; }
+        var reason = _rejectReason;
+        _showReject = false;
+        _rejectReason = string.Empty;
+        await RunAsync(() => Transfers.RejectAsync(Id, _user.Identity?.Name ?? "", _user.IsInRole, reason), "Transfer rejected, returned to Draft");
+    }
+
+    private async Task RunAsync(Func<Task> action, string okMsg)
+    {
+        _error = null; _busy = true;
+        try
+        {
+            await action();
+            await LoadAsync();
+            await Swal.ToastAsync("success", okMsg);
+        }
+        catch (ValidationException ex) { _error = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage)); }
+        catch (InvalidOperationException ex) { _error = ex.Message; }
+        finally { _busy = false; }
+    }
+
+    private static string StatusClass(string s) => s switch
+    {
+        "Draft" => "b-draft", "PendingApproval" => "b-warn", "Posted" => "b-done", _ => "b-dark"
+    };
+    private static string StepIcon(string s) => s switch { "Approved" => "bi-check-lg", "Rejected" => "bi-x-lg", _ => "bi-clock" };
+    private static string StepDot(string s) => s switch { "Approved" => "ok", "Rejected" => "no", _ => "wait" };
+}

@@ -33,6 +33,7 @@
                         @Field("Input Tax (PPN Masukan)", _m.InputTax, v => _m.InputTax = v)
                         @Field("Output Tax (PPN Keluaran)", _m.OutputTax, v => _m.OutputTax = v)
                         @Field("POS Cash / Default Cash", _m.PosCash, v => _m.PosCash = v)
+                        @Field("Purchase Price Variance (Selisih Harga Beli)", _m.Ppv, v => _m.Ppv = v)
                     </div>
                 </div>
             </section>
@@ -46,7 +47,7 @@
 @code {
     private sealed class Model
     {
-        public int? Ar, Ap, Inventory, GrIr, Sales, Cogs, InputTax, OutputTax, PosCash;
+        public int? Ar, Ap, Inventory, GrIr, Sales, Cogs, InputTax, OutputTax, PosCash, Ppv;
     }
     private readonly Model _m = new();
     private IReadOnlyList<AccountDto> _postable = [];
@@ -60,6 +61,7 @@
         _m.Ar = c.ArAccountId; _m.Ap = c.ApAccountId; _m.Inventory = c.InventoryAccountId; _m.GrIr = c.GrIrAccountId;
         _m.Sales = c.SalesAccountId; _m.Cogs = c.CogsAccountId; _m.InputTax = c.InputTaxAccountId;
         _m.OutputTax = c.OutputTaxAccountId; _m.PosCash = c.PosCashAccountId;
+        _m.Ppv = c.PurchasePriceVarianceAccountId;
         _loading = false;
     }
 
@@ -81,7 +83,7 @@
         try
         {
             await Config.UpdateAsync(new UpdatePostingConfigurationRequest(_m.Ar, _m.Ap, _m.Inventory, _m.GrIr,
-                _m.Sales, _m.Cogs, _m.InputTax, _m.OutputTax, _m.PosCash));
+                _m.Sales, _m.Cogs, _m.InputTax, _m.OutputTax, _m.PosCash, _m.Ppv));
             _saved = true;
         }
         catch (Exception ex) { _error = ex.Message; }

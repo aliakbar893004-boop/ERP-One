@@ -1,8 +1,16 @@
 @page "/cashier/sales/{Id:int}"
 @attribute [Authorize(Policy = "cashier.pos.index")]
 @rendermode InteractiveServer
+@using Microsoft.AspNetCore.Identity
+@using ErpOne.Application.Approvals
 @using ErpOne.Application.PosSales
+@using ErpOne.Application.PosRefunds
 @inject IPosSaleService Pos
+@inject IPosRefundService Refunds
+@inject IApprovalChainService ApprovalChains
+@inject UserManager<ApplicationUser> UserManager
+@inject RoleManager<ApplicationRole> RoleManager
+@inject SwalService Swal
 @inject ICompanySettingService CompanyService
 @inject IJSRuntime JS
 
@@ -33,10 +41,78 @@
         <div class="pd-head">
             <h1>@_sale.SaleNumber</h1>
             <span class="badge @(_sale.IsCashPayment ? "b-done" : "b-dark")">@_sale.PaymentMethodName</span>
+            @if (_refundable is not null && _refundable.RefundStatus != "Completed")
+            {
+                <span class="badge @(_refundable.RefundStatus == "Refunded" ? "b-danger" : "b-warn")">@_refundable.RefundStatus</span>
+            }
             <div class="actions">
                 <button class="btn btn-primary" @onclick="ReprintAsync"><i class="bi bi-printer"></i> Reprint</button>
+                @if (_refundable is { ShiftOpen: true } && _refundable.RefundStatus != "Refunded")
+                {
+                    <AuthorizeView Policy="cashier.pos.void"><Authorized>
+                        <button class="btn btn-danger" @onclick="OpenRefund" disabled="@_busy"><i class="bi bi-x-octagon"></i> Refund / Void</button>
+                    </Authorized></AuthorizeView>
+                }
             </div>
         </div>
+
+        @if (_showRefund && _refundable is not null)
+        {
+            <section class="card">
+                <div class="card-h"><span class="hd-ic"><i class="bi bi-arrow-counterclockwise"></i></span><h2>Refund / Void</h2></div>
+                <div class="card-b">
+                    @if (_refundError is not null) { <div class="pf-alert err"><i class="bi bi-exclamation-octagon"></i> @_refundError</div> }
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-light"><tr><th>Product</th><th class="text-end">Sold</th><th class="text-end">Refunded</th><th class="text-end">Remaining</th><th class="text-end" style="width:140px">Refund qty</th></tr></thead>
+                            <tbody>
+                                @for (int i = 0; i < _rows.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td><span class="pn">@_rows[idx].ProductName</span> <span class="sku">@_rows[idx].Sku</span></td>
+                                        <td class="text-end mono">@_rows[idx].SoldQty</td>
+                                        <td class="text-end mono">@_rows[idx].AlreadyRefundedQty</td>
+                                        <td class="text-end mono">@_rows[idx].RemainingQty</td>
+                                        <td><input class="ctl mono text-end" type="number" min="0" max="@_rows[idx].RemainingQty" step="1" @bind="_rows[idx].RefundQty" disabled="@(_rows[idx].RemainingQty == 0)" /></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="grid mt-2">
+                        <div class="f c12"><label class="fl">Reason <span class="req">*</span></label><input class="ctl" @bind="_reason" placeholder="Why is this refunded?" /></div>
+                    </div>
+                    <div class="row-end" style="margin-top:12px">
+                        <button class="btn btn-outline-secondary btn-sm" @onclick="RefundAll">Refund all remaining</button>
+                        <button class="btn btn-ghost btn-sm" @onclick="@(() => _showRefund = false)">Cancel</button>
+                        <button class="btn btn-danger btn-sm" @onclick="OpenAuth" disabled="@_busy">Continue</button>
+                    </div>
+                </div>
+            </section>
+        }
+
+        @if (_showAuth)
+        {
+            <div class="auth-overlay" @onclick="@(() => _showAuth = false)">
+                <div class="auth-modal" @onclick:stopPropagation="true">
+                    <h3><i class="bi bi-shield-lock"></i> Refund authorization</h3>
+                    <p>Enter the credentials of an authorized user to approve this refund.</p>
+                    @if (_authError is not null) { <div class="pf-alert err">@_authError</div> }
+                    <label class="fl">Username</label>
+                    <input class="ctl" @bind="_authUser" autocomplete="off" />
+                    <label class="fl" style="margin-top:10px">Password</label>
+                    <input class="ctl" type="password" @bind="_authPass" autocomplete="off" />
+                    <div class="row-end" style="margin-top:14px">
+                        <button class="btn btn-ghost btn-sm" @onclick="@(() => _showAuth = false)" disabled="@_busy">Cancel</button>
+                        <button class="btn btn-danger btn-sm" @onclick="ConfirmRefundAsync" disabled="@_busy">
+                            @if (_busy) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> }
+                            Authorize &amp; refund
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
 
         <section class="card">
             <div class="card-h">
@@ -142,6 +218,30 @@
                 </div>
             </div>
         </section>
+
+        @if (_history.Count > 0)
+        {
+            <section class="card">
+                <div class="card-h"><span class="hd-ic"><i class="bi bi-clock-history"></i></span><h2>Refunds</h2></div>
+                <div class="card-b">
+                    <table class="items">
+                        <thead><tr><th>Refund</th><th>Date</th><th>By</th><th>Authorized</th><th class="r">Amount</th></tr></thead>
+                        <tbody>
+                            @foreach (var h in _history)
+                            {
+                                <tr>
+                                    <td class="mono">@h.RefundNumber</td>
+                                    <td>@h.RefundDate.ToString("dd MMM yyyy HH:mm")</td>
+                                    <td>@h.CashierName</td>
+                                    <td>@(h.AuthorizedBy ?? "—")</td>
+                                    <td class="r mono total">@h.GrandTotal.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        }
     }
 </div>
 
@@ -185,16 +285,105 @@
 
 @code {
     [Parameter] public int Id { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private sealed class RefundRow { public int PosSaleLineId; public string Sku = ""; public string ProductName = ""; public int SoldQty; public int AlreadyRefundedQty; public int RemainingQty; public int RefundQty; }
 
     private PosSaleDto? _sale;
     private CompanySettingDto? _company;
-    private bool _loading = true;
+    private RefundableSaleDto? _refundable;
+    private IReadOnlyList<PosRefundDto> _history = [];
+    private readonly List<RefundRow> _rows = [];
+    private bool _loading = true, _busy, _showRefund, _showAuth;
+    private string _reason = "";
+    private string _authUser = "", _authPass = "";
+    private string? _refundError, _authError;
+    private System.Security.Claims.ClaimsPrincipal _user = default!;
 
     protected override async Task OnInitializedAsync()
     {
-        _sale = await Pos.GetByIdAsync(Id);
+        _user = (await AuthStateTask).User;
         _company = await CompanyService.GetAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _sale = await Pos.GetByIdAsync(Id);
+        if (_sale is not null)
+        {
+            _refundable = await Refunds.GetRefundableAsync(Id);
+            _history = await Refunds.GetBySaleAsync(Id);
+        }
         _loading = false;
+    }
+
+    private void OpenRefund()
+    {
+        _refundError = null; _reason = ""; _rows.Clear();
+        foreach (var l in _refundable!.Lines)
+            _rows.Add(new RefundRow { PosSaleLineId = l.PosSaleLineId, Sku = l.Sku, ProductName = l.ProductName,
+                SoldQty = l.SoldQty, AlreadyRefundedQty = l.AlreadyRefundedQty, RemainingQty = l.RemainingQty, RefundQty = 0 });
+        _showRefund = true;
+    }
+
+    private void RefundAll() { foreach (var r in _rows) r.RefundQty = r.RemainingQty; }
+
+    private void OpenAuth()
+    {
+        _refundError = null;
+        if (string.IsNullOrWhiteSpace(_reason)) { _refundError = "Reason is required."; return; }
+        if (_rows.All(r => r.RefundQty <= 0)) { _refundError = "Enter at least one refund quantity."; return; }
+        if (_rows.Any(r => r.RefundQty < 0 || r.RefundQty > r.RemainingQty)) { _refundError = "Refund qty exceeds remaining."; return; }
+        _authError = null; _authUser = ""; _authPass = ""; _showAuth = true;
+    }
+
+    private async Task ConfirmRefundAsync()
+    {
+        _authError = null; _busy = true;
+        try
+        {
+            var authName = await VerifyAuthorizerAsync(_authUser, _authPass);
+            if (authName is null) { _authError = "Invalid credentials or user not authorized to refund."; return; }
+            var lines = _rows.Where(r => r.RefundQty > 0).Select(r => new PosRefundLineInput(r.PosSaleLineId, r.RefundQty)).ToList();
+            await Refunds.RefundAsync(Id, new CreatePosRefundRequest(_reason, lines),
+                _user.Identity?.Name ?? "", _user.Identity?.Name ?? "", authName);
+            _showAuth = false; _showRefund = false;
+            await LoadAsync();
+            await Swal.ToastAsync("success", "Refund posted");
+        }
+        catch (Exception ex) { _authError = ex.Message; }
+        finally { _busy = false; }
+    }
+
+    private async Task<string?> VerifyAuthorizerAsync(string username, string password)
+    {
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password)) return null;
+        var user = await UserManager.FindByNameAsync(username.Trim());
+        if (user is null || !user.IsActive) return null;
+        if (!await UserManager.CheckPasswordAsync(user, password)) return null;
+
+        var userRoles = await UserManager.GetRolesAsync(user);
+        var voidRoles = (await ApprovalChains.GetByDocumentTypeAsync(ApprovalDocumentType.PosSaleVoid))
+            .Select(s => s.RoleName).ToHashSet();
+        var authorized = voidRoles.Count > 0
+            ? userRoles.Any(voidRoles.Contains)
+            : await UserHasVoidPermissionAsync(userRoles);
+        return authorized ? (user.UserName ?? username) : null;
+    }
+
+    private async Task<bool> UserHasVoidPermissionAsync(IEnumerable<string> userRoles)
+    {
+        var perm = AppMenus.Perm("cashier.pos", "void");
+        foreach (var roleName in userRoles)
+        {
+            var role = await RoleManager.FindByNameAsync(roleName);
+            if (role is null) continue;
+            var claims = await RoleManager.GetClaimsAsync(role);
+            if (claims.Any(c => c.Type == AppMenus.ClaimType && c.Value == perm)) return true;
+        }
+        return false;
     }
 
     private async Task ReprintAsync() => await JS.InvokeVoidAsync("appPrint");

@@ -34,8 +34,12 @@ using ErpOne.Application.Expenses;
 using ErpOne.Application.SupplierInvoices;
 using ErpOne.Application.SupplierPayments;
 using ErpOne.Application.DeliveryOrders;
+using ErpOne.Application.StockTransfers;
+using ErpOne.Application.StockOpnames;
 using ErpOne.Application.CashierShifts;
 using ErpOne.Application.PosSales;
+using ErpOne.Application.PosRefunds;
+using ErpOne.Application.Costing;
 using ErpOne.Infrastructure.Persistence;
 using ErpOne.Infrastructure.Services;
 
@@ -75,6 +79,8 @@ public static class DependencyInjection
         services.AddScoped<IJournalEntryService, JournalEntryService>();
         services.AddScoped<ILedgerService, LedgerService>();
         services.AddScoped<IPostingConfigurationService, PostingConfigurationService>();
+        services.AddScoped<ICostingSettingService, CostingSettingService>();
+        services.AddScoped<ICostingService, CostingService>();
         services.AddScoped<IJournalPostingService, JournalPostingService>();
         services.AddScoped<IFinancialStatementService, FinancialStatementService>();
         services.AddScoped<IWarehouseService, WarehouseService>();
@@ -101,8 +107,11 @@ public static class DependencyInjection
         services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
         services.AddScoped<ISalesOrderService, SalesOrderService>();
         services.AddScoped<IDeliveryOrderService, DeliveryOrderService>();
+        services.AddScoped<IStockTransferService, StockTransferService>();
+        services.AddScoped<IStockOpnameService, StockOpnameService>();
         services.AddScoped<ICashierShiftService, CashierShiftService>();
         services.AddScoped<IPosSaleService, PosSaleService>();
+        services.AddScoped<IPosRefundService, PosRefundService>();
         services.AddScoped<IGoodsReceiptService, GoodsReceiptService>();
         services.Configure<GoodsReceiptOptions>(configuration.GetSection("GoodsReceipt"));
 

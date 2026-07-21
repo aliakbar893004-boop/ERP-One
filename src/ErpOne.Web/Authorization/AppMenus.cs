@@ -29,9 +29,11 @@ public static class AppMenus
     private static AppAction[] DeliveryOrderActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActPost];
     private static AppAction[] SalesOrderActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActApprove, ActClose];
     private static AppAction[] CashierShiftActions => [ActIndex, ActCreate, ActClose];
-    private static AppAction[] PosActions => [ActIndex, ActCreate];
+    private static AppAction[] PosActions => [ActIndex, ActCreate, ActVoid];
     private static AppAction[] SupplierPaymentActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActApprove, ActVoid];
     private static AppAction[] JournalEntryActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActPost];
+    private static AppAction[] StockTransferActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActApprove, ActPost];
+    private static AppAction[] StockOpnameActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActApprove, ActPost];
     private static AppAction[] ReportActions => [ActIndex, ActExport];
 
     public static readonly IReadOnlyList<ResourceGroup> Groups =
@@ -60,6 +62,8 @@ public static class AppMenus
             new("inventory.stock-levels", "Stock Levels",     "bi-boxes",                 ViewOnly),
             new("inventory.adjustments",  "Stock Adjustment", "bi-clipboard2-check-fill", ViewCreate),
             new("inventory.low-stock",    "Low Stock",        "bi-exclamation-triangle", ViewOnly),
+            new("inventory.transfers",    "Stock Transfer",   "bi-arrow-left-right",     StockTransferActions),
+            new("inventory.stock-opname", "Stock Opname",     "bi-clipboard-data",       StockOpnameActions),
         ]),
         new("Transaksi",
         [
@@ -109,6 +113,7 @@ public static class AppMenus
             new("settings.approval-chains", "Approval Chain", "bi-diagram-3-fill",            CRUD),
             new("settings.document-numbering", "Document Numbering", "bi-123",                [ActIndex, ActEdit]),
             new("settings.posting-config", "Posting Configuration", "bi-diagram-3-fill",       [ActIndex, ActEdit]),
+            new("settings.costing",         "Costing Method",  "bi-calculator-fill",           ViewOnly),
             new("settings.errorlog",        "Error Log",      "bi-exclamation-triangle-fill", ViewOnly),
         ]),
     ];

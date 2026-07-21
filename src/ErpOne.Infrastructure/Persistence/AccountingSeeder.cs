@@ -39,6 +39,7 @@ public static class AccountingSeeder
                 ("4200", "Diskon Penjualan", AccountType.Revenue, "4000", true),
                 ("5000", "Harga Pokok Penjualan", AccountType.Expense, null, false),
                 ("5100", "Harga Pokok Penjualan", AccountType.Expense, "5000", true),
+                ("5150", "Selisih Harga Beli", AccountType.Expense, "5000", true),
                 ("6000", "Beban Operasional", AccountType.Expense, null, false),
                 ("6100", "Beban Gaji", AccountType.Expense, "6000", true),
                 ("6200", "Beban Sewa", AccountType.Expense, "6000", true),
@@ -60,6 +61,14 @@ public static class AccountingSeeder
         async Task<int?> IdOf(string code) =>
             await db.Accounts.Where(a => a.Code == code).Select(a => (int?)a.Id).FirstOrDefaultAsync(ct);
 
+        // 1b) Idempotent: ensure PPV account 5150 exists (DBs seeded before Tahap 2).
+        var cogsGroupId = await db.Accounts.Where(a => a.Code == "5000").Select(a => (int?)a.Id).FirstOrDefaultAsync(ct);
+        if (cogsGroupId is int parent5000 && !await db.Accounts.AnyAsync(a => a.Code == "5150", ct))
+        {
+            db.Accounts.Add(new Account("5150", "Selisih Harga Beli", AccountType.Expense, parent5000, true, null));
+            await db.SaveChangesAsync(ct);
+        }
+
         // 2) PostingConfiguration mapping (only if the row exists and AR is still unset).
         var cfg = await db.PostingConfigurations.FirstOrDefaultAsync(ct);
         if (cfg is not null && cfg.ArAccountId is null)
@@ -67,7 +76,17 @@ public static class AccountingSeeder
             cfg.Update(
                 ar: await IdOf("1130"), ap: await IdOf("2110"), inventory: await IdOf("1140"),
                 grIr: await IdOf("1160"), sales: await IdOf("4100"), cogs: await IdOf("5100"),
-                inputTax: await IdOf("1150"), outputTax: await IdOf("2120"), posCash: await IdOf("1110"));
+                inputTax: await IdOf("1150"), outputTax: await IdOf("2120"), posCash: await IdOf("1110"),
+                purchasePriceVariance: await IdOf("5150"));
+            await db.SaveChangesAsync(ct);
+        }
+
+        // 2b) Idempotent: ensure PPV mapped (configs created before Tahap 2).
+        if (cfg is not null && cfg.PurchasePriceVarianceAccountId is null && await IdOf("5150") is int ppvId)
+        {
+            cfg.Update(cfg.ArAccountId, cfg.ApAccountId, cfg.InventoryAccountId, cfg.GrIrAccountId,
+                cfg.SalesAccountId, cfg.CogsAccountId, cfg.InputTaxAccountId, cfg.OutputTaxAccountId,
+                cfg.PosCashAccountId, ppvId);
             await db.SaveChangesAsync(ct);
         }
 

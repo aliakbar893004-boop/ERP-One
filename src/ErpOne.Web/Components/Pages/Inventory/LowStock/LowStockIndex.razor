@@ -1,0 +1,107 @@
+@page "/inventory/low-stock"
+@attribute [Authorize(Policy = "inventory.low-stock.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.LowStock
+@using ErpOne.Application.Warehouses
+@inject ILowStockService LowStock
+@inject IWarehouseService WarehouseService
+
+<PageTitle>Low Stock</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs">
+                <a href="/">Home</a><span class="sep">·</span><span>Inventory</span><span class="sep">·</span><span class="here">Low Stock</span>
+            </nav>
+            <h1>Low Stock</h1>
+            <p>Variants at or below their reorder level, per warehouse.</p>
+        </div>
+    </div>
+
+    @if (_result is not null)
+    {
+        <div class="kpis">
+            <div class="kpi accent">
+                <div class="ic ic-amb"><i class="bi bi-exclamation-triangle"></i></div>
+                <div class="kpi-tx"><div class="v">@_result.LowCount.ToString("N0")</div><div class="l">Items low</div></div>
+            </div>
+            <div class="kpi">
+                <div class="ic ic-red"><i class="bi bi-x-octagon"></i></div>
+                <div class="kpi-tx"><div class="v">@_result.OutOfStockCount.ToString("N0")</div><div class="l">Out of stock</div></div>
+            </div>
+        </div>
+    }
+
+    <div class="toolbar">
+        <select @bind="_warehouseId" @bind:after="ReloadAsync">
+            <option value="0">All warehouses</option>
+            @foreach (var w in _warehouses) { <option value="@w.Id">@w.Name</option> }
+        </select>
+    </div>
+
+    @if (_result is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_result.Rows.Count == 0)
+    {
+        <div class="empty"><div class="empty-ic"><i class="bi bi-check2-circle"></i></div><p>No variants below reorder level.</p></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:160px">SKU</th><th>Product</th><th>Warehouse</th>
+                            <th class="r" style="width:90px">Qty</th>
+                            <th class="r" style="width:120px">Reorder Level</th>
+                            <th class="r" style="width:140px">Suggested Order</th>
+                            <th style="width:90px">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in _result.Rows)
+                        {
+                            <tr>
+                                <td class="code mono">@r.Sku</td>
+                                <td class="nm">@r.ProductName</td>
+                                <td>@r.WarehouseName</td>
+                                <td class="r mono">@r.Quantity.ToString("N0")</td>
+                                <td class="r mono">@r.ReorderLevel.ToString("N0")</td>
+                                <td class="r mono">@r.SuggestedOrderQty.ToString("N0")</td>
+                                <td>
+                                    @if (r.IsOutOfStock)
+                                    {
+                                        <span class="badge bg-danger">Out</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">Low</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private LowStockSummaryDto? _result;
+    private IReadOnlyList<WarehouseDto> _warehouses = [];
+    private int _warehouseId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _warehouses = await WarehouseService.GetAllAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync() => _result = await LowStock.GetLowStockAsync(_warehouseId == 0 ? null : _warehouseId);
+    private async Task ReloadAsync() => await LoadAsync();
+}
