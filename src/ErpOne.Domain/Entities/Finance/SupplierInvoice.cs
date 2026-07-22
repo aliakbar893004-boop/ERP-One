@@ -21,8 +21,9 @@ public class SupplierInvoice : AuditableEntity
     public decimal TaxTotal { get; private set; }
     public decimal GrandTotal { get; private set; }
     public decimal PaidAmount { get; private set; }
+    public decimal CreditedAmount { get; private set; }
 
-    public decimal Outstanding => GrandTotal - PaidAmount;
+    public decimal Outstanding => GrandTotal - PaidAmount - CreditedAmount;
     public IReadOnlyCollection<SupplierInvoiceLine> Lines => _lines;
 
     private SupplierInvoice() { } // EF Core
@@ -67,10 +68,10 @@ public class SupplierInvoice : AuditableEntity
         if (amount <= 0) throw new ArgumentException("Payment amount must be > 0.", nameof(amount));
         if (Status == SupplierInvoiceStatus.Cancelled)
             throw new InvalidOperationException("Cannot pay a cancelled invoice.");
-        if (PaidAmount + amount > GrandTotal)
+        if (PaidAmount + CreditedAmount + amount > GrandTotal)
             throw new InvalidOperationException("Payment exceeds the invoice outstanding amount.");
         PaidAmount += amount;
-        Status = PaidAmount >= GrandTotal ? SupplierInvoiceStatus.Paid : SupplierInvoiceStatus.PartiallyPaid;
+        Status = (PaidAmount + CreditedAmount) >= GrandTotal ? SupplierInvoiceStatus.Paid : SupplierInvoiceStatus.PartiallyPaid;
     }
 
     public void ReversePayment(decimal amount)
@@ -79,7 +80,34 @@ public class SupplierInvoice : AuditableEntity
         if (amount > PaidAmount)
             throw new InvalidOperationException("Reversal exceeds the paid amount.");
         PaidAmount -= amount;
-        Status = PaidAmount <= 0 ? SupplierInvoiceStatus.Open : SupplierInvoiceStatus.PartiallyPaid;
+        Status = (PaidAmount + CreditedAmount) <= 0
+            ? SupplierInvoiceStatus.Open
+            : (PaidAmount + CreditedAmount) >= GrandTotal ? SupplierInvoiceStatus.Paid : SupplierInvoiceStatus.PartiallyPaid;
+    }
+
+    /// <summary>Terapkan nota kredit (retur pembelian) — mengurangi Outstanding tanpa kas keluar.</summary>
+    public void ApplyCredit(decimal amount)
+    {
+        if (amount <= 0) throw new ArgumentException("Credit amount must be > 0.", nameof(amount));
+        if (Status == SupplierInvoiceStatus.Cancelled)
+            throw new InvalidOperationException("Cannot credit a cancelled invoice.");
+        if (PaidAmount + CreditedAmount + amount > GrandTotal)
+            throw new InvalidOperationException("Credit exceeds the invoice outstanding amount.");
+        CreditedAmount += amount;
+        Status = (PaidAmount + CreditedAmount) >= GrandTotal
+            ? SupplierInvoiceStatus.Paid
+            : (PaidAmount + CreditedAmount) > 0 ? SupplierInvoiceStatus.PartiallyPaid : SupplierInvoiceStatus.Open;
+    }
+
+    /// <summary>Balikkan nota kredit (kelengkapan; tak dipakai v1 — tanpa void retur).</summary>
+    public void ReverseCredit(decimal amount)
+    {
+        if (amount <= 0) throw new ArgumentException("Reversal amount must be > 0.", nameof(amount));
+        if (amount > CreditedAmount) throw new InvalidOperationException("Reversal exceeds the credited amount.");
+        CreditedAmount -= amount;
+        Status = (PaidAmount + CreditedAmount) <= 0
+            ? SupplierInvoiceStatus.Open
+            : (PaidAmount + CreditedAmount) >= GrandTotal ? SupplierInvoiceStatus.Paid : SupplierInvoiceStatus.PartiallyPaid;
     }
 
     private void SetHeader(DateTime invoiceDate, DateTime dueDate, string? supplierInvoiceNo, string? notes)
