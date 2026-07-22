@@ -54,6 +54,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
     public DbSet<SupplierInvoiceLine> SupplierInvoiceLines => Set<SupplierInvoiceLine>();
     public DbSet<PurchaseReturn> PurchaseReturns => Set<PurchaseReturn>();
     public DbSet<PurchaseReturnLine> PurchaseReturnLines => Set<PurchaseReturnLine>();
+    public DbSet<SalesReturn> SalesReturns => Set<SalesReturn>();
+    public DbSet<SalesReturnLine> SalesReturnLines => Set<SalesReturnLine>();
     public DbSet<CashBankMovement> CashBankMovements => Set<CashBankMovement>();
     public DbSet<SupplierPayment> SupplierPayments => Set<SupplierPayment>();
     public DbSet<SupplierPaymentAllocation> SupplierPaymentAllocations => Set<SupplierPaymentAllocation>();
@@ -273,7 +275,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
                 new { Id = 13, Code = "StockTransfer", Prefix = "TRF", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
                 new { Id = 14, Code = "StockOpname", Prefix = "OPN", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
                 new { Id = 15, Code = "PosRefund", Prefix = "RFN", DateFormat = "yyyyMMdd", Padding = 4, ResetPeriod = ResetPeriod.Daily, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
-                new { Id = 16, Code = "PurchaseReturn", Prefix = "DN", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" }
+                new { Id = 16, Code = "PurchaseReturn", Prefix = "DN", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" },
+                new { Id = 17, Code = "SalesReturn", Prefix = "CN", DateFormat = "yyyyMM", Padding = 4, ResetPeriod = ResetPeriod.Monthly, Separator = "-", CreatedAt = seedAt, CreatedBy = (string?)"system" }
             );
         });
 
@@ -793,6 +796,44 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             e.HasIndex(x => x.GoodsReceiptLineId);
         });
 
+        modelBuilder.Entity<SalesReturn>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ReturnNumber).HasMaxLength(40).IsRequired();
+            e.HasIndex(x => x.ReturnNumber).IsUnique();
+            e.Property(x => x.Notes).HasMaxLength(500);
+            e.Property(x => x.RejectionNote).HasMaxLength(500);
+            e.Property(x => x.SourceType).HasConversion<string>().HasMaxLength(20).IsRequired();
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            e.Property(x => x.Subtotal).HasPrecision(18, 2);
+            e.Property(x => x.DiscountTotal).HasPrecision(18, 2);
+            e.Property(x => x.TaxTotal).HasPrecision(18, 2);
+            e.Property(x => x.GrandTotal).HasPrecision(18, 2);
+            e.Property(x => x.InventoryTotal).HasPrecision(18, 2);
+
+            e.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+
+            e.HasMany(x => x.Lines).WithOne().HasForeignKey(l => l.SalesReturnId).OnDelete(DeleteBehavior.Cascade);
+            e.Metadata.FindNavigation(nameof(SalesReturn.Lines))!.SetPropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<SalesReturnLine>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.VariantSku).HasMaxLength(60).IsRequired();
+            e.Property(x => x.ProductName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.UnitCost).HasPrecision(18, 2);
+            e.Property(x => x.UnitPrice).HasPrecision(18, 2);
+            e.Property(x => x.DiscountPercent).HasPrecision(5, 2);
+            e.Property(x => x.TaxRateSnapshot).HasPrecision(5, 2);
+            e.Property(x => x.LineSubtotal).HasPrecision(18, 2);
+            e.Property(x => x.LineDiscount).HasPrecision(18, 2);
+            e.Property(x => x.LineTax).HasPrecision(18, 2);
+            e.Property(x => x.LineTotal).HasPrecision(18, 2);
+            e.HasOne<ProductVariant>().WithMany().HasForeignKey(x => x.ProductVariantId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => x.DeliveryOrderLineId);
+        });
+
         modelBuilder.Entity<CashBankMovement>(e =>
         {
             e.HasKey(x => x.Id);
@@ -847,6 +888,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             e.Property(x => x.TaxTotal).HasPrecision(18, 2);
             e.Property(x => x.GrandTotal).HasPrecision(18, 2);
             e.Property(x => x.PaidAmount).HasPrecision(18, 2);
+            e.Property(x => x.CreditedAmount).HasPrecision(18, 2);
             e.Ignore(x => x.Outstanding);
 
             e.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
@@ -1133,6 +1175,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             [nameof(PosRefundLine)] = "T_",
             [nameof(PurchaseReturn)] = "T_",
             [nameof(PurchaseReturnLine)] = "T_",
+            [nameof(SalesReturn)] = "T_",
+            [nameof(SalesReturnLine)] = "T_",
             [nameof(CashierShift)] = "T_",
             [nameof(CashierShiftTotal)] = "T_",
             [nameof(PosSale)] = "T_",

@@ -19,4 +19,5 @@ public static class DocumentTypes
     public const string StockOpname   = "StockOpname";
     public const string PosRefund     = "PosRefund";
     public const string PurchaseReturn = "PurchaseReturn";
+    public const string SalesReturn = "SalesReturn";
 }
