@@ -1,0 +1,49 @@
+@using System.Security.Claims
+@using ErpOne.Application.Notifications
+@using ErpOne.Web.Authorization
+@inject INotificationService Notifications
+
+<div class="dropdown">
+    <button type="button" class="notif-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+            aria-expanded="false" title="Notifikasi" aria-label="Notifikasi">
+        <i class="bi bi-bell" aria-hidden="true"></i>
+        @if (_summary is { TotalCount: > 0 })
+        {
+            <span class="notif-badge">@(_summary.TotalCount > 99 ? "99+" : _summary.TotalCount.ToString())</span>
+        }
+    </button>
+    <div class="dropdown-menu dropdown-menu-end notif-menu">
+        <div class="notif-head">Notifikasi</div>
+        @if (_summary is null || _summary.Groups.Count == 0)
+        {
+            <div class="notif-empty"><i class="bi bi-check2-circle"></i> Tidak ada notifikasi</div>
+        }
+        else
+        {
+            @foreach (var g in _summary.Groups)
+            {
+                <a class="notif-item notif-@g.Severity" href="@g.Url">
+                    <span class="notif-ic"><i class="bi @g.Icon"></i></span>
+                    <span class="notif-label">@g.Label</span>
+                    <span class="notif-count">@g.Count</span>
+                </a>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+    private NotificationSummaryDto? _summary;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await AuthStateTask).User;
+        if (user.Identity?.IsAuthenticated != true) return;
+        var userName = user.Identity.Name ?? "";
+        var roleClaimType = (user.Identity as ClaimsIdentity)?.RoleClaimType ?? ClaimTypes.Role;
+        var roles = user.FindAll(roleClaimType).Select(c => c.Value).ToList();
+        bool HasPerm(string p) => user.HasClaim(AppMenus.ClaimType, p);
+        _summary = await Notifications.GetForUserAsync(userName, roles, HasPerm, DateTime.Today);
+    }
+}
