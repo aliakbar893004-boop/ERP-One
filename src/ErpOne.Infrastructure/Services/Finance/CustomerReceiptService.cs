@@ -71,9 +71,9 @@ public class CustomerReceiptService(
         await db.CustomerInvoices.AsNoTracking()
             .Where(i => i.CustomerId == customerId
                 && (i.Status == CustomerInvoiceStatus.Open || i.Status == CustomerInvoiceStatus.PartiallyPaid)
-                && i.GrandTotal - i.PaidAmount > 0)
+                && i.GrandTotal - i.PaidAmount - i.CreditedAmount > 0)
             .OrderBy(i => i.DueDate)
-            .Select(i => new OpenInvoiceDto(i.Id, i.InvoiceNumber, i.InvoiceDate, i.DueDate, i.GrandTotal, i.GrandTotal - i.PaidAmount))
+            .Select(i => new OpenInvoiceDto(i.Id, i.InvoiceNumber, i.InvoiceDate, i.DueDate, i.GrandTotal, i.GrandTotal - i.PaidAmount - i.CreditedAmount))
             .ToListAsync(ct);
 
     public async Task<CustomerReceiptDto> CreateAsync(CreateCustomerReceiptRequest request, CancellationToken ct = default)
@@ -152,7 +152,7 @@ public class CustomerReceiptService(
         foreach (var a in allocations)
         {
             var inv = invs.First(i => i.Id == a.CustomerInvoiceId);
-            var outstanding = inv.GrandTotal - inv.PaidAmount;
+            var outstanding = inv.Outstanding;
             if (a.Amount > outstanding) throw Fail($"Allocation {a.Amount} exceeds outstanding {outstanding} for {inv.InvoiceNumber}.");
         }
         return invCurrency;

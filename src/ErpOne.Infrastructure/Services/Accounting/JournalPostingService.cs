@@ -216,6 +216,33 @@ public class JournalPostingService(AppDbContext db, IDocumentNumberService docNu
         await PostBalancedAsync(r.ReturnDate, $"Purchase Return {r.ReturnNumber}", "PurchaseReturn", r.Id, lines, ct);
     }
 
+    public async Task PostSalesReturnAsync(SalesReturn r, CancellationToken ct = default)
+    {
+        var cfg = await ConfigAsync(ct);
+        var inventory = RequireAccount(cfg.InventoryAccountId, "Inventory");
+        var cogs = RequireAccount(cfg.CogsAccountId, "COGS");
+
+        // Goods back into stock (reverse of the delivery COGS entry): Dr Inventory / Cr COGS.
+        var lines = new List<(int, decimal, decimal, string?)>
+        {
+            (inventory, r.InventoryTotal, 0m, "Inventory returned"),
+            (cogs, 0m, r.InventoryTotal, "COGS reversed"),
+        };
+
+        // Invoice path: credit note reduces receivable — Dr Sales / Dr Output Tax / Cr AR.
+        if (r.SourceType == SalesReturnSource.CustomerInvoice)
+        {
+            var ar = RequireAccount(cfg.ArAccountId, "Accounts Receivable");
+            var sales = RequireAccount(cfg.SalesAccountId, "Sales");
+            var net = r.Subtotal - r.DiscountTotal;
+            lines.Add((sales, net, 0m, "Revenue reversed (credit note)"));
+            if (r.TaxTotal > 0m)
+                lines.Add((RequireAccount(cfg.OutputTaxAccountId, "Output Tax"), r.TaxTotal, 0m, "Output VAT reversed"));
+            lines.Add((ar, 0m, r.GrandTotal, "Credit note to customer"));
+        }
+        await PostBalancedAsync(r.ReturnDate, $"Sales Return {r.ReturnNumber}", "SalesReturn", r.Id, lines, ct);
+    }
+
     public async Task ReverseForAsync(string sourceType, int sourceId, DateTime date, string? note, CancellationToken ct = default)
     {
         var original = await db.JournalEntries.Include(x => x.Lines)

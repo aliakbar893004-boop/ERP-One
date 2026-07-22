@@ -20,7 +20,7 @@ public class NumberSequenceServiceTests : IClassFixture<CustomWebApplicationFact
         var svc = scope.ServiceProvider.GetRequiredService<INumberSequenceService>();
 
         var all = await svc.GetAllAsync();
-        Assert.Equal(16, all.Count);   // 6 core + AP invoice/payment + AR invoice/receipt + Expense + JournalEntry + StockTransfer + StockOpname + PosRefund + PurchaseReturn
+        Assert.Equal(17, all.Count);   // 6 core + AP invoice/payment + AR invoice/receipt + Expense + JournalEntry + StockTransfer + StockOpname + PosRefund + PurchaseReturn + SalesReturn
         var po = all.Single(x => x.Code == DocumentTypes.PurchaseOrder);
         Assert.StartsWith("PO-", po.Sample);
         var apv = all.Single(x => x.Code == DocumentTypes.SupplierInvoice);
