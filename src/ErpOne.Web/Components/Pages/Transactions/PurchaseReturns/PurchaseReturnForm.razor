@@ -1,0 +1,178 @@
+@page "/transactions/purchase-returns/new"
+@page "/transactions/purchase-returns/{Id:int}/edit"
+@attribute [Authorize(Policy = "transactions.purchase-returns.create")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Purchasing.PurchaseReturns
+@using FluentValidation
+@inject IPurchaseReturnService Returns
+@inject NavigationManager Nav
+
+<PageTitle>@Title</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs"><a href="/transactions/purchase-returns">Purchase Return</a><i class="bi bi-chevron-right"></i><span class="here">@(Id is null ? "New" : "Edit")</span></div>
+        <h1>@Title</h1>
+    </div>
+
+    @if (_loading) { <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div> }
+    else
+    {
+        @if (_error is not null) { <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h"><span class="hd-ic"><i class="bi bi-arrow-return-left"></i></span><div class="hd-tx"><h2>Return</h2><p>Return received goods to the supplier.</p></div></div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c4"><label class="fl">Source path <span class="req">*</span></label>
+                            <select class="ctl" value="@_sourceType" @onchange="OnPathChangedAsync" disabled="@(Id is not null)">
+                                <option value="GoodsReceipt">Goods Receipt (pre-invoice)</option>
+                                <option value="SupplierInvoice">Supplier Invoice (debit note)</option>
+                            </select></div>
+                        <div class="f c4"><label class="fl">Source document <span class="req">*</span></label>
+                            <select class="ctl" value="@_sourceDocId" @onchange="OnSourceChangedAsync" disabled="@(Id is not null)">
+                                <option value="0">— select —</option>
+                                @foreach (var s in _sources) { <option value="@s.DocId">@s.DocNumber · @s.SupplierName · @s.DocDate.ToString("d MMM yyyy")</option> }
+                            </select></div>
+                        <div class="f c4"><label class="fl">Date <span class="req">*</span></label><input type="date" class="ctl" @bind="_date" /></div>
+                        <div class="f c12"><label class="fl">Notes</label><input class="ctl" @bind="_notes" placeholder="Optional" /></div>
+                    </div>
+
+                    @if (_linesLoading) { <div class="py-3"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading lines…</div> }
+                    else if (_lines.Count == 0 && _sourceDocId > 0) { <div class="cf-alert"><i class="bi bi-info-circle"></i> No returnable lines on this document.</div> }
+                    else if (_lines.Count > 0)
+                    {
+                        <table class="table align-middle mt-3">
+                            <thead class="table-light"><tr><th>Product</th><th>Warehouse</th><th class="text-end" style="width:110px">Remaining</th><th class="text-end" style="width:160px">Return qty</th></tr></thead>
+                            <tbody>
+                                @for (int i = 0; i < _lines.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td><div class="prod"><span class="pn">@_lines[idx].ProductName</span><span class="sku">@_lines[idx].Sku</span></div></td>
+                                        <td>@_lines[idx].WarehouseName</td>
+                                        <td class="text-end mono">@_lines[idx].RemainingQty</td>
+                                        <td><input class="ctl mono text-end" type="number" min="0" max="@_lines[idx].RemainingQty" step="1" @bind="_lines[idx].Qty" /></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </section>
+            <div class="pf-footer"><div class="in">
+                <span class="note"><span class="req">*</span> required</span>
+                <a class="btn btn-ghost" href="/transactions/purchase-returns"><i class="bi bi-x-lg"></i> Cancel</a>
+                <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving"><i class="bi bi-check2"></i> Save draft</button>
+            </div></div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private sealed class LineRow
+    {
+        public int GoodsReceiptLineId { get; set; }
+        public int? SupplierInvoiceLineId { get; set; }
+        public string Sku { get; set; } = "";
+        public string ProductName { get; set; } = "";
+        public string WarehouseName { get; set; } = "";
+        public int RemainingQty { get; set; }
+        public int Qty { get; set; }
+    }
+
+    private string _sourceType = "GoodsReceipt";
+    private IReadOnlyList<ReturnableSourceOptionDto> _sources = [];
+    private int _sourceDocId;
+    private List<LineRow> _lines = [];
+    private DateTime _date = DateTime.Today;
+    private string? _notes, _error;
+    private bool _loading = true, _saving, _linesLoading;
+
+    private string Title => Id is null ? "New Purchase Return" : "Edit Purchase Return";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id is int id)
+        {
+            var r = await Returns.GetByIdAsync(id);
+            if (r is null || r.Status != "Draft") { Nav.NavigateTo("/transactions/purchase-returns"); return; }
+            _sourceType = r.SourceType;
+            _sourceDocId = r.GoodsReceiptId ?? r.SupplierInvoiceId ?? 0;
+            _date = r.ReturnDate; _notes = r.Notes;
+            await LoadSourcesAsync();
+            await LoadLinesAsync();
+            foreach (var existing in r.Lines)
+            {
+                var row = _lines.FirstOrDefault(l => l.GoodsReceiptLineId == existing.GoodsReceiptLineId
+                    && l.SupplierInvoiceLineId == existing.SupplierInvoiceLineId);
+                if (row is not null) row.Qty = existing.Quantity;
+            }
+        }
+        else
+        {
+            await LoadSourcesAsync();
+        }
+        _loading = false;
+    }
+
+    private async Task OnPathChangedAsync(ChangeEventArgs e)
+    {
+        _sourceType = e.Value?.ToString() ?? "GoodsReceipt";
+        _sourceDocId = 0; _lines = [];
+        await LoadSourcesAsync();
+    }
+
+    private async Task LoadSourcesAsync() =>
+        _sources = _sourceType == "GoodsReceipt"
+            ? await Returns.GetReturnableGrnsAsync()
+            : await Returns.GetReturnableInvoicesAsync();
+
+    private async Task OnSourceChangedAsync(ChangeEventArgs e)
+    {
+        _sourceDocId = int.TryParse(e.Value?.ToString(), out var v) ? v : 0;
+        await LoadLinesAsync();
+    }
+
+    private async Task LoadLinesAsync()
+    {
+        _lines = [];
+        if (_sourceDocId <= 0) return;
+        _linesLoading = true;
+        var src = await Returns.GetReturnableSourceAsync(_sourceType, _sourceDocId);
+        if (src is not null)
+            _lines = src.Lines.Select(l => new LineRow
+            {
+                GoodsReceiptLineId = l.GoodsReceiptLineId,
+                SupplierInvoiceLineId = l.SupplierInvoiceLineId,
+                Sku = l.Sku,
+                ProductName = l.ProductName,
+                WarehouseName = l.WarehouseName,
+                RemainingQty = l.RemainingQty,
+                Qty = 0
+            }).ToList();
+        _linesLoading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null; _saving = true;
+        try
+        {
+            var lines = _lines.Where(l => l.Qty > 0)
+                .Select(l => new PurchaseReturnLineInput(l.GoodsReceiptLineId, l.SupplierInvoiceLineId, l.Qty)).ToList();
+            PurchaseReturnDto saved = Id is int id
+                ? await Returns.UpdateAsync(id, new UpdatePurchaseReturnRequest(_date, _notes, lines))
+                : await Returns.CreateAsync(new CreatePurchaseReturnRequest(_sourceType,
+                    _sourceType == "GoodsReceipt" ? _sourceDocId : null,
+                    _sourceType == "SupplierInvoice" ? _sourceDocId : null,
+                    _date, _notes, lines));
+            Nav.NavigateTo($"/transactions/purchase-returns/{saved.Id}");
+        }
+        catch (ValidationException ex) { _error = ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Validation failed."; }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+}

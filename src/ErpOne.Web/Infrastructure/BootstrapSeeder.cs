@@ -88,6 +88,13 @@ public static class BootstrapSeeder
             await db.SaveChangesAsync();
         }
 
+        // Seed rantai approval default untuk Purchase Return (idempotent).
+        if (!await db.ApprovalChainSteps.AnyAsync(c => c.DocumentType == ApprovalDocumentType.PurchaseReturn))
+        {
+            db.ApprovalChainSteps.Add(new ApprovalChainStep(ApprovalDocumentType.PurchaseReturn, 1, roleName));
+            await db.SaveChangesAsync();
+        }
+
         // Seed COA + posting configuration + master GL accounts (idempotent).
         await AccountingSeeder.SeedAsync(db);
 
