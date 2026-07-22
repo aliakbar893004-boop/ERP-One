@@ -41,6 +41,7 @@ using ErpOne.Application.PosSales;
 using ErpOne.Application.PosRefunds;
 using ErpOne.Application.Purchasing.PurchaseReturns;
 using ErpOne.Application.Sales.SalesReturns;
+using ErpOne.Application.Notifications;
 using ErpOne.Application.Costing;
 using ErpOne.Infrastructure.Persistence;
 using ErpOne.Infrastructure.Services;
@@ -117,6 +118,7 @@ public static class DependencyInjection
         services.AddScoped<IGoodsReceiptService, GoodsReceiptService>();
         services.AddScoped<IPurchaseReturnService, PurchaseReturnService>();
         services.AddScoped<ISalesReturnService, SalesReturnService>();
+        services.AddScoped<INotificationService, NotificationService>();
         services.Configure<GoodsReceiptOptions>(configuration.GetSection("GoodsReceipt"));
 
         return services;
