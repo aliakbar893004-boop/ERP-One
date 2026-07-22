@@ -1,0 +1,80 @@
+@page "/transactions/sales-returns"
+@attribute [Authorize(Policy = "transactions.sales-returns.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Common
+@using ErpOne.Application.Sales.SalesReturns
+@using ErpOne.Domain.Entities
+@inject ISalesReturnService Returns
+@inject NavigationManager Nav
+
+<PageTitle>Sales Return</PageTitle>
+
+<div class="pi">
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs"><a href="/">Home</a><span class="sep">·</span><span>Transaksi</span><span class="sep">·</span><span class="here">Sales Return</span></nav>
+            <h1>Sales Return</h1>
+            <p>Accept returned goods from a customer (credit note) — approval required before posting.</p>
+        </div>
+        <AuthorizeView Policy="transactions.sales-returns.create">
+            <Authorized>
+                <div class="pi-actions"><a class="btn btn-primary" href="/transactions/sales-returns/new"><i class="bi bi-plus-lg"></i> New return</a></div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <div class="toolbar">
+        <div class="chips">
+            <button class="chip @(_status is null ? "on" : "")" @onclick="() => SetStatusAsync(null)">All</button>
+            @foreach (var s in Enum.GetValues<SalesReturnStatus>())
+            { <button class="chip @(_status == s ? "on" : "")" @onclick="() => SetStatusAsync(s)">@s</button> }
+        </div>
+    </div>
+
+    @if (_page is null) { <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div> }
+    else if (_page.Total == 0) { <div class="empty"><div class="empty-ic"><i class="bi bi-arrow-return-right"></i></div><p>No returns yet.</p></div> }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th style="width:150px">Return</th><th style="width:110px">Date</th><th style="width:130px">Source</th><th>Customer</th><th class="text-end" style="width:80px">Lines</th><th class="text-end" style="width:130px">Grand Total</th><th style="width:130px" class="text-center">Status</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in _page.Items)
+                        {
+                            <tr style="cursor:pointer" @onclick="@(() => Nav.NavigateTo($"/transactions/sales-returns/{r.Id}"))">
+                                <td class="code mono">@r.ReturnNumber</td>
+                                <td class="code">@r.ReturnDate.ToString("d MMM yyyy")</td>
+                                <td>@r.SourceType</td>
+                                <td>@r.CustomerName</td>
+                                <td class="text-end mono">@r.LineCount</td>
+                                <td class="text-end mono">@r.GrandTotal.ToString("N2")</td>
+                                <td class="text-center"><span class="badge @StatusClass(r.Status)">@r.Status</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (_page.TotalPages > 1) { <div class="card-foot"><Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" /></div> }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<SalesReturnListItemDto>? _page;
+    private int _currentPage = 1;
+    private SalesReturnStatus? _status;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+    private async Task LoadAsync() => _page = await Returns.GetPagedAsync(_currentPage, PageSize, null, _status);
+    private async Task SetStatusAsync(SalesReturnStatus? s) { _status = s; _currentPage = 1; await LoadAsync(); }
+    private async Task GoToPageAsync(int p) { _currentPage = p; await LoadAsync(); }
+
+    private static string StatusClass(string s) => s switch
+    {
+        "Posted" => "bg-success-subtle text-success-emphasis",
+        "PendingApproval" => "bg-warning-subtle text-warning-emphasis",
+        _ => "bg-secondary-subtle text-secondary-emphasis"
+    };
+}

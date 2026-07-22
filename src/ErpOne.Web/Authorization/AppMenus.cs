@@ -34,6 +34,7 @@ public static class AppMenus
     private static AppAction[] JournalEntryActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActPost];
     private static AppAction[] StockTransferActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActApprove, ActPost];
     private static AppAction[] PurchaseReturnActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActApprove, ActPost];
+    private static AppAction[] SalesReturnActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActApprove, ActPost];
     private static AppAction[] StockOpnameActions => [ActIndex, ActCreate, ActEdit, ActDelete, ActApprove, ActPost];
     private static AppAction[] ReportActions => [ActIndex, ActExport];
 
@@ -74,6 +75,7 @@ public static class AppMenus
             new("transactions.sales-orders",    "Sales Order",    "bi-bag-check-fill",     SalesOrderActions),
             new("transactions.delivery-orders", "Delivery Order", "bi-truck",              DeliveryOrderActions),
             new("transactions.purchase-returns", "Purchase Return", "bi-arrow-return-left", PurchaseReturnActions),
+            new("transactions.sales-returns", "Sales Return", "bi-arrow-return-right", SalesReturnActions),
         ]),
         new("Kasir",
         [
