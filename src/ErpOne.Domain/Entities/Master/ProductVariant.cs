@@ -78,6 +78,14 @@ public class ProductVariant : AuditableEntity
         CostPrice = Math.Round(newCost, 2, MidpointRounding.AwayFromZero);
     }
 
+    /// <summary>Set CostPrice sebagai headline (rata-rata tertimbang lintas gudang) untuk mode Average-per-gudang.
+    /// Tidak dipakai MA (lewat ApplyMovingAverage) maupun Standard.</summary>
+    public void SetHeadlineCost(decimal cost)
+    {
+        if (cost < 0) throw new ArgumentException("Cost must be >= 0.", nameof(cost));
+        CostPrice = Math.Round(cost, 2, MidpointRounding.AwayFromZero);
+    }
+
     private void SetSku(string sku)
     {
         if (string.IsNullOrWhiteSpace(sku)) throw new ArgumentException("SKU is required.", nameof(sku));

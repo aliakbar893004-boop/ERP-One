@@ -9,6 +9,7 @@ public class ProductStock : AuditableEntity
     public int ProductVariantId { get; private set; }
     public int WarehouseId { get; private set; }
     public int Quantity { get; private set; }
+    public decimal CostPrice { get; private set; }
 
     private ProductStock() { } // EF Core
 
@@ -30,5 +31,12 @@ public class ProductStock : AuditableEntity
         if (result < 0)
             throw new InvalidOperationException("Stock cannot go negative.");
         Quantity = result;
+    }
+
+    /// <summary>Set biaya rata-rata per (varian,gudang). Dipakai strategi Average-per-gudang.</summary>
+    public void SetCost(decimal cost)
+    {
+        if (cost < 0) throw new ArgumentException("Cost must be >= 0.", nameof(cost));
+        CostPrice = cost;
     }
 }

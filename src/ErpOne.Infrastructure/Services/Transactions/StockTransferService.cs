@@ -155,6 +155,9 @@ public class StockTransferService(
                 line.Quantity, cost, t.TransferDate, "StockTransfer", t.Id, t.TransferNumber));
             await db.UpsertStockAsync(line.ProductVariantId, t.SourceWarehouseId, -line.Quantity, ct);
             await db.UpsertStockAsync(line.ProductVariantId, t.DestinationWarehouseId, line.Quantity, ct);
+            // Leg tujuan: perbarui basis biaya gudang tujuan. No-op untuk MA (inUnitCost = CostPrice global)
+            // & Standard; untuk Average-per-gudang memindahkan biaya ke rata-rata gudang tujuan.
+            await costing.OnInboundAsync(line.ProductVariantId, t.DestinationWarehouseId, line.Quantity, cost, ct);
         }
         t.MarkPosted();
     }
