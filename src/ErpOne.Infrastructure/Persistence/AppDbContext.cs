@@ -18,6 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<ProductStock> ProductStocks => Set<ProductStock>();
+    public DbSet<CostLayer> CostLayers => Set<CostLayer>();
     public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<Brand> Brands => Set<Brand>();
@@ -160,12 +161,27 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
         {
             e.HasKey(s => s.Id);
             e.HasIndex(s => new { s.ProductVariantId, s.WarehouseId }).IsUnique();
+            e.Property(s => s.CostPrice).HasPrecision(18, 2);
 
             e.HasOne<ProductVariant>().WithMany()
                 .HasForeignKey(s => s.ProductVariantId)
                 .OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Warehouse>().WithMany()
                 .HasForeignKey(s => s.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CostLayer>(e =>
+        {
+            e.HasKey(l => l.Id);
+            e.Property(l => l.UnitCost).HasPrecision(18, 2);
+            e.HasIndex(l => new { l.ProductVariantId, l.WarehouseId, l.Id });
+
+            e.HasOne<ProductVariant>().WithMany()
+                .HasForeignKey(l => l.ProductVariantId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Warehouse>().WithMany()
+                .HasForeignKey(l => l.WarehouseId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -1076,6 +1092,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             [nameof(ApprovalStep)] = "T_",
             // Stok
             [nameof(ProductStock)] = "S_",
+            [nameof(CostLayer)] = "S_",
             [nameof(StockMovement)] = "S_",
             [nameof(CashBankMovement)] = "S_",
         };

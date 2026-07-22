@@ -35,6 +35,8 @@
                                 @onchange="e => _method = (CostingMethod)int.Parse(e.Value!.ToString()!)">
                             <option value="@((int)CostingMethod.MovingAverage)">Moving Average</option>
                             <option value="@((int)CostingMethod.StandardCost)">Standard Cost</option>
+                            <option value="@((int)CostingMethod.AveragePerWarehouse)">Average per Warehouse</option>
+                            <option value="@((int)CostingMethod.Fifo)">FIFO</option>
                         </select>
                     </div>
                     @if (_locked)

@@ -32,7 +32,7 @@ public class CostingSettingServiceTests : IClassFixture<CustomWebApplicationFact
     {
         using var scope = _factory.Services.CreateScope();
         var ex = await Assert.ThrowsAsync<ValidationException>(
-            () => Svc(scope).UpdateMethodAsync(CostingMethod.Fifo));
+            () => Svc(scope).UpdateMethodAsync((CostingMethod)999));
         Assert.Contains("belum didukung", ex.Message);
     }
 
@@ -73,6 +73,38 @@ public class CostingSettingServiceTests : IClassFixture<CustomWebApplicationFact
         // Restore default so sibling tests in this shared-DB class stay order-independent.
         var cs = await db.CostingSettings.FirstAsync();
         cs.SetMethod(CostingMethod.MovingAverage);
+        await db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task UpdateMethodAsync_accepts_average_per_warehouse_when_unlocked()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.StockMovements.RemoveRange(db.StockMovements);
+        await db.SaveChangesAsync();
+
+        await Svc(scope).UpdateMethodAsync(CostingMethod.AveragePerWarehouse);
+        Assert.Equal(CostingMethod.AveragePerWarehouse, await Svc(scope).GetMethodAsync());
+
+        var cs = await db.CostingSettings.FirstAsync();
+        cs.SetMethod(CostingMethod.MovingAverage); // restore for sibling tests
+        await db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task UpdateMethodAsync_accepts_fifo_when_unlocked()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.StockMovements.RemoveRange(db.StockMovements);
+        await db.SaveChangesAsync();
+
+        await Svc(scope).UpdateMethodAsync(CostingMethod.Fifo);
+        Assert.Equal(CostingMethod.Fifo, await Svc(scope).GetMethodAsync());
+
+        var cs = await db.CostingSettings.FirstAsync();
+        cs.SetMethod(CostingMethod.MovingAverage); // restore for sibling tests
         await db.SaveChangesAsync();
     }
 }

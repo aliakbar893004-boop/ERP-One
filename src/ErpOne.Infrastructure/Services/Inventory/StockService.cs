@@ -11,11 +11,16 @@ namespace ErpOne.Infrastructure.Services;
 public class StockService(
     AppDbContext db,
     IValidator<StockAdjustmentRequest> adjustmentValidator,
-    ICostingService costing) : IStockService
+    ICostingService costing,
+    ICostingSettingService costingSettings) : IStockService
 {
-    public async Task<IReadOnlyList<StockLevelDto>> GetLevelsByVariantAsync(int variantId, CancellationToken ct = default) =>
-        await BuildLevelQuery(db.ProductStocks.AsNoTracking().Where(s => s.ProductVariantId == variantId))
+    public async Task<IReadOnlyList<StockLevelDto>> GetLevelsByVariantAsync(int variantId, CancellationToken ct = default)
+    {
+        var method = await costingSettings.GetMethodAsync(ct);
+        var perWh = method is CostingMethod.AveragePerWarehouse or CostingMethod.Fifo;
+        return await BuildLevelQuery(db.ProductStocks.AsNoTracking().Where(s => s.ProductVariantId == variantId), perWh)
             .ToListAsync(ct);
+    }
 
     public async Task<int> GetOnHandAsync(int variantId, int warehouseId, CancellationToken ct = default) =>
         await db.ProductStocks.AsNoTracking()
@@ -57,11 +62,14 @@ public class StockService(
             _ => q
         };
 
+        var method = await costingSettings.GetMethodAsync(ct);
+        var perWh = method is CostingMethod.AveragePerWarehouse or CostingMethod.Fifo;
         var total = await q.CountAsync(ct);
         var items = await q
             .OrderBy(x => x.p.Name).ThenBy(x => x.v.Sku)
             .Skip((page - 1) * pageSize).Take(pageSize)
-            .Select(x => new StockLevelDto(x.v.Id, x.v.Sku, x.p.Name, x.w.Id, x.w.Name, x.s.Quantity, x.v.CostPrice))
+            .Select(x => new StockLevelDto(x.v.Id, x.v.Sku, x.p.Name, x.w.Id, x.w.Name, x.s.Quantity,
+                perWh ? x.s.CostPrice : x.v.CostPrice))
             .ToListAsync(ct);
 
         return new PagedResult<StockLevelDto>(items, total, page, pageSize);
@@ -82,12 +90,12 @@ public class StockService(
     }
 
     /// <summary>Proyeksi ProductStock -> StockLevelDto dengan SKU/nama produk/nama gudang/HPP.</summary>
-    private IQueryable<StockLevelDto> BuildLevelQuery(IQueryable<ProductStock> source) =>
+    private IQueryable<StockLevelDto> BuildLevelQuery(IQueryable<ProductStock> source, bool perWh) =>
         from s in source
         join v in db.ProductVariants.AsNoTracking() on s.ProductVariantId equals v.Id
         join p in db.Products.AsNoTracking() on v.ProductId equals p.Id
         join w in db.Warehouses.AsNoTracking() on s.WarehouseId equals w.Id
-        select new StockLevelDto(v.Id, v.Sku, p.Name, w.Id, w.Name, s.Quantity, v.CostPrice);
+        select new StockLevelDto(v.Id, v.Sku, p.Name, w.Id, w.Name, s.Quantity, perWh ? s.CostPrice : v.CostPrice);
 
     public async Task RecordOpeningAsync(int variantId, int warehouseId, int quantity, decimal unitCost, CancellationToken ct = default)
     {
