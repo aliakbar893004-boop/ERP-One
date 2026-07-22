@@ -11,5 +11,6 @@ public enum ApprovalDocumentType
     ExpenseVoid,
     StockTransfer,
     StockOpname,
-    PosSaleVoid
+    PosSaleVoid,
+    PurchaseReturn
 }
