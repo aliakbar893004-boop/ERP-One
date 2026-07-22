@@ -185,6 +185,37 @@ public class JournalPostingService(AppDbContext db, IDocumentNumberService docNu
         await PostBalancedAsync(refund.RefundDate, $"POS Refund {refund.RefundNumber}", "PosRefund", refund.Id, lines, ct);
     }
 
+    public async Task PostPurchaseReturnAsync(PurchaseReturn r, CancellationToken ct = default)
+    {
+        var cfg = await ConfigAsync(ct);
+        var inventory = RequireAccount(cfg.InventoryAccountId, "Inventory");
+        var grIr = RequireAccount(cfg.GrIrAccountId, "GR-IR");
+
+        if (r.SourceType == PurchaseReturnSource.GoodsReceipt)
+        {
+            // Reverse the GR-IR/Inventory pair: Dr GR-IR / Cr Inventory.
+            await PostBalancedAsync(r.ReturnDate, $"Purchase Return {r.ReturnNumber}", "PurchaseReturn", r.Id,
+                [(grIr, r.InventoryTotal, 0m, "Return goods (pre-invoice)"),
+                 (inventory, 0m, r.InventoryTotal, "Inventory returned")], ct);
+            return;
+        }
+
+        // SupplierInvoice path (debit note): Dr AP / Cr Input Tax / Cr Inventory / +/- GR-IR variance.
+        var ap = RequireAccount(cfg.ApAccountId, "Accounts Payable");
+        var net = r.Subtotal - r.DiscountTotal;
+        var grIrVariance = net - r.InventoryTotal; // Cr if net>inv, Dr if net<inv
+        var lines = new List<(int, decimal, decimal, string?)>
+        {
+            (ap, r.GrandTotal, 0m, "Debit note to supplier"),
+            (inventory, 0m, r.InventoryTotal, "Inventory returned"),
+        };
+        if (r.TaxTotal > 0m)
+            lines.Add((RequireAccount(cfg.InputTaxAccountId, "Input Tax"), 0m, r.TaxTotal, "Input VAT reversal"));
+        if (grIrVariance != 0m)
+            lines.Add((grIr, Math.Max(-grIrVariance, 0m), Math.Max(grIrVariance, 0m), "GR-IR variance"));
+        await PostBalancedAsync(r.ReturnDate, $"Purchase Return {r.ReturnNumber}", "PurchaseReturn", r.Id, lines, ct);
+    }
+
     public async Task ReverseForAsync(string sourceType, int sourceId, DateTime date, string? note, CancellationToken ct = default)
     {
         var original = await db.JournalEntries.Include(x => x.Lines)

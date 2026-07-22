@@ -80,9 +80,9 @@ public class SupplierPaymentService(
         await db.SupplierInvoices.AsNoTracking()
             .Where(i => i.SupplierId == supplierId
                 && (i.Status == SupplierInvoiceStatus.Open || i.Status == SupplierInvoiceStatus.PartiallyPaid)
-                && i.GrandTotal - i.PaidAmount > 0)
+                && i.GrandTotal - i.PaidAmount - i.CreditedAmount > 0)
             .OrderBy(i => i.DueDate)
-            .Select(i => new PayableInvoiceDto(i.Id, i.InvoiceNumber, i.InvoiceDate, i.DueDate, i.GrandTotal, i.GrandTotal - i.PaidAmount))
+            .Select(i => new PayableInvoiceDto(i.Id, i.InvoiceNumber, i.InvoiceDate, i.DueDate, i.GrandTotal, i.GrandTotal - i.PaidAmount - i.CreditedAmount))
             .ToListAsync(ct);
 
     public async Task<SupplierPaymentDto> CreateDraftAsync(CreateSupplierPaymentRequest request, CancellationToken ct = default)
@@ -231,7 +231,7 @@ public class SupplierPaymentService(
         foreach (var a in allocations)
         {
             var inv = invs.First(i => i.Id == a.SupplierInvoiceId);
-            var outstanding = inv.GrandTotal - inv.PaidAmount;
+            var outstanding = inv.Outstanding;
             if (a.Amount > outstanding) throw Fail($"Allocation {a.Amount} exceeds outstanding {outstanding} for {inv.InvoiceNumber}.");
         }
         return invCurrency;

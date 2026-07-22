@@ -39,6 +39,7 @@ using ErpOne.Application.StockOpnames;
 using ErpOne.Application.CashierShifts;
 using ErpOne.Application.PosSales;
 using ErpOne.Application.PosRefunds;
+using ErpOne.Application.Purchasing.PurchaseReturns;
 using ErpOne.Application.Costing;
 using ErpOne.Infrastructure.Persistence;
 using ErpOne.Infrastructure.Services;
@@ -113,6 +114,7 @@ public static class DependencyInjection
         services.AddScoped<IPosSaleService, PosSaleService>();
         services.AddScoped<IPosRefundService, PosRefundService>();
         services.AddScoped<IGoodsReceiptService, GoodsReceiptService>();
+        services.AddScoped<IPurchaseReturnService, PurchaseReturnService>();
         services.Configure<GoodsReceiptOptions>(configuration.GetSection("GoodsReceipt"));
 
         return services;
