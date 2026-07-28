@@ -3,8 +3,10 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @using FluentValidation
+@using ErpOne.Application.PriceLists
 @inject ICustomerService CustomerService
 @inject ICurrencyService CurrencyService
+@inject IPriceListService PriceLists
 @inject IAuthorizationService Auth
 @inject NavigationManager Nav
 
@@ -124,6 +126,17 @@
                             <label class="fl">Credit limit</label>
                             <input class="ctl mono" type="number" min="0" step="0.01" @bind="_creditLimit" />
                         </div>
+                        <div class="f c4">
+                            <label class="fl">Price list</label>
+                            <select class="ctl" @bind="_priceListId">
+                                <option value="0">— Use warehouse default —</option>
+                                @foreach (var pl in _priceLists)
+                                {
+                                    <option value="@pl.Id">@pl.Code — @pl.Name</option>
+                                }
+                            </select>
+                            <div class="cf-hint">Overrides the warehouse default for this customer, in every outlet.</div>
+                        </div>
                         <div class="f c12">
                             <label class="tgl">
                                 <input type="checkbox" @bind="_isActive" />
@@ -166,6 +179,8 @@
     private string _currency = "IDR";
     private IReadOnlyList<CurrencyDto> _currencies = [];
     private decimal _creditLimit;
+    private int _priceListId;
+    private IReadOnlyList<PriceListDto> _priceLists = [];
     private bool _isActive = true;
     private bool _loading = true, _saving, _notFound;
     private string? _error, _codeError, _nameError, _emailError;
@@ -188,6 +203,7 @@
         }
 
         _currencies = await CurrencyService.GetActiveAsync();
+        _priceLists = await PriceLists.GetActiveAsync();
 
         if (Id is int id)
         {
@@ -198,6 +214,7 @@
                 _code = c.Code; _name = c.Name; _contactPerson = c.ContactPerson; _phone = c.Phone;
                 _email = c.Email; _address = c.Address; _taxId = c.TaxId; _paymentTermDays = c.PaymentTermDays;
                 _currency = c.DefaultCurrency; _creditLimit = c.CreditLimit; _isActive = c.IsActive;
+                _priceListId = c.PriceListId ?? 0;
             }
         }
 
@@ -210,12 +227,15 @@
         _saving = true;
         try
         {
+            // 0 di dropdown berarti "tidak diatur" → null, supaya jatuh ke default gudang.
+            var priceListId = _priceListId > 0 ? _priceListId : (int?)null;
+
             if (Id is int id)
                 await CustomerService.UpdateAsync(id, new UpdateCustomerRequest(_code, _name, _contactPerson, _phone,
-                    _email, _address, _taxId, _paymentTermDays, _currency, _creditLimit, _isActive));
+                    _email, _address, _taxId, _paymentTermDays, _currency, _creditLimit, _isActive, priceListId));
             else
                 await CustomerService.CreateAsync(new CreateCustomerRequest(_code, _name, _contactPerson, _phone,
-                    _email, _address, _taxId, _paymentTermDays, _currency, _creditLimit, _isActive));
+                    _email, _address, _taxId, _paymentTermDays, _currency, _creditLimit, _isActive, priceListId));
 
             Nav.NavigateTo("/master/customers");
         }

@@ -18,27 +18,30 @@ public class Customer : AuditableEntity
     public decimal CreditLimit { get; private set; }
     public bool IsActive { get; private set; }
 
+    /// <summary>Price list khusus customer ini; menang atas default gudang. null = pakai default gudang.</summary>
+    public int? PriceListId { get; private set; }
+
     private Customer() { } // EF Core
 
     public Customer(string code, string name, string? contactPerson, string? phone, string? email,
         string? address, string? taxId, int paymentTermDays, string? defaultCurrency,
-        decimal creditLimit, bool isActive)
+        decimal creditLimit, bool isActive, int? priceListId = null)
     {
         Apply(code, name, contactPerson, phone, email, address, taxId, paymentTermDays,
-            defaultCurrency, creditLimit, isActive);
+            defaultCurrency, creditLimit, isActive, priceListId);
     }
 
     public void Update(string code, string name, string? contactPerson, string? phone, string? email,
         string? address, string? taxId, int paymentTermDays, string? defaultCurrency,
-        decimal creditLimit, bool isActive)
+        decimal creditLimit, bool isActive, int? priceListId = null)
     {
         Apply(code, name, contactPerson, phone, email, address, taxId, paymentTermDays,
-            defaultCurrency, creditLimit, isActive);
+            defaultCurrency, creditLimit, isActive, priceListId);
     }
 
     private void Apply(string code, string name, string? contactPerson, string? phone, string? email,
         string? address, string? taxId, int paymentTermDays, string? defaultCurrency,
-        decimal creditLimit, bool isActive)
+        decimal creditLimit, bool isActive, int? priceListId)
     {
         SetCode(code);
         SetName(name);
@@ -51,6 +54,7 @@ public class Customer : AuditableEntity
         SetCurrency(defaultCurrency);
         SetCreditLimit(creditLimit);
         IsActive = isActive;
+        PriceListId = priceListId is > 0 ? priceListId : null;
     }
 
     private void SetCode(string code)

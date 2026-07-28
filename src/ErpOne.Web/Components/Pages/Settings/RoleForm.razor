@@ -3,7 +3,9 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.Identity
+@using ErpOne.Application.Pricing
 @inject RoleManager<ApplicationRole> RoleManager
+@inject IPricingSettingService PricingSettings
 @inject IAuthorizationService Auth
 @inject NavigationManager Nav
 
@@ -56,6 +58,16 @@
                         <div class="f c6">
                             <label class="fl">Description</label>
                             <input class="ctl" placeholder="What this role is for…" @bind="_description" />
+                        </div>
+                        <div class="f c4">
+                            <label class="fl">Max Discount %</label>
+                            <input type="number" min="0" max="100" step="0.01" class="ctl mono text-end"
+                                   placeholder="—" @bind="_maxDiscountPercent" />
+                            <div class="cf-hint">
+                                Leave empty to use the global default (@_globalMaxDiscount.ToString("0.##")%).
+                                Enter 0 to forbid discounts entirely for this role. When a user has several
+                                roles, the highest limit applies.
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -165,6 +177,8 @@
 
     private string _name = string.Empty;
     private string? _description;
+    private decimal? _maxDiscountPercent;
+    private decimal _globalMaxDiscount = 100m;
     private readonly HashSet<string> _selectedPerms = [];
     private bool _loading = true, _saving, _notFound;
     private string? _error;
@@ -185,6 +199,8 @@
             return;
         }
 
+        _globalMaxDiscount = (await PricingSettings.GetAsync()).DefaultMaxDiscountPercent;
+
         if (Id is not null)
         {
             _role = await RoleManager.FindByIdAsync(Id);
@@ -196,6 +212,7 @@
             {
                 _name        = _role.Name ?? "";
                 _description = _role.Description;
+                _maxDiscountPercent = _role.MaxDiscountPercent;
 
                 var claims = await RoleManager.GetClaimsAsync(_role);
                 foreach (var c in claims.Where(c => c.Type == AppMenus.ClaimType))
@@ -228,6 +245,11 @@
     {
         _error = null;
         if (string.IsNullOrWhiteSpace(_name)) { _error = "Role name is required."; return; }
+        if (_maxDiscountPercent is { } mdp && (mdp < 0m || mdp > 100m))
+        {
+            _error = "Max discount % must be between 0 and 100.";
+            return;
+        }
 
         _saving = true;
         try
@@ -235,13 +257,18 @@
             IdentityResult result;
             if (_role is null)
             {
-                _role  = new ApplicationRole(_name.Trim()) { Description = _description?.Trim() };
+                _role = new ApplicationRole(_name.Trim())
+                {
+                    Description = _description?.Trim(),
+                    MaxDiscountPercent = _maxDiscountPercent
+                };
                 result = await RoleManager.CreateAsync(_role);
             }
             else
             {
                 _role.Name        = _name.Trim();
                 _role.Description = _description?.Trim();
+                _role.MaxDiscountPercent = _maxDiscountPercent;
                 result            = await RoleManager.UpdateAsync(_role);
             }
 

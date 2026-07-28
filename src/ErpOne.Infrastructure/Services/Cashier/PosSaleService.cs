@@ -5,6 +5,7 @@ using ErpOne.Application.Common;
 using ErpOne.Application.Costing;
 using ErpOne.Application.Numbering;
 using ErpOne.Application.PosSales;
+using ErpOne.Application.Pricing;
 using ErpOne.Domain.Entities;
 using ErpOne.Infrastructure.Persistence;
 
@@ -15,20 +16,23 @@ public class PosSaleService(
     IValidator<CreatePosSaleRequest> validator,
     IDocumentNumberService docNumbers,
     IJournalPostingService journalPoster,
-    ICostingService costing) : IPosSaleService
+    ICostingService costing,
+    IPricingService pricing) : IPosSaleService
 {
     public async Task<IReadOnlyList<PosProductOptionDto>> SearchProductsAsync(int warehouseId, string? term, CancellationToken ct = default)
     {
         var q = from v in db.ProductVariants.AsNoTracking()
                 join p in db.Products.AsNoTracking() on v.ProductId equals p.Id
                 where v.IsActive
-                select new { v.Id, v.Sku, v.Barcode, ProductName = p.Name, v.Price, v.DiscountPrice, v.DiscountPercent };
+                // DiscountPrice sengaja tidak diambil: harga dasar kini ditentukan IPricingService,
+                // bukan lagi DiscountPrice ?? Price. Price tetap diambil untuk badge harga coret.
+                select new { v.Id, v.Sku, v.Barcode, ProductName = p.Name, v.Price, v.DiscountPercent };
 
         if (!string.IsNullOrWhiteSpace(term))
             q = q.Where(x => x.Barcode == term || x.Sku.Contains(term) || x.ProductName.Contains(term));
 
         var rows = await q.OrderBy(x => x.ProductName).Take(20)
-            .Select(x => new { x.Id, x.Sku, x.Barcode, x.ProductName, x.Price, x.DiscountPrice, x.DiscountPercent })
+            .Select(x => new { x.Id, x.Sku, x.Barcode, x.ProductName, x.Price, x.DiscountPercent })
             .ToListAsync(ct);
 
         var ids = rows.Select(r => r.Id).ToList();
@@ -38,14 +42,22 @@ public class PosSaleService(
             .Select(g => new { VariantId = g.Key, Qty = g.Sum(x => x.Quantity) })
             .ToListAsync(ct);
 
-        return rows.Select(r => new PosProductOptionDto(
+        // Harga dasar dari engine (price list gudang → harga master). Qty 1 dipakai karena pencarian
+        // belum tahu qty; tier qty tetap berlaku & divalidasi ulang saat submit.
+        var priced = await pricing.ResolveManyAsync(
+            rows.Select(r => new PriceRequest(r.Id, 1, null, warehouseId, DateOnly.FromDateTime(DateTime.Now)))
+                .ToList(),
+            ct);
+
+        return rows.Select((r, i) => new PosProductOptionDto(
             r.Id, r.Sku, r.ProductName, r.Barcode,
-            r.DiscountPrice ?? r.Price,
+            priced[i].UnitPrice,
             stock.FirstOrDefault(s => s.VariantId == r.Id)?.Qty ?? 0,
             r.Price, r.DiscountPercent)).ToList();
     }
 
-    public async Task<PosSaleDto> CreateSaleAsync(string userId, string userName, int shiftId, CreatePosSaleRequest request, CancellationToken ct = default)
+    public async Task<PosSaleDto> CreateSaleAsync(string userId, string userName, int shiftId,
+        CreatePosSaleRequest request, IReadOnlyList<string>? roleNames = null, CancellationToken ct = default)
     {
         await validator.ValidateAndThrowAsync(request, ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
@@ -68,6 +80,27 @@ public class PosSaleService(
         var whId = shift.WarehouseId;
         var now = DateTime.Now;
 
+        // Harga dasar dihitung server; UnitPrice kiriman client hanya dipakai untuk mengukur
+        // penyimpangan, TIDAK untuk menetapkan harga. POS tanpa customer → CustomerId null.
+        var maxDiscount = await pricing.GetMaxDiscountPercentAsync(roleNames, ct);
+        var resolvedPrices = await pricing.ResolveManyAsync(
+            request.Lines.Select(l => new PriceRequest(l.ProductVariantId, l.Quantity, null, whId,
+                DateOnly.FromDateTime(now))).ToList(),
+            ct);
+
+        for (var i = 0; i < request.Lines.Count; i++)
+        {
+            var line = request.Lines[i];
+            var deviation = PriceMath.DeviationPercent(resolvedPrices[i].UnitPrice, line.UnitPrice, line.DiscountPercent);
+            if (deviation <= maxDiscount) continue;
+
+            var deviantSku = await db.ProductVariants.Where(v => v.Id == line.ProductVariantId)
+                .Select(v => v.Sku).FirstOrDefaultAsync(ct) ?? line.ProductVariantId.ToString();
+
+            throw Fail($"Discount on {deviantSku} is {deviation:0.##}% below the current price " +
+                       $"({resolvedPrices[i].UnitPrice:N0}), which exceeds your limit of {maxDiscount:0.##}%.");
+        }
+
         // Fase-1: cek stok semua baris (akumulasi per varian) sebelum mutasi apa pun.
         var takenPerVariant = new Dictionary<int, int>();
         foreach (var line in request.Lines)
@@ -89,14 +122,15 @@ public class PosSaleService(
         var sale = new PosSale(await docNumbers.NextAsync(DocumentTypes.PosSale, now, ct), shift.Id, whId, now,
             request.PaymentMethodId, isCash, request.TaxId, taxRate, userId, userName);
 
-        foreach (var line in request.Lines)
+        for (var i = 0; i < request.Lines.Count; i++)
         {
+            var line = request.Lines[i];
             var v = await db.ProductVariants.FirstOrDefaultAsync(x => x.Id == line.ProductVariantId, ct)
                 ?? throw Fail($"Varian {line.ProductVariantId} tidak ditemukan.");
             var name = await db.Products.Where(p => p.Id == v.ProductId).Select(p => p.Name).FirstOrDefaultAsync(ct) ?? "—";
 
             var unitCost = await costing.GetOutboundUnitCostAsync(v.Id, whId, line.Quantity, ct);
-            sale.AddLine(v.Id, v.Sku, name, line.Quantity, line.UnitPrice, line.DiscountPercent, unitCost);
+            sale.AddLine(v.Id, v.Sku, name, line.Quantity, resolvedPrices[i].UnitPrice, line.DiscountPercent, unitCost);
 
             db.StockMovements.Add(new StockMovement(v.Id, whId, MovementType.Out,
                 -line.Quantity, unitCost, now, refType: "POS", refId: null, note: sale.SaleNumber));

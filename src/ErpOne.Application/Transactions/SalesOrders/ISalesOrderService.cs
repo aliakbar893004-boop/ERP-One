@@ -14,8 +14,12 @@ public interface ISalesOrderService
     Task<IReadOnlyList<SalesOrderVariantOptionDto>> SearchVariantsAsync(string? term, CancellationToken ct = default);
     Task<SalesOrderCreditInfoDto> GetCreditInfoAsync(int customerId, decimal thisOrderTotal, int? excludeSoId, CancellationToken ct = default);
 
-    Task<SalesOrderDto> CreateAsync(CreateSalesOrderRequest request, CancellationToken ct = default);
-    Task<bool> UpdateAsync(int id, UpdateSalesOrderRequest request, CancellationToken ct = default);
+    /// <summary>roleNames adalah parameter method, BUKAN bagian request: DTO datang dari client dan
+    /// bisa dipalsukan. null/kosong → batas diskon jatuh ke default global.</summary>
+    Task<SalesOrderDto> CreateAsync(CreateSalesOrderRequest request,
+        IReadOnlyList<string>? roleNames = null, CancellationToken ct = default);
+    Task<bool> UpdateAsync(int id, UpdateSalesOrderRequest request,
+        IReadOnlyList<string>? roleNames = null, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
 
     Task SubmitAsync(int id, CancellationToken ct = default);

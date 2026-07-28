@@ -55,7 +55,7 @@ public class CustomerService(
 
         var entity = new Customer(request.Code, request.Name, request.ContactPerson, request.Phone,
             request.Email, request.Address, request.TaxId, request.PaymentTermDays, request.DefaultCurrency,
-            request.CreditLimit, request.IsActive);
+            request.CreditLimit, request.IsActive, request.PriceListId);
         db.Customers.Add(entity);
         await db.SaveChangesAsync(ct);
         return ToDto(entity);
@@ -71,7 +71,7 @@ public class CustomerService(
         await EnsureCodeUniqueAsync(request.Code, id, ct);
         entity.Update(request.Code, request.Name, request.ContactPerson, request.Phone,
             request.Email, request.Address, request.TaxId, request.PaymentTermDays, request.DefaultCurrency,
-            request.CreditLimit, request.IsActive);
+            request.CreditLimit, request.IsActive, request.PriceListId);
 
         await db.SaveChangesAsync(ct);
         return true;
@@ -101,5 +101,6 @@ public class CustomerService(
 
     private static CustomerDto ToDto(Customer x) =>
         new(x.Id, x.Code, x.Name, x.ContactPerson, x.Phone, x.Email, x.Address, x.TaxId,
-            x.PaymentTermDays, x.DefaultCurrency, x.CreditLimit, x.IsActive, x.CreatedAt, x.CreatedBy);
+            x.PaymentTermDays, x.DefaultCurrency, x.CreditLimit, x.IsActive, x.CreatedAt, x.CreatedBy,
+            x.PriceListId);
 }

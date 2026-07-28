@@ -59,7 +59,8 @@ public class WarehouseService(
         await createValidator.ValidateAndThrowAsync(request, ct);
         await EnsureCodeUniqueAsync(request.Code, null, ct);
 
-        var entity = new Warehouse(request.Code, request.Name, request.Address, request.IsActive, request.IsDefault);
+        var entity = new Warehouse(request.Code, request.Name, request.Address, request.IsActive, request.IsDefault,
+            request.DefaultPriceListId);
         db.Warehouses.Add(entity);
 
         if (request.IsDefault)
@@ -77,7 +78,8 @@ public class WarehouseService(
         if (entity is null) return false;
 
         await EnsureCodeUniqueAsync(request.Code, id, ct);
-        entity.Update(request.Code, request.Name, request.Address, request.IsActive, request.IsDefault);
+        entity.Update(request.Code, request.Name, request.Address, request.IsActive, request.IsDefault,
+            request.DefaultPriceListId);
 
         if (request.IsDefault)
             await ClearOtherDefaultsAsync(id, ct);
@@ -115,5 +117,6 @@ public class WarehouseService(
     }
 
     private static WarehouseDto ToDto(Warehouse x) =>
-        new(x.Id, x.Code, x.Name, x.Address, x.IsActive, x.IsDefault, x.CreatedAt, x.CreatedBy);
+        new(x.Id, x.Code, x.Name, x.Address, x.IsActive, x.IsDefault, x.CreatedAt, x.CreatedBy,
+            x.DefaultPriceListId);
 }

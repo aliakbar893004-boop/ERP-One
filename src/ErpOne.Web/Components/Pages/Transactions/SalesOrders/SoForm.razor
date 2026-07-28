@@ -7,8 +7,10 @@
 @using ErpOne.Application.Customers
 @using ErpOne.Application.Warehouses
 @using ErpOne.Application.Taxes
+@using ErpOne.Application.Pricing
 @using ErpOne.Web.Authorization
 @inject ISalesOrderService SoService
+@inject IPricingService Pricing
 @inject ICustomerService CustomerService
 @inject IWarehouseService WarehouseService
 @inject ITaxService TaxService
@@ -158,8 +160,14 @@
                                                     }
                                                 </select>
                                             </td>
-                                            <td><input type="number" min="1" class="ctl ctl-sm mono text-end" @bind="row.Quantity" @bind:after="RefreshCreditAsync" /></td>
-                                            <td><input type="number" min="0" step="0.01" class="ctl ctl-sm mono text-end" @bind="row.UnitPrice" @bind:after="RefreshCreditAsync" /></td>
+                                            <td><input type="number" min="1" class="ctl ctl-sm mono text-end" @bind="row.Quantity" @bind:after="() => OnQuantityChangedAsync(row)" /></td>
+                                            <td>
+                                                <input type="number" min="0" step="0.01" class="ctl ctl-sm mono text-end" @bind="row.UnitPrice" @bind:after="RefreshCreditAsync" />
+                                                @if (row.PriceListName is not null)
+                                                {
+                                                    <div class="hint-sm">@row.PriceListName@(row.MatchedMinQty is > 1 ? $" · ≥{row.MatchedMinQty}" : "")</div>
+                                                }
+                                            </td>
                                             <td><input type="number" min="0" max="100" step="0.01" class="ctl ctl-sm mono text-end" @bind="row.DiscountPercent" @bind:after="RefreshCreditAsync" /></td>
                                             <td>
                                                 <select class="ctl sel ctl-sm" @bind="row.TaxId" @bind:after="RefreshCreditAsync">
@@ -229,6 +237,12 @@
         public decimal UnitPrice { get; set; }
         public decimal DiscountPercent { get; set; }
         public int? TaxId { get; set; }
+
+        /// <summary>Harga hasil engine terakhir. Dibandingkan dengan UnitPrice untuk tahu apakah
+        /// harga masih otomatis (boleh ikut berubah saat qty melewati tier) atau sudah dinego manual.</summary>
+        public decimal ResolvedPrice { get; set; }
+        public string? PriceListName { get; set; }
+        public int? MatchedMinQty { get; set; }
     }
 
     private IReadOnlyList<CustomerDto> _customers = [];
@@ -288,6 +302,17 @@
                 _orderDate = so.OrderDate; _expectedDate = so.ExpectedDate; _notes = so.Notes;
                 foreach (var l in so.Lines)
                     _rows.Add(new Row { VariantId = l.ProductVariantId, Quantity = l.Quantity, UnitPrice = l.UnitPrice, DiscountPercent = l.DiscountPercent, TaxId = l.TaxId });
+
+                // Tampilkan asal harga untuk baris yang dimuat, TANPA menimpa harga tersimpan:
+                // ResolvedPrice sengaja tidak disamakan dengan UnitPrice agar harga SO yang
+                // sudah dinego tidak ikut berubah saat qty diedit.
+                foreach (var row in _rows)
+                {
+                    var r = await Pricing.ResolveAsync(new PriceRequest(row.VariantId, Math.Max(1, row.Quantity),
+                        _customerId, _warehouseId, DateOnly.FromDateTime(_orderDate)));
+                    row.PriceListName = r.PriceListName;
+                    row.MatchedMinQty = r.MatchedMinQty;
+                }
             }
         }
         else
@@ -309,15 +334,50 @@
     private async Task OnCustomerChanged(ChangeEventArgs e)
     {
         _customerId = int.TryParse(e.Value?.ToString(), out var v) ? v : 0;
+        // Harga dasar bergantung price list customer — resolve ulang semua baris.
+        foreach (var row in _rows) await ResolveRowPriceAsync(row);
         await RefreshCreditAsync();
     }
 
     private async Task OnVariantChanged(Row row, string? value)
     {
         row.VariantId = int.TryParse(value, out var id) ? id : 0;
-        var v = _variants.FirstOrDefault(x => x.VariantId == row.VariantId);
-        if (v is not null && row.UnitPrice == 0) row.UnitPrice = v.DiscountPrice ?? v.Price; // suggested selling price
+        await ResolveRowPriceAsync(row);
         await RefreshCreditAsync();
+    }
+
+    /// <summary>Re-resolve wajib saat qty berubah: tanpa ini tier qty tidak pernah aktif —
+    /// user mengisi qty 50 tapi harga tetap harga tier 1.</summary>
+    private async Task OnQuantityChangedAsync(Row row)
+    {
+        await ResolveRowPriceAsync(row);
+        await RefreshCreditAsync();
+    }
+
+    /// <summary>Ambil harga dasar dari engine. Hanya menimpa UnitPrice bila harga masih otomatis
+    /// (belum diisi, atau sama dengan hasil resolusi sebelumnya) agar harga nego tidak hilang.</summary>
+    private async Task ResolveRowPriceAsync(Row row)
+    {
+        if (row.VariantId <= 0)
+        {
+            row.ResolvedPrice = 0m;
+            row.PriceListName = null;
+            row.MatchedMinQty = null;
+            return;
+        }
+
+        var result = await Pricing.ResolveAsync(new PriceRequest(
+            row.VariantId, Math.Max(1, row.Quantity),
+            _customerId > 0 ? _customerId : null,
+            _warehouseId > 0 ? _warehouseId : null,
+            DateOnly.FromDateTime(_orderDate)));
+
+        var priceWasAutomatic = row.UnitPrice == 0m || row.UnitPrice == row.ResolvedPrice;
+        if (priceWasAutomatic) row.UnitPrice = result.UnitPrice;
+
+        row.ResolvedPrice = result.UnitPrice;
+        row.PriceListName = result.PriceListName;
+        row.MatchedMinQty = result.MatchedMinQty;
     }
 
     private async Task RefreshCreditAsync()
@@ -346,13 +406,18 @@
         if (_customerId <= 0) { _error = "Select a customer first."; return; }
         if (lines.Count == 0) { _error = "Select at least one line item with a product."; return; }
 
+        // Role dibaca dari AuthenticationState (server-side), bukan dari DTO — batas diskon
+        // tidak boleh bisa dipengaruhi client.
+        var roles = (await AuthStateTask).User
+            .FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).ToArray();
+
         _saving = true;
         try
         {
             if (Id is int id)
-                await SoService.UpdateAsync(id, new UpdateSalesOrderRequest(_warehouseId, _orderDate, _expectedDate, _notes, lines));
+                await SoService.UpdateAsync(id, new UpdateSalesOrderRequest(_warehouseId, _orderDate, _expectedDate, _notes, lines), roles);
             else
-                await SoService.CreateAsync(new CreateSalesOrderRequest(_customerId, _warehouseId, _orderDate, _expectedDate, _notes, lines));
+                await SoService.CreateAsync(new CreateSalesOrderRequest(_customerId, _warehouseId, _orderDate, _expectedDate, _notes, lines), roles);
             Nav.NavigateTo("/transactions/sales-orders");
         }
         catch (ValidationException ex)

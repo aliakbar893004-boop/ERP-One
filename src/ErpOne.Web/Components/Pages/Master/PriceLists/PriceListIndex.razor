@@ -1,0 +1,154 @@
+@page "/master/price-lists"
+@attribute [Authorize(Policy = "master.price-lists.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.PriceLists
+@inject IPriceListService PriceLists
+@inject NavigationManager Nav
+@inject SwalService Swal
+
+<PageTitle>Price Lists</PageTitle>
+
+<div class="pi">
+
+    <div class="pi-head">
+        <div>
+            <nav class="crumbs">
+                <a href="/">Home</a>
+                <span class="sep">·</span>
+                <span>Master</span>
+                <span class="sep">·</span>
+                <span class="here">Price Lists</span>
+            </nav>
+            <p>Structural selling prices with quantity tiers, assigned to customers and warehouses.</p>
+        </div>
+        <AuthorizeView Policy="master.price-lists.create">
+            <Authorized>
+                <div class="pi-actions">
+                    <a class="btn btn-primary" href="/master/price-lists/new"><i class="bi bi-plus-lg"></i> Add price list</a>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <div class="toolbar">
+        <div class="search">
+            <i class="bi bi-search"></i>
+            <input placeholder="Search code or name…" @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKeyUp" />
+        </div>
+    </div>
+
+    @if (_page is null)
+    {
+        <div class="pi-loading"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Loading…</div>
+    }
+    else if (_page.Total == 0)
+    {
+        <div class="empty">
+            <div class="empty-ic"><i class="bi bi-tags-fill"></i></div>
+            <p>
+                @if (string.IsNullOrEmpty(_search))
+                {
+                    <span>No price lists yet. <a href="/master/price-lists/new">Add the first one.</a></span>
+                }
+                else
+                {
+                    <span>No price lists match your search.</span>
+                }
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-top">
+                <span class="n">Showing <b>@((_page.Page - 1) * PageSize + 1)–@Math.Min(_page.Page * PageSize, _page.Total)</b> of <b>@_page.Total.ToString("N0")</b></span>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:140px">Code</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th style="width:90px" class="text-center">Tiers</th>
+                            <th style="width:90px" class="text-center">Active</th>
+                            <th class="text-end pe-3" style="width:120px"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in _page.Items)
+                        {
+                            <tr>
+                                <td class="code mono">@item.Code</td>
+                                <td class="nm">@item.Name</td>
+                                <td>@(string.IsNullOrWhiteSpace(item.Description) ? "—" : item.Description)</td>
+                                <td class="text-center mono">@item.LineCount</td>
+                                <td class="text-center">@(item.IsActive ? "✔" : "—")</td>
+                                <td class="text-end pe-3 text-nowrap">
+                                    <AuthorizeView Policy="master.price-lists.edit">
+                                        <Authorized>
+                                            <a class="btn btn-sm btn-outline-primary me-1" href="@($"/master/price-lists/{item.Id}/edit")" title="Edit"><i class="bi bi-pencil"></i></a>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                    <AuthorizeView Policy="master.price-lists.delete">
+                                        <Authorized>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(item.Id, item.Name)" title="Delete"><i class="bi bi-trash3"></i></button>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (_page.TotalPages > 1)
+            {
+                <div class="card-foot">
+                    <Pager Page="_page.Page" TotalPages="_page.TotalPages" OnPageChanged="GoToPageAsync" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 15;
+    private PagedResult<PriceListDto>? _page;
+    private int _currentPage = 1;
+    private string? _search;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() =>
+        _page = await PriceLists.GetPagedAsync(_currentPage, PageSize, _search);
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        _currentPage = 1;
+        await LoadAsync();
+    }
+
+    private async Task GoToPageAsync(int page)
+    {
+        _currentPage = page;
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(int id, string name)
+    {
+        if (!await Swal.ConfirmAsync("Delete price list?", $"\"{name}\" will be permanently removed."))
+            return;
+        try
+        {
+            await PriceLists.DeleteAsync(id);
+            await LoadAsync();
+            await Swal.ToastAsync("success", "Price list deleted");
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            // Price list yang masih dipakai customer/gudang ditolak service — tampilkan alasannya.
+            await Swal.ToastAsync("error", ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Cannot delete price list");
+        }
+    }
+}

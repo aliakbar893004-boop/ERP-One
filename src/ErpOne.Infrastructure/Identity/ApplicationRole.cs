@@ -8,6 +8,10 @@ public class ApplicationRole : IdentityRole, IAuditable
 {
     public string? Description { get; set; }
 
+    /// <summary>Batas diskon manual untuk role ini. null = tidak diatur (pakai default global).
+    /// 0 = tidak boleh memberi diskon sama sekali.</summary>
+    public decimal? MaxDiscountPercent { get; set; }
+
     public DateTime CreatedAt { get; private set; }
     public string? CreatedBy { get; private set; }
     public DateTime? ModifiedAt { get; private set; }

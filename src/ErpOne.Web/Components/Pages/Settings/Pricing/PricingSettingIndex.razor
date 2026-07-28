@@ -1,0 +1,83 @@
+@page "/settings/pricing"
+@attribute [Authorize(Policy = "settings.pricing.index")]
+@rendermode InteractiveServer
+@using ErpOne.Application.Pricing
+@inject IPricingSettingService PricingSettings
+
+<PageTitle>Pricing</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs"><a href="/">Home</a><i class="bi bi-chevron-right"></i><span>Settings</span><i class="bi bi-chevron-right"></i><span class="here">Pricing</span></div>
+        <h1>Pricing</h1>
+    </div>
+
+    @if (_loading) { <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div> }
+    else
+    {
+        @if (_saved) { <div class="cf-alert ok"><i class="bi bi-check2-circle"></i> Saved.</div> }
+        @if (_error is not null) { <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div> }
+
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-percent"></i></span>
+                    <div class="hd-tx">
+                        <h2>Default maximum discount</h2>
+                        <p>
+                            Applies to users whose roles have no discount limit set. Per-role limits are
+                            configured in Settings → Role, and the highest limit among a user's roles wins.
+                        </p>
+                    </div>
+                </div>
+                <div class="card-b">
+                    <div class="f c4">
+                        <label class="fl">Default max discount %</label>
+                        <input type="number" min="0" max="100" step="0.01" class="ctl mono text-end"
+                               @bind="_defaultMaxDiscountPercent" />
+                    </div>
+                    <p class="cf-hint">
+                        Measured against the price resolved by the pricing engine, and it covers both
+                        line discounts and manual price overrides — lowering the unit price counts as a discount.
+                        100% leaves discounting effectively unrestricted.
+                    </p>
+                </div>
+                <div class="pf-footer"><div class="in">
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving"><i class="bi bi-check2"></i> Save</button>
+                </div></div>
+            </section>
+        </div>
+    }
+</div>
+
+@code {
+    private bool _loading = true, _saving, _saved;
+    private string? _error;
+    private decimal _defaultMaxDiscountPercent = 100m;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        var dto = await PricingSettings.GetAsync();
+        _defaultMaxDiscountPercent = dto.DefaultMaxDiscountPercent;
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = null; _saved = false; _saving = true;
+        try
+        {
+            await PricingSettings.UpdateAsync(_defaultMaxDiscountPercent);
+            _saved = true;
+            await LoadAsync();
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _error = ex.Errors.FirstOrDefault()?.ErrorMessage ?? "Cannot save pricing setting.";
+        }
+        catch (Exception ex) { _error = ex.Message; }
+        finally { _saving = false; }
+    }
+}

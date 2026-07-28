@@ -167,7 +167,20 @@ Untuk yang butuh pembukuan penuh.
 ## Fase 6 — Opsional / Nice-to-have
 
 - **Quotation** (penawaran → SO) & **Purchase Requisition** (permintaan → PO).
-- **Price List / Promo / Diskon** terpusat (POS sekarang diskon manual per baris).
+- **Price List / Promo / Diskon terpusat** — dipecah tiga sub-fase (ukurannya subsistem, bukan satu modul):
+  - [x] **6b-1 Fondasi** — seam `IPricingService` (pola `ICostingService`), `PriceList` + `PriceListLine`
+    dengan tier qty, assignment ke `Customer.PriceListId` & `Warehouse.DefaultPriceListId`, dan
+    guardrail diskon per role yang divalidasi server. Menutup celah lama: POS & SO tidak lagi
+    mempercayai `UnitPrice`/`DiscountPercent` kiriman client.
+    Spec: `docs/superpowers/specs/2026-07-27-f6b1-pricing-pricelist-design.md` ·
+    Plan: `docs/superpowers/plans/2026-07-27-f6b1-pricing-pricelist.md`
+  - [ ] **6b-2 Promo per item** — promo terjadwal (%, nominal, fixed price), target
+    varian/produk/kategori/brand, pemilihan **1 promo terbaik** di atas harga price list (cascade),
+    jejak perhitungan agar bisa diaudit.
+  - [ ] **6b-3 Promo tingkat transaksi + BOGO** — diskon total struk/order dengan alokasi ke baris
+    (agar laba kotor & HPP tetap benar) + Buy-X-Get-Y. Satu-satunya sub-fase yang mengubah skema
+    dokumen transaksi. Catatan: `CreatePosSaleRequest.TransactionDiscount` yang sudah ada **belum**
+    dibatasi guardrail sampai fase ini.
 - **Notifikasi** in-app: approval menunggu, stok menipis, jatuh tempo.
 - **Audit / Activity Log** (jejak aksi user — beda dari Error Log yang teknis).
 - **Batch / Expiry / Serial number** (jika produk butuh).

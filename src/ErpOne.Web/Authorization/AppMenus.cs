@@ -58,6 +58,7 @@ public static class AppMenus
             new("master.suppliers",  "Supplier",  "bi-truck",         CRUD),
             new("master.customers",  "Customer",  "bi-person-vcard-fill", CRUD),
             new("master.currencies", "Currency",  "bi-currency-exchange", CRUD),
+            new("master.price-lists", "Price List", "bi-tags-fill",       CRUD),
         ]),
         new("Inventory",
         [
@@ -118,6 +119,7 @@ public static class AppMenus
             new("settings.document-numbering", "Document Numbering", "bi-123",                [ActIndex, ActEdit]),
             new("settings.posting-config", "Posting Configuration", "bi-diagram-3-fill",       [ActIndex, ActEdit]),
             new("settings.costing",         "Costing Method",  "bi-calculator-fill",           [ActIndex, ActEdit]),
+            new("settings.pricing",         "Pricing",         "bi-percent",                   [ActIndex, ActEdit]),
             new("settings.errorlog",        "Error Log",      "bi-exclamation-triangle-fill", ViewOnly),
         ]),
     ];

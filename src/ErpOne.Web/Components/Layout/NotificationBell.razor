@@ -1,7 +1,8 @@
 @using System.Security.Claims
+@using Microsoft.Extensions.DependencyInjection
 @using ErpOne.Application.Notifications
 @using ErpOne.Web.Authorization
-@inject INotificationService Notifications
+@inject IServiceScopeFactory ScopeFactory
 
 <div class="dropdown">
     <button type="button" class="notif-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside"
@@ -44,6 +45,15 @@
         var roleClaimType = (user.Identity as ClaimsIdentity)?.RoleClaimType ?? ClaimTypes.Role;
         var roles = user.FindAll(roleClaimType).Select(c => c.Value).ToList();
         bool HasPerm(string p) => user.HasClaim(AppMenus.ClaimType, p);
-        _summary = await Notifications.GetForUserAsync(userName, roles, HasPerm, DateTime.Today);
+
+        // Scope sendiri = AppDbContext sendiri. WAJIB: AppDbContext diregistrasi scoped, dan di
+        // Blazor Server satu scope hidup selama circuit — dipakai bersama seluruh komponen.
+        // Blazor memulai OnInitializedAsync semua komponen tanpa menunggu satu per satu, jadi
+        // query bell ini (yang memindai low-stock, relatif lama) akan tumpang-tindih dengan query
+        // OnInitializedAsync halaman → "A second operation was started on this context instance".
+        // Bell hanya membaca, tidak menulis, jadi context terpisah aman secara semantik.
+        using var scope = ScopeFactory.CreateScope();
+        var notifications = scope.ServiceProvider.GetRequiredService<INotificationService>();
+        _summary = await notifications.GetForUserAsync(userName, roles, HasPerm, DateTime.Today);
     }
 }

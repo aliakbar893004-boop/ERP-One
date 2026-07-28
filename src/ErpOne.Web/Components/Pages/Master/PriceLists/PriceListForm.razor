@@ -1,0 +1,258 @@
+@page "/master/price-lists/new"
+@page "/master/price-lists/{Id:int}/edit"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using FluentValidation
+@using ErpOne.Application.PriceLists
+@inject IPriceListService PriceLists
+@inject IAuthorizationService Auth
+@inject NavigationManager Nav
+
+<PageTitle>@Title</PageTitle>
+
+<div class="cf">
+    <div class="cf-top">
+        <div class="crumbs">
+            <a href="/master/price-lists">Master</a>
+            <i class="bi bi-chevron-right"></i>
+            <a href="/master/price-lists">Price Lists</a>
+            <i class="bi bi-chevron-right"></i>
+            <span class="here">@(Id is null ? "New" : "Edit")</span>
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+    }
+    else if (_notFound)
+    {
+        <div class="cf-alert warn"><i class="bi bi-exclamation-triangle"></i> Price list not found.</div>
+    }
+    else
+    {
+        @if (_error is not null)
+        {
+            <div class="cf-alert err"><i class="bi bi-exclamation-octagon"></i> @_error</div>
+        }
+
+        <div class="cf-wrap">
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-tags-fill"></i></span>
+                    <div class="hd-tx">
+                        <h2>Price list information</h2>
+                        <p>Assign this list to customers, or set it as a warehouse default for POS.</p>
+                    </div>
+                </div>
+                <div class="card-b">
+                    <div class="grid">
+                        <div class="f c3">
+                            <label class="fl">Code <span class="req">*</span></label>
+                            <input class="ctl mono up @(_codeError is not null ? "bad" : "")"
+                                   placeholder="GROSIR" maxlength="20" @bind="_code" @bind:event="oninput" />
+                            @if (_codeError is not null)
+                            {
+                                <div class="err-txt">@_codeError</div>
+                            }
+                        </div>
+                        <div class="f c4">
+                            <label class="fl">Name <span class="req">*</span></label>
+                            <input class="ctl @(_nameError is not null ? "bad" : "")"
+                                   placeholder="Wholesale" maxlength="100" @bind="_name" @bind:event="oninput" />
+                            @if (_nameError is not null)
+                            {
+                                <div class="err-txt">@_nameError</div>
+                            }
+                        </div>
+                        <div class="f c3 d-flex align-items-end gap-4">
+                            <label class="fl-check">
+                                <input type="checkbox" @bind="_isActive" /> Active
+                            </label>
+                        </div>
+                        <div class="f c12">
+                            <label class="fl">Description</label>
+                            <input class="ctl" maxlength="255" @bind="_description" />
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-h">
+                    <span class="hd-ic"><i class="bi bi-layers-half"></i></span>
+                    <div class="hd-tx">
+                        <h2>Prices &amp; quantity tiers</h2>
+                        <p>
+                            MinQty 1 is the base price. Add rows with a higher MinQty for bulk pricing —
+                            the largest MinQty not exceeding the ordered quantity wins.
+                        </p>
+                    </div>
+                </div>
+                <div class="card-b">
+                    <div class="table-responsive">
+                        <table class="tbl-lines">
+                            <thead>
+                                <tr>
+                                    <th>Product variant <span class="req">*</span></th>
+                                    <th style="width:140px" class="text-end">Min qty</th>
+                                    <th style="width:180px" class="text-end">Unit price</th>
+                                    <th style="width:60px"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (_rows.Count == 0)
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-3">
+                                            No prices yet. A price list with no rows leaves every product at its master price.
+                                        </td>
+                                    </tr>
+                                }
+                                @foreach (var row in _rows)
+                                {
+                                    <tr>
+                                        <td>
+                                            <select class="ctl ctl-sm" value="@row.VariantId"
+                                                    @onchange="e => OnVariantChanged(row, e.Value?.ToString())">
+                                                <option value="0">— Select variant —</option>
+                                                @foreach (var v in _variants)
+                                                {
+                                                    <option value="@v.VariantId">@v.Sku — @v.ProductName</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td><input type="number" min="1" step="1" class="ctl ctl-sm mono text-end" @bind="row.MinQty" /></td>
+                                        <td><input type="number" min="0" step="0.01" class="ctl ctl-sm mono text-end" @bind="row.UnitPrice" /></td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveRow(row)" title="Remove">
+                                                <i class="bi bi-trash3"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-ghost btn-sm mt-2" @onclick="AddRow"><i class="bi bi-plus-lg"></i> Add tier</button>
+                </div>
+            </section>
+
+            <div class="pf-footer">
+                <div class="in">
+                    <span class="note">
+                        <span class="req">*</span> required fields
+                    </span>
+                    <a class="btn btn-ghost" href="/master/price-lists"><i class="bi bi-x-lg"></i> Cancel</a>
+                    <button class="btn btn-primary" @onclick="SaveAsync" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check2"></i>
+                        }
+                        Save price list
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private sealed class Row
+    {
+        public int VariantId { get; set; }
+        public int MinQty { get; set; } = 1;
+        public decimal UnitPrice { get; set; }
+    }
+
+    private string _code = string.Empty;
+    private string _name = string.Empty;
+    private string? _description;
+    private bool _isActive = true;
+    private bool _loading = true, _saving, _notFound;
+    private string? _error, _codeError, _nameError;
+
+    private readonly List<Row> _rows = new();
+    private IReadOnlyList<PriceListVariantOptionDto> _variants = [];
+
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = default!;
+
+    private string Title => Id is null ? "Add Price List" : "Edit Price List";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateTask;
+        var perm = Id is null
+            ? AppMenus.Perm("master.price-lists", "create")
+            : AppMenus.Perm("master.price-lists", "edit");
+        if (!(await Auth.AuthorizeAsync(state.User, perm)).Succeeded)
+        {
+            Nav.NavigateTo("/master/price-lists");
+            return;
+        }
+
+        _variants = await PriceLists.SearchVariantsAsync(null);
+
+        if (Id is int id)
+        {
+            var list = await PriceLists.GetByIdAsync(id);
+            if (list is null) _notFound = true;
+            else
+            {
+                _code = list.Code; _name = list.Name; _description = list.Description; _isActive = list.IsActive;
+                foreach (var l in list.Lines)
+                    _rows.Add(new Row { VariantId = l.ProductVariantId, MinQty = l.MinQty, UnitPrice = l.UnitPrice });
+            }
+        }
+        _loading = false;
+    }
+
+    private void AddRow() => _rows.Add(new Row());
+
+    private void RemoveRow(Row row) => _rows.Remove(row);
+
+    /// <summary>Saat varian dipilih, prefill harga master sebagai titik awal — hanya bila belum diisi,
+    /// agar harga yang sudah diketik tidak tertimpa.</summary>
+    private void OnVariantChanged(Row row, string? value)
+    {
+        row.VariantId = int.TryParse(value, out var id) ? id : 0;
+        if (row.UnitPrice == 0)
+            row.UnitPrice = _variants.FirstOrDefault(v => v.VariantId == row.VariantId)?.Price ?? 0m;
+    }
+
+    private async Task SaveAsync()
+    {
+        _error = _codeError = _nameError = null;
+
+        var lines = _rows.Where(r => r.VariantId > 0)
+            .Select(r => new PriceListLineRequest(r.VariantId, r.MinQty, r.UnitPrice))
+            .ToList();
+
+        _saving = true;
+        try
+        {
+            if (Id is int id)
+                await PriceLists.UpdateAsync(id, new UpdatePriceListRequest(_code, _name, _description, _isActive, lines));
+            else
+                await PriceLists.CreateAsync(new CreatePriceListRequest(_code, _name, _description, _isActive, lines));
+
+            Nav.NavigateTo("/master/price-lists");
+        }
+        catch (ValidationException ex)
+        {
+            foreach (var e in ex.Errors)
+            {
+                if (e.PropertyName == nameof(CreatePriceListRequest.Code)) _codeError = e.ErrorMessage;
+                else if (e.PropertyName == nameof(CreatePriceListRequest.Name)) _nameError = e.ErrorMessage;
+                else _error = e.ErrorMessage;
+            }
+        }
+        finally { _saving = false; }
+    }
+}

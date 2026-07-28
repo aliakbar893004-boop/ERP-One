@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ErpOne.Application.Approvals;
 using ErpOne.Application.Common;
 using ErpOne.Application.Numbering;
+using ErpOne.Application.Pricing;
 using ErpOne.Application.SalesOrders;
 using ErpOne.Domain.Entities;
 using ErpOne.Infrastructure.Persistence;
@@ -14,7 +15,8 @@ public class SalesOrderService(
     IApprovalService approval,
     IValidator<CreateSalesOrderRequest> createValidator,
     IValidator<UpdateSalesOrderRequest> updateValidator,
-    IDocumentNumberService docNumbers) : ISalesOrderService
+    IDocumentNumberService docNumbers,
+    IPricingService pricing) : ISalesOrderService
 {
     private const ApprovalDocumentType DocType = ApprovalDocumentType.SalesOrder;
 
@@ -130,7 +132,8 @@ public class SalesOrderService(
         return new SalesOrderCreditInfoDto(creditLimit, estimatedOutstanding, thisOrderTotal, exceedsLimit);
     }
 
-    public async Task<SalesOrderDto> CreateAsync(CreateSalesOrderRequest request, CancellationToken ct = default)
+    public async Task<SalesOrderDto> CreateAsync(CreateSalesOrderRequest request,
+        IReadOnlyList<string>? roleNames = null, CancellationToken ct = default)
     {
         await createValidator.ValidateAndThrowAsync(request, ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
@@ -141,7 +144,8 @@ public class SalesOrderService(
 
         var so = new SalesOrder(soNumber, request.CustomerId, request.WarehouseId,
             request.OrderDate, request.ExpectedDate, currency, request.Notes);
-        so.SetLines(await BuildLinesAsync(request.Lines, ct));
+        so.SetLines(await BuildLinesAsync(request.Lines, request.CustomerId, request.WarehouseId,
+            request.OrderDate, roleNames, ct));
 
         db.SalesOrders.Add(so);
         await db.SaveChangesAsync(ct);
@@ -150,7 +154,8 @@ public class SalesOrderService(
         return (await GetByIdAsync(so.Id, ct))!;
     }
 
-    public async Task<bool> UpdateAsync(int id, UpdateSalesOrderRequest request, CancellationToken ct = default)
+    public async Task<bool> UpdateAsync(int id, UpdateSalesOrderRequest request,
+        IReadOnlyList<string>? roleNames = null, CancellationToken ct = default)
     {
         await updateValidator.ValidateAndThrowAsync(request, ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
@@ -162,7 +167,8 @@ public class SalesOrderService(
         db.SalesOrderLines.RemoveRange(oldLines);
 
         so.UpdateHeader(so.CustomerId, request.WarehouseId, request.OrderDate, request.ExpectedDate, so.Currency, request.Notes);
-        so.SetLines(await BuildLinesAsync(request.Lines, ct));
+        so.SetLines(await BuildLinesAsync(request.Lines, so.CustomerId, request.WarehouseId,
+            request.OrderDate, roleNames, ct));
 
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
@@ -250,12 +256,17 @@ public class SalesOrderService(
 
 
     private async Task<List<SalesOrderLine>> BuildLinesAsync(
-        IReadOnlyList<SalesOrderLineRequest> requests, CancellationToken ct)
+        IReadOnlyList<SalesOrderLineRequest> requests,
+        int customerId, int warehouseId, DateTime orderDate,
+        IReadOnlyList<string>? roleNames,
+        CancellationToken ct)
     {
         var taxIds = requests.Where(l => l.TaxId.HasValue).Select(l => l.TaxId!.Value).Distinct().ToList();
         var rates = taxIds.Count == 0
             ? new Dictionary<int, decimal>()
             : await db.Taxes.Where(t => taxIds.Contains(t.Id)).ToDictionaryAsync(t => t.Id, t => t.Rate, ct);
+
+        await EnforceDiscountLimitAsync(requests, customerId, warehouseId, orderDate, roleNames, ct);
 
         var lines = new List<SalesOrderLine>();
         foreach (var l in requests)
@@ -264,6 +275,39 @@ public class SalesOrderService(
             lines.Add(new SalesOrderLine(l.ProductVariantId, l.Quantity, l.UnitPrice, l.DiscountPercent, l.TaxId, rate));
         }
         return lines;
+    }
+
+    /// <summary>Harga dasar dihitung server; penyimpangan harga efektif client terhadapnya dibatasi
+    /// batas role. Ini menutup dua celah sekaligus: override UnitPrice dan DiscountPercent.
+    /// Harga nego tetap dihormati selama masih di dalam batas.</summary>
+    private async Task EnforceDiscountLimitAsync(
+        IReadOnlyList<SalesOrderLineRequest> requests,
+        int customerId, int warehouseId, DateTime orderDate,
+        IReadOnlyList<string>? roleNames,
+        CancellationToken ct)
+    {
+        if (requests.Count == 0) return;
+
+        var maxDiscount = await pricing.GetMaxDiscountPercentAsync(roleNames, ct);
+        var onDate = DateOnly.FromDateTime(orderDate);
+
+        var resolved = await pricing.ResolveManyAsync(
+            requests.Select(l => new PriceRequest(l.ProductVariantId, l.Quantity, customerId, warehouseId, onDate))
+                .ToList(),
+            ct);
+
+        for (var i = 0; i < requests.Count; i++)
+        {
+            var line = requests[i];
+            var deviation = PriceMath.DeviationPercent(resolved[i].UnitPrice, line.UnitPrice, line.DiscountPercent);
+            if (deviation <= maxDiscount) continue;
+
+            var sku = await db.ProductVariants.Where(v => v.Id == line.ProductVariantId)
+                .Select(v => v.Sku).FirstOrDefaultAsync(ct) ?? line.ProductVariantId.ToString();
+
+            throw Fail($"Discount on {sku} is {deviation:0.##}% below the current price " +
+                       $"({resolved[i].UnitPrice:N0}), which exceeds your limit of {maxDiscount:0.##}%.");
+        }
     }
 
     private static ValidationException Fail(string message) =>

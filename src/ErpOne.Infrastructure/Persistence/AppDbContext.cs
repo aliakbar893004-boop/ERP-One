@@ -70,6 +70,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
     public DbSet<JournalEntryLine> JournalEntryLines => Set<JournalEntryLine>();
     public DbSet<PostingConfiguration> PostingConfigurations => Set<PostingConfiguration>();
     public DbSet<CostingSetting> CostingSettings => Set<CostingSetting>();
+    public DbSet<PriceList> PriceLists => Set<PriceList>();
+    public DbSet<PriceListLine> PriceListLines => Set<PriceListLine>();
+    public DbSet<PricingSetting> PricingSettings => Set<PricingSetting>();
     public DbSet<ApprovalChainStep> ApprovalChainSteps => Set<ApprovalChainStep>();
     public DbSet<ApprovalStep> ApprovalSteps => Set<ApprovalStep>();
     public DbSet<ProductAttribute> ProductAttributes => Set<ProductAttribute>();
@@ -347,6 +350,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             e.Property(x => x.Name).HasMaxLength(100).IsRequired();
             e.Property(x => x.Address).HasMaxLength(300);
 
+            e.HasOne<PriceList>().WithMany()
+                .HasForeignKey(x => x.DefaultPriceListId).OnDelete(DeleteBehavior.Restrict);
+
             // Gudang default agar fase stok (F2) punya tujuan stok awal.
             // HasData butuh nilai statik (bukan DateTime.UtcNow).
             e.HasData(new
@@ -411,6 +417,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             e.Property(x => x.TaxId).HasMaxLength(30);
             e.Property(x => x.DefaultCurrency).HasMaxLength(3).IsRequired();
             e.Property(x => x.CreditLimit).HasPrecision(18, 2);
+
+            e.HasOne<PriceList>().WithMany()
+                .HasForeignKey(x => x.PriceListId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<PurchaseOrder>(e =>
@@ -1047,6 +1056,53 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             });
         });
 
+        modelBuilder.Entity<PriceList>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            e.HasIndex(x => x.Code).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(255);
+
+            e.HasMany(x => x.Lines)
+                .WithOne()
+                .HasForeignKey(l => l.PriceListId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.Metadata.FindNavigation(nameof(PriceList.Lines))!
+                .SetPropertyAccessMode(PropertyAccessMode.Field);
+        });
+
+        modelBuilder.Entity<PriceListLine>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.UnitPrice).HasPrecision(18, 2);
+            e.HasOne<ProductVariant>().WithMany()
+                .HasForeignKey(x => x.ProductVariantId).OnDelete(DeleteBehavior.Restrict);
+
+            // Satu harga per (price list, varian, tier).
+            e.HasIndex(x => new { x.PriceListId, x.ProductVariantId, x.MinQty }).IsUnique();
+        });
+
+        modelBuilder.Entity<PricingSetting>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.DefaultMaxDiscountPercent).HasPrecision(5, 2);
+
+            // Seed 100 = perilaku sebelum fitur ini (diskon bebas), agar rilis tidak breaking.
+            e.HasData(new
+            {
+                Id = 1,
+                DefaultMaxDiscountPercent = 100m,
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                CreatedBy = (string?)"system"
+            });
+        });
+
+        modelBuilder.Entity<ApplicationRole>(e =>
+        {
+            e.Property(x => x.MaxDiscountPercent).HasPrecision(5, 2);
+        });
+
         modelBuilder.Entity<ApprovalChainStep>(e =>
         {
             e.HasKey(x => x.Id);
@@ -1137,6 +1193,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUser? 
             [nameof(Account)] = "M_",
             [nameof(PostingConfiguration)] = "M_",
             [nameof(CostingSetting)] = "M_",
+            [nameof(PriceList)] = "M_",
+            [nameof(PriceListLine)] = "M_",
+            [nameof(PricingSetting)] = "M_",
             [nameof(NumberSequence)] = "M_",
             [nameof(NumberSequenceCounter)] = "M_",
             [nameof(CompanySetting)] = "M_",

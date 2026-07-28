@@ -4,6 +4,7 @@
 @rendermode InteractiveServer
 @implements IDisposable
 @using FluentValidation
+@using Microsoft.Extensions.DependencyInjection
 @using ErpOne.Application.CashierShifts
 @using ErpOne.Application.PosSales
 @using ErpOne.Application.Taxes
@@ -15,6 +16,7 @@
 @inject IJSRuntime JS
 @inject NavigationManager Nav
 @inject ErpOne.Web.Services.IPosSessionRegistry Sessions
+@inject IServiceScopeFactory ScopeFactory
 
 <PageTitle>Cashier (POS)</PageTitle>
 
@@ -304,6 +306,7 @@
     private DateTime? _blockedSince;
     private string _token = "";
     private string _userId = "", _userName = "";
+    private string[] _roles = [];
     private readonly List<CartLine> _cart = new();
     private CartLine? _selected;
     private string? _term;
@@ -335,6 +338,9 @@
         var user = (await AuthStateTask).User;
         _userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
         _userName = user.Identity?.Name ?? "";
+        // Role dibaca dari AuthenticationState (server-side), bukan dari DTO — batas diskon
+        // tidak boleh bisa dipengaruhi client.
+        _roles = user.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).ToArray();
 
         _token = Guid.NewGuid().ToString("N");
         if (!Sessions.TryAcquire(_userId, _token))
@@ -383,6 +389,26 @@
 
     private const int MinSearchChars = 2;
 
+    // Pencarian produk TIDAK boleh (a) memakai AppDbContext milik circuit, dan (b) dibatalkan di
+    // tengah command SQL. Keduanya mematikan circuit: cancel saat command berjalan memunculkan
+    // SqlException "A severe error occurred on the current command / Operation cancelled by user",
+    // dan setelah circuit tumbang keystroke berikutnya kena ObjectDisposedException di AppDbContext.
+    // Pola aman: scope DI sendiri (context sendiri) + query dibiarkan selesai; hasil basi dibuang
+    // lewat nomor urut, bukan lewat pembatalan query.
+    private int _searchSeq;
+
+    private async Task<bool> RunSearchAsync(int warehouseId, string term, int seq)
+    {
+        using var scope = ScopeFactory.CreateScope();
+        var pos = scope.ServiceProvider.GetRequiredService<IPosSaleService>();
+        var found = await pos.SearchProductsAsync(warehouseId, term);
+
+        if (seq != _searchSeq) return false; // keystroke yang lebih baru sudah menang
+        _results = found;
+        _error = null;
+        return true;
+    }
+
     // Live search while typing (debounced): show matching products without auto-add.
     private async Task OnTermInput(ChangeEventArgs e)
     {
@@ -390,28 +416,38 @@
         _searchCts?.Cancel();
 
         var term = _term?.Trim() ?? "";
+        var seq = ++_searchSeq;
         if (_shift is null || term.Length < MinSearchChars) { _results = []; return; }
 
         _searchCts = new CancellationTokenSource();
         var token = _searchCts.Token;
         try
         {
-            await Task.Delay(250, token); // debounce keystrokes
-            var found = await Pos.SearchProductsAsync(_shift.WarehouseId, term, token);
-            if (!token.IsCancellationRequested) { _results = found; StateHasChanged(); }
+            await Task.Delay(250, token); // debounce keystrokes — timer saja, tidak menyentuh DB
+            if (await RunSearchAsync(_shift.WarehouseId, term, seq)) StateHasChanged();
         }
         catch (OperationCanceledException) { /* the next keystroke cancels this one */ }
+        catch (Exception ex)
+        {
+            _error = $"Product search failed: {ex.Message}";
+            StateHasChanged();
+        }
     }
 
     // Enter / search button: search immediately + auto-add when a barcode matches exactly.
     private async Task SearchAsync()
     {
         _searchCts?.Cancel();
+        var seq = ++_searchSeq;
         if (_shift is null || string.IsNullOrWhiteSpace(_term)) { _results = []; return; }
-        _results = await Pos.SearchProductsAsync(_shift.WarehouseId, _term);
-        // barcode exact → auto-add
-        var exact = _results.FirstOrDefault(r => string.Equals(r.Barcode, _term, StringComparison.OrdinalIgnoreCase));
-        if (exact is not null) { AddToCart(exact); _term = ""; _results = []; }
+        try
+        {
+            if (!await RunSearchAsync(_shift.WarehouseId, _term, seq)) return;
+            // barcode exact → auto-add
+            var exact = _results.FirstOrDefault(r => string.Equals(r.Barcode, _term, StringComparison.OrdinalIgnoreCase));
+            if (exact is not null) { AddToCart(exact); _term = ""; _results = []; }
+        }
+        catch (Exception ex) { _error = $"Product search failed: {ex.Message}"; }
     }
 
     private async Task OnTermKey(KeyboardEventArgs e) { if (e.Key == "Enter") await SearchAsync(); }
@@ -448,7 +484,7 @@
             var req = new CreatePosSaleRequest(_paymentMethodId, _taxId, _transactionDiscount,
                 IsCash ? _amountTendered : GrandTotal,
                 _cart.Select(c => new PosSaleLineRequest(c.VariantId, c.Qty, c.UnitPrice, c.DiscountPercent)).ToList());
-            _lastSale = await Pos.CreateSaleAsync(_userId, _userName, _shift.Id, req);
+            _lastSale = await Pos.CreateSaleAsync(_userId, _userName, _shift.Id, req, _roles);
             ClearCart();
             _shift = await Shifts.GetOpenShiftByWarehouseAsync(_shift.WarehouseId);
             await JS.InvokeVoidAsync("appPrint");

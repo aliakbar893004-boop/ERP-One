@@ -12,18 +12,25 @@ public class Warehouse : AuditableEntity
     public bool IsActive { get; private set; }
     public bool IsDefault { get; private set; }
 
+    /// <summary>Price list default untuk penjualan di gudang ini (dipakai POS). null = harga master produk.</summary>
+    public int? DefaultPriceListId { get; private set; }
+
     private Warehouse() { } // EF Core
 
-    public Warehouse(string code, string name, string? address, bool isActive, bool isDefault)
+    public Warehouse(string code, string name, string? address, bool isActive, bool isDefault,
+        int? defaultPriceListId = null)
     {
         SetCode(code); SetName(name); SetAddress(address);
         IsActive = isActive; IsDefault = isDefault;
+        DefaultPriceListId = defaultPriceListId is > 0 ? defaultPriceListId : null;
     }
 
-    public void Update(string code, string name, string? address, bool isActive, bool isDefault)
+    public void Update(string code, string name, string? address, bool isActive, bool isDefault,
+        int? defaultPriceListId = null)
     {
         SetCode(code); SetName(name); SetAddress(address);
         IsActive = isActive; IsDefault = isDefault;
+        DefaultPriceListId = defaultPriceListId is > 0 ? defaultPriceListId : null;
     }
 
     public void SetAsDefault() => IsDefault = true;

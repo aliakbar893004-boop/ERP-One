@@ -3,7 +3,9 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @using FluentValidation
+@using ErpOne.Application.PriceLists
 @inject IWarehouseService WarehouseService
+@inject IPriceListService PriceLists
 @inject IAuthorizationService Auth
 @inject NavigationManager Nav
 
@@ -92,6 +94,17 @@
                                 <span class="tx">Default warehouse<small>Pre-selected on new transactions</small></span>
                             </label>
                         </div>
+                        <div class="f c6">
+                            <label class="fl">Default price list</label>
+                            <select class="ctl" @bind="_defaultPriceListId">
+                                <option value="0">— Use master product price —</option>
+                                @foreach (var pl in _priceLists)
+                                {
+                                    <option value="@pl.Id">@pl.Code — @pl.Name</option>
+                                }
+                            </select>
+                            <div class="cf-hint">Base price for POS sales in this warehouse. A customer's own price list still wins.</div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -125,6 +138,8 @@
     private string? _address;
     private bool _isActive = true;
     private bool _isDefault;
+    private int _defaultPriceListId;
+    private IReadOnlyList<PriceListDto> _priceLists = [];
     private bool _loading = true, _saving, _notFound;
     private string? _error, _codeError, _nameError, _addressError;
 
@@ -145,6 +160,8 @@
             return;
         }
 
+        _priceLists = await PriceLists.GetActiveAsync();
+
         if (Id is int id)
         {
             var warehouse = await WarehouseService.GetByIdAsync(id);
@@ -157,6 +174,7 @@
                 _address = warehouse.Address;
                 _isActive = warehouse.IsActive;
                 _isDefault = warehouse.IsDefault;
+                _defaultPriceListId = warehouse.DefaultPriceListId ?? 0;
             }
         }
 
@@ -170,10 +188,13 @@
 
         try
         {
+            // 0 di dropdown berarti "tidak diatur" → null, jatuh ke harga master produk.
+            var defaultPriceListId = _defaultPriceListId > 0 ? _defaultPriceListId : (int?)null;
+
             if (Id is int id)
-                await WarehouseService.UpdateAsync(id, new UpdateWarehouseRequest(_code, _name, _address, _isActive, _isDefault));
+                await WarehouseService.UpdateAsync(id, new UpdateWarehouseRequest(_code, _name, _address, _isActive, _isDefault, defaultPriceListId));
             else
-                await WarehouseService.CreateAsync(new CreateWarehouseRequest(_code, _name, _address, _isActive, _isDefault));
+                await WarehouseService.CreateAsync(new CreateWarehouseRequest(_code, _name, _address, _isActive, _isDefault, defaultPriceListId));
 
             Nav.NavigateTo("/master/warehouses");
         }

@@ -11,6 +11,8 @@ using ErpOne.Application.Brands;
 using ErpOne.Application.CashBank;
 using ErpOne.Application.CompanySettings;
 using ErpOne.Application.Currencies;
+using ErpOne.Application.Pricing;
+using ErpOne.Application.PriceLists;
 using ErpOne.Application.Dashboard;
 using ErpOne.Application.Numbering;
 using ErpOne.Application.Reports;
@@ -68,6 +70,9 @@ public static class DependencyInjection
         services.AddScoped<IUnitService, UnitService>();
         services.AddScoped<IBrandService, BrandService>();
         services.AddScoped<ICurrencyService, CurrencyService>();
+        services.AddScoped<IPricingService, PricingService>();
+        services.AddScoped<IPriceListService, PriceListService>();
+        services.AddScoped<IPricingSettingService, PricingSettingService>();
         services.AddScoped<IDocumentNumberService, DocumentNumberService>();
         services.AddScoped<INumberSequenceService, NumberSequenceService>();
         services.AddScoped<ICompanySettingService, CompanySettingService>();

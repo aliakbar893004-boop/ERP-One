@@ -567,6 +567,8 @@ h1:focus {
 .pf-form label.fl { display:block; font-size:0.78125rem; font-weight:700; color:#334155; margin-bottom:7px; }
 .pf-form label.fl .req, .pf-form .req { color:var(--danger); }
 .pf-form .hint { margin-top:7px; font-size:0.75rem; color:var(--muted); }
+/* Asal harga per baris (nama price list / tier) — di bawah input harga, tidak menambah tinggi baris. */
+.pf-form .hint-sm { margin-top:3px; font-size:0.6875rem; line-height:1.2; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pf-form .mono { font-variant-numeric:tabular-nums; letter-spacing:.02em; }
 .pf-form .ctl { width:100%; border:1.5px solid var(--line); background:var(--field); border-radius:11px; padding:11px 13px; font:inherit; font-size:0.875rem; color:var(--ink); outline:none; transition:border-color .15s, box-shadow .15s, background .15s; }
 .pf-form .ctl::placeholder { color:#9AA6B2; }
